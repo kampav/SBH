@@ -10,7 +10,8 @@
 - **Based on:** Jeremy Ethier "Built With Science" content library
 - **Stack:** Next.js 14 (App Router) + TypeScript + Tailwind + Firebase + GCP Cloud Run
 - **Local path:** `C:\Projects\SBH`
-- **GitHub:** [ADD GITHUB URL WHEN CREATED]
+- **GitHub:** https://github.com/kampav/SBH
+- **Live URL:** https://sbh-app-m3nvdpbv4q-nw.a.run.app
 - **GCP Project:** `science-based-health` (billing enabled, europe-west2)
 - **Firebase Project:** `science-based-health` (Firestore rules deployed)
 
@@ -37,11 +38,10 @@
 | CI/CD pipeline | DONE | `.github/workflows/deploy.yml` |
 
 ### NEXT TASKS (Next session start here)
-1. **Enable Firebase Auth providers** — Go to [Firebase Console → Authentication](https://console.firebase.google.com/project/science-based-health/authentication) → Get Started → Enable Email/Password + Google
-2. **Create GitHub repo** — Push code, add secrets from `SETUP_GITHUB_SECRETS.md`
-3. **First test** — Open http://localhost:3000, register, complete onboarding, test all pages
-4. **First deployment** — Push to GitHub main → auto-deploy to Cloud Run
-5. Delete `.secrets/gcp-sa-key.json` after secrets are in GitHub
+1. **Test full flow** — Open https://sbh-app-m3nvdpbv4q-nw.a.run.app, register with your email, complete onboarding, test dashboard / nutrition / workout / metrics
+2. **Clean up** — Delete `.secrets/gcp-sa-key.json` (already in GitHub)
+3. **Phase 1 polish** — Progressive overload suggestions, weekly streaks, food quick-add, programme selector
+4. **Custom domain** (optional) — Map sbh.pav.dev or similar to the Cloud Run URL
 
 ---
 
