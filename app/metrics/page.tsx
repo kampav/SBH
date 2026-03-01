@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
@@ -43,7 +45,7 @@ export default function MetricsPage() {
       weightKg: kg,
       bmi: calcBMI(kg, 165), // will use profile height in future
       notes,
-      loggedAt: serverTimestamp() as ReturnType<typeof serverTimestamp>,
+      loggedAt: serverTimestamp(),
     }
     await saveMetric(uid, metric)
     setMetrics(prev => [...prev, metric].sort((a, b) => a.date.localeCompare(b.date)))
@@ -63,7 +65,7 @@ export default function MetricsPage() {
 
   const latest = metrics[metrics.length - 1]
   const alert = metrics.length >= 2
-    ? getWeightAlert((latest.weightKg - metrics[metrics.length - 8]?.weightKg ?? latest.weightKg) / 1)
+    ? getWeightAlert((latest.weightKg - (metrics[metrics.length - 8]?.weightKg ?? latest.weightKg)) / 1)
     : null
 
   return (

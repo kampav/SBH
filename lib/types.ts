@@ -1,4 +1,7 @@
-import { Timestamp } from 'firebase/firestore'
+import { Timestamp, FieldValue } from 'firebase/firestore'
+
+// Timestamp fields can be a Timestamp (when read) or FieldValue (when writing serverTimestamp())
+export type FirestoreTimestamp = Timestamp | FieldValue
 
 // ─── User Profile ────────────────────────────────────────────────────────────
 export interface UserProfile {
@@ -22,8 +25,8 @@ export interface UserProfile {
   carbTargetG: number
   fatTargetG: number
   onboardingComplete: boolean
-  createdAt: Timestamp
-  updatedAt: Timestamp
+  createdAt: FirestoreTimestamp
+  updatedAt: FirestoreTimestamp
 }
 
 // ─── Daily Metrics ────────────────────────────────────────────────────────────
@@ -34,7 +37,7 @@ export interface DailyMetric {
   bodyFatPct?: number
   leanMassKg?: number
   notes?: string
-  loggedAt: Timestamp
+  loggedAt: FirestoreTimestamp
 }
 
 // ─── Nutrition ────────────────────────────────────────────────────────────────
@@ -86,7 +89,7 @@ export interface DailyWorkout {
   totalVolumeKg: number
   estimatedCaloriesBurned: number
   notes?: string
-  completedAt: Timestamp
+  completedAt: FirestoreTimestamp
 }
 
 // ─── Programme ────────────────────────────────────────────────────────────────

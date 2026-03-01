@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useState, useRef } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
@@ -74,7 +76,7 @@ export default function WorkoutPage() {
       durationMinutes,
       totalVolumeKg,
       estimatedCaloriesBurned: estimateCaloriesBurned(durationMinutes, 83),
-      completedAt: serverTimestamp() as ReturnType<typeof serverTimestamp>,
+      completedAt: serverTimestamp(),
     }
     await saveWorkout(uid, workout)
     setSaving(false)

@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -47,8 +49,8 @@ export default function OnboardingPage() {
       ...form,
       ...calc,
       onboardingComplete: true,
-      createdAt: serverTimestamp() as ReturnType<typeof serverTimestamp>,
-      updatedAt: serverTimestamp() as ReturnType<typeof serverTimestamp>,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     })
     router.push('/dashboard')
   }

@@ -1,6 +1,6 @@
-import { initializeApp, getApps, getApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app'
+import { getAuth, Auth } from 'firebase/auth'
+import { getFirestore, Firestore } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,9 +11,41 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-// Prevent re-initialising on hot reload
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig)
+// Lazy init — only runs in browser, never during Next.js SSR/build
+let _app: FirebaseApp | null = null
+let _auth: Auth | null = null
+let _db: Firestore | null = null
 
-export const auth = getAuth(app)
-export const db = getFirestore(app)
-export default app
+function initFirebase() {
+  if (typeof window === 'undefined') return
+  if (!_app) _app = getApps().length ? getApp() : initializeApp(firebaseConfig)
+  if (!_auth) _auth = getAuth(_app)
+  if (!_db) _db = getFirestore(_app)
+}
+
+// Getters — safe to call in components (always runs client-side via useEffect/event handlers)
+export const getFirebaseAuth = (): Auth => {
+  initFirebase()
+  return _auth!
+}
+
+export const getFirebaseDB = (): Firestore => {
+  initFirebase()
+  return _db!
+}
+
+// Convenience exports — initialised lazily on first access
+// Use Object.defineProperty so the getter runs on first import-use in client context
+export const auth = new Proxy({} as Auth, {
+  get(_target, prop) {
+    initFirebase()
+    return (_auth as unknown as Record<string | symbol, unknown>)[prop]
+  },
+})
+
+export const db = new Proxy({} as Firestore, {
+  get(_target, prop) {
+    initFirebase()
+    return (_db as unknown as Record<string | symbol, unknown>)[prop]
+  },
+})
