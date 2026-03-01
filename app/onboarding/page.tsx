@@ -16,6 +16,7 @@ type Step = 'goal' | 'metrics' | 'activity' | 'confirm'
 export default function OnboardingPage() {
   const router = useRouter()
   const [uid, setUid] = useState<string | null>(null)
+  const [authReady, setAuthReady] = useState(false)
   const [step, setStep] = useState<Step>('goal')
   const [saving, setSaving] = useState(false)
 
@@ -31,6 +32,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, user => {
+      setAuthReady(true)
       if (!user) router.push('/login')
       else setUid(user.uid)
     })
@@ -56,6 +58,12 @@ export default function OnboardingPage() {
   }
 
   const set = (field: string, value: unknown) => setForm(f => ({ ...f, [field]: value }))
+
+  if (!authReady) return (
+    <main className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <p className="text-slate-400">Loading...</p>
+    </main>
+  )
 
   return (
     <main className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4">

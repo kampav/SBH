@@ -26,6 +26,7 @@ const SET_TEMPLATE = (n: number): SetLog => ({ setNumber: n, weightKg: 0, reps: 
 export default function WorkoutPage() {
   const router = useRouter()
   const [uid, setUid] = useState<string | null>(null)
+  const [authReady, setAuthReady] = useState(false)
   const [exercises, setExercises] = useState<ExerciseLog[]>(PHASE1_WORKOUT.map(e => ({
     ...e,
     sets: [SET_TEMPLATE(1), SET_TEMPLATE(2), SET_TEMPLATE(3)],
@@ -38,6 +39,7 @@ export default function WorkoutPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, user => {
+      setAuthReady(true)
       if (!user) router.push('/login')
       else setUid(user.uid)
     })
@@ -82,6 +84,12 @@ export default function WorkoutPage() {
     setSaving(false)
     setCompleted(true)
   }
+
+  if (!authReady) return (
+    <main className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <p className="text-slate-400">Loading...</p>
+    </main>
+  )
 
   if (completed) {
     const duration = Math.round((Date.now() - startTime) / 60000)

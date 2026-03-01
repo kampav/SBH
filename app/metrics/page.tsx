@@ -15,6 +15,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 export default function MetricsPage() {
   const router = useRouter()
   const [uid, setUid] = useState<string | null>(null)
+  const [authReady, setAuthReady] = useState(false)
   const [targetWeight, setTargetWeight] = useState<number>(70)
   const [metrics, setMetrics] = useState<DailyMetric[]>([])
   const [weight, setWeight] = useState('')
@@ -24,6 +25,7 @@ export default function MetricsPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
+      setAuthReady(true)
       if (!user) { router.push('/login'); return }
       setUid(user.uid)
       const p = await getProfile(user.uid)
@@ -67,6 +69,12 @@ export default function MetricsPage() {
   const alert = metrics.length >= 2
     ? getWeightAlert((latest.weightKg - (metrics[metrics.length - 8]?.weightKg ?? latest.weightKg)) / 1)
     : null
+
+  if (!authReady) return (
+    <main className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <p className="text-slate-400">Loading...</p>
+    </main>
+  )
 
   return (
     <main className="min-h-screen bg-slate-900 text-white">

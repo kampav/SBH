@@ -17,15 +17,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
-      if (!user) {
-        router.push('/login')
-        return
-      }
+      if (!user) { setLoading(false); router.push('/login'); return }
       const p = await getProfile(user.uid)
-      if (!p?.onboardingComplete) {
-        router.push('/onboarding')
-        return
-      }
+      if (!p?.onboardingComplete) { setLoading(false); router.push('/onboarding'); return }
       setProfile(p)
       setLoading(false)
     })

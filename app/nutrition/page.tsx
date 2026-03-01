@@ -25,6 +25,7 @@ const EMPTY_NUTRITION: DailyNutrition = {
 export default function NutritionPage() {
   const router = useRouter()
   const [uid, setUid] = useState<string | null>(null)
+  const [authReady, setAuthReady] = useState(false)
   const [data, setData] = useState<DailyNutrition>(EMPTY_NUTRITION)
   const [targets, setTargets] = useState({ cal: 2050, protein: 166, carbs: 180, fat: 65 })
   const [showForm, setShowForm] = useState(false)
@@ -32,6 +33,7 @@ export default function NutritionPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
+      setAuthReady(true)
       if (!user) { router.push('/login'); return }
       setUid(user.uid)
       const p = await getProfile(user.uid)
@@ -71,6 +73,12 @@ export default function NutritionPage() {
 
   const remaining = targets.cal - data.totalCalories
   const pct = Math.min((data.totalCalories / targets.cal) * 100, 100)
+
+  if (!authReady) return (
+    <main className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <p className="text-slate-400">Loading...</p>
+    </main>
+  )
 
   return (
     <main className="min-h-screen bg-slate-900 text-white">
