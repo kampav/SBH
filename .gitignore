@@ -38,3 +38,8 @@ next-env.d.ts
 # secrets — NEVER commit
 .secrets/
 *.json.key
+
+# temp scripts + local files
+_write_*.py
+*.xlsx
+.claude/
