@@ -11,7 +11,8 @@
 - **Stack:** Next.js 14 (App Router) + TypeScript + Tailwind + Firebase + GCP Cloud Run
 - **Local path:** `C:\Projects\SBH`
 - **GitHub:** [ADD GITHUB URL WHEN CREATED]
-- **GCP Project:** [ADD WHEN CREATED]
+- **GCP Project:** `science-based-health` (billing enabled, europe-west2)
+- **Firebase Project:** `science-based-health` (Firestore rules deployed)
 
 ---
 
@@ -36,12 +37,11 @@
 | CI/CD pipeline | DONE | `.github/workflows/deploy.yml` |
 
 ### NEXT TASKS (Next session start here)
-1. **Firebase setup** — Create Firebase project, get config, fill `.env.local`
-2. **Test locally** — `npm run dev`, verify auth + onboarding + pages work
-3. **Firestore security rules** — Add rules file, deploy to Firebase
-4. **GitHub repo** — Create, push code, verify CI/CD workflow
-5. **GCP setup** — Create project, enable APIs, create service account
-6. **First deployment** — Push to main → auto-deploy to Cloud Run
+1. **Enable Firebase Auth providers** — Go to [Firebase Console → Authentication](https://console.firebase.google.com/project/science-based-health/authentication) → Get Started → Enable Email/Password + Google
+2. **Create GitHub repo** — Push code, add secrets from `SETUP_GITHUB_SECRETS.md`
+3. **First test** — Open http://localhost:3000, register, complete onboarding, test all pages
+4. **First deployment** — Push to GitHub main → auto-deploy to Cloud Run
+5. Delete `.secrets/gcp-sa-key.json` after secrets are in GitHub
 
 ---
 
