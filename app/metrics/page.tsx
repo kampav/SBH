@@ -6,43 +6,61 @@ import { useEffect, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
-import { getProfile, getMetrics, saveMetric } from '@/lib/firestore'
+import { getProfile, getMetrics, saveMetric, getMeasurements, saveMeasurement } from '@/lib/firestore'
 import { calcBMI, getBMICategory, movingAverage, getWeightAlert } from '@/lib/calculations'
-import { DailyMetric } from '@/lib/types'
+import { DailyMetric, BodyMeasurement } from '@/lib/types'
 import { serverTimestamp } from 'firebase/firestore'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, ReferenceLine, Legend,
+} from 'recharts'
 import { computeBadges, computeStreak, computeXP, getLevel } from '@/lib/gamification'
 import { getRecentWorkouts, getNutrition } from '@/lib/firestore'
+import { Scale, Ruler, Trophy, ChevronDown, ChevronUp, Check } from 'lucide-react'
 
 const today = new Date().toISOString().slice(0, 10)
+const VIOLET = '#7c3aed'
+const CYAN   = '#06b6d4'
+const ROSE   = '#f43f5e'
+const AMBER  = '#f59e0b'
+const LIME   = '#84cc16'
 
 export default function MetricsPage() {
   const router = useRouter()
   const [uid, setUid] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
-  const [targetWeight, setTargetWeight] = useState<number>(70)
+  const [targetWeight, setTargetWeight] = useState(70)
   const [metrics, setMetrics] = useState<DailyMetric[]>([])
+  const [measurements, setMeasurements] = useState<BodyMeasurement[]>([])
   const [weight, setWeight] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [savingWeight, setSavingWeight] = useState(false)
   const [range, setRange] = useState<7 | 30 | 90>(30)
   const [badges, setBadges] = useState<ReturnType<typeof computeBadges>>([])
   const [xp, setXp] = useState(0)
   const [level, setLevel] = useState(1)
   const [levelTitle, setLevelTitle] = useState('Beginner')
+  const [showMeasureForm, setShowMeasureForm] = useState(false)
+  const [savingMeasure, setSavingMeasure] = useState(false)
+  const [measureSaved, setMeasureSaved] = useState(false)
+  const [mForm, setMForm] = useState({ chest: '', waist: '', neck: '', hips: '', bicep: '' })
+  const [chartTab, setChartTab] = useState<'weight' | 'measurements'>('weight')
+  const [showBadges, setShowBadges] = useState(false)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
       setAuthReady(true)
       if (!user) { router.push('/login'); return }
       setUid(user.uid)
-      const [p, m, workouts, nutrition] = await Promise.all([
+      const [p, m, meas, workouts, nutrition] = await Promise.all([
         getProfile(user.uid),
         getMetrics(user.uid, 90),
+        getMeasurements(user.uid, 20),
         getRecentWorkouts(user.uid, 90),
         getNutrition(user.uid, today),
       ])
       if (p) setTargetWeight(p.targetWeightKg)
       setMetrics(m)
+      setMeasurements(meas)
       const wDates = workouts.map(w => w.date)
       const nDates = nutrition ? [today] : []
       const mDates = m.map(mt => mt.date)
@@ -66,126 +84,306 @@ export default function MetricsPage() {
     if (!uid || !weight) return
     const kg = parseFloat(weight)
     if (isNaN(kg)) return
-    setSaving(true)
-    const metric: DailyMetric = {
-      date: today,
-      weightKg: kg,
-      bmi: calcBMI(kg, 165),
-      loggedAt: serverTimestamp(),
-    }
+    setSavingWeight(true)
+    const metric: DailyMetric = { date: today, weightKg: kg, bmi: calcBMI(kg, 165), loggedAt: serverTimestamp() }
     await saveMetric(uid, metric)
     setMetrics(prev => [...prev.filter(m => m.date !== today), metric].sort((a, b) => a.date.localeCompare(b.date)))
     setWeight('')
-    setSaving(false)
+    setSavingWeight(false)
   }
 
-  const displayed = metrics.slice(-range)
-  const avgWeights = movingAverage(displayed.map(m => m.weightKg))
-  const chartData = displayed.map((m, i) => ({ date: m.date.slice(5), weight: m.weightKg, avg: avgWeights[i] }))
-  const latest = metrics[metrics.length - 1]
-  const alert = metrics.length >= 2
-    ? getWeightAlert((latest.weightKg - (metrics[metrics.length - 8]?.weightKg ?? latest.weightKg)))
+  async function logMeasurements() {
+    if (!uid) return
+    const chest = parseFloat(mForm.chest)
+    const waist = parseFloat(mForm.waist)
+    const neck  = parseFloat(mForm.neck)
+    if (isNaN(chest) || isNaN(waist) || isNaN(neck)) return
+    setSavingMeasure(true)
+    const m: BodyMeasurement = {
+      date: today, chestCm: chest, waistCm: waist, neckCm: neck,
+      hipsCm: mForm.hips ? parseFloat(mForm.hips) : undefined,
+      bicepCm: mForm.bicep ? parseFloat(mForm.bicep) : undefined,
+      loggedAt: serverTimestamp(),
+    }
+    await saveMeasurement(uid, m)
+    setMeasurements(prev => [...prev.filter(x => x.date !== today), m].sort((a, b) => a.date.localeCompare(b.date)))
+    setSavingMeasure(false)
+    setMeasureSaved(true)
+    setShowMeasureForm(false)
+    setMForm({ chest: '', waist: '', neck: '', hips: '', bicep: '' })
+    setTimeout(() => setMeasureSaved(false), 2500)
+  }
+
+  const displayed     = metrics.slice(-range)
+  const avgWeights    = movingAverage(displayed.map(m => m.weightKg))
+  const weightChartData = displayed.map((m, i) => ({ date: m.date.slice(5), weight: m.weightKg, avg: avgWeights[i] }))
+  const measChartData   = measurements.slice(-16).map(m => ({
+    date: m.date.slice(5), chest: m.chestCm, waist: m.waistCm, neck: m.neckCm, hips: m.hipsCm, bicep: m.bicepCm,
+  }))
+
+  const latest     = metrics[metrics.length - 1]
+  const latestMeas = measurements[measurements.length - 1]
+  const alert      = metrics.length >= 2
+    ? getWeightAlert(latest.weightKg - (metrics[metrics.length - 8]?.weightKg ?? latest.weightKg))
+    : null
+  const earnedBadges = badges.filter(b => b.earned)
+  const wDelta  = metrics.length >= 2 ? metrics[metrics.length - 1].weightKg - metrics[0].weightKg : null
+  const wstDelta = measurements.length >= 2
+    ? measurements[measurements.length - 1].waistCm - measurements[0].waistCm
     : null
 
   if (!authReady) return (
-    <main className="min-h-screen bg-app flex items-center justify-center">
-      <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    <main className="min-h-screen mesh-bg flex items-center justify-center">
+      <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
     </main>
   )
 
-  const earnedBadges = badges.filter(b => b.earned)
-
   return (
-    <main className="min-h-screen bg-app page-pad">
+    <main className="min-h-screen mesh-bg page-pad">
       <header className="px-4 pt-12 pb-4">
-        <p className="text-xs text-2 mb-0.5">Your journey</p>
+        <p className="text-xs text-2 mb-0.5">Track your transformation</p>
         <h1 className="text-xl font-bold text-1">Progress</h1>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 space-y-4">
 
+        {/* Summary cards */}
+        <div className="grid grid-cols-3 gap-2.5">
+          {[
+            { label:'Weight',  value: latest ? `${latest.weightKg}kg` : '—',           delta: wDelta, emoji:'⚖️', color: VIOLET },
+            { label:'Waist',   value: latestMeas ? `${latestMeas.waistCm}cm` : '—',     delta: wstDelta, emoji:'📏', color: ROSE },
+            { label:'BMI',     value: latest ? String(latest.bmi) : '—',
+              sub: latest ? getBMICategory(latest.bmi) : undefined, emoji:'🧮', color: CYAN },
+          ].map(c => (
+            <div key={c.label} className="glass rounded-2xl p-3 text-center">
+              <div className="text-xl mb-1">{c.emoji}</div>
+              <p className="text-xs text-2">{c.label}</p>
+              <p className="font-bold text-sm" style={{color: c.color}}>{c.value}</p>
+              {c.delta !== null && c.delta !== undefined && (
+                <p className="text-xs mt-0.5" style={{color: c.delta < 0 ? LIME : ROSE}}>
+                  {c.delta > 0 ? '+' : ''}{c.delta.toFixed(1)}{c.label === 'Waist' ? 'cm' : 'kg'}
+                </p>
+              )}
+              {'sub' in c && c.sub && <p className="text-xs text-3">{c.sub}</p>}
+            </div>
+          ))}
+        </div>
+
         {/* Log weight */}
-        <div className="bg-card-sbh rounded-2xl p-4 border border-sbh">
-          <h2 className="text-xs font-semibold text-2 uppercase tracking-widest mb-3">Log Today&#39;s Weight</h2>
+        <div className="glass rounded-2xl p-4">
+          <h2 className="text-xs font-semibold text-2 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <Scale size={13} style={{color: VIOLET}} /> Log Today&apos;s Weight
+          </h2>
           <div className="flex gap-2">
-            <input type="number" step="0.1" value={weight} onChange={e => setWeight(e.target.value)}
-              placeholder="kg (e.g. 83.0)"
-              className="flex-1 px-3 py-2.5 rounded-xl text-1 outline-none"
-              style={{background:'#111d35',border:'1px solid #1a2744'}}
-            />
-            <button onClick={logWeight} disabled={saving || !weight}
-              className="px-5 py-2.5 rounded-xl font-semibold text-white disabled:opacity-50 transition-opacity"
-              style={{background:'#10b981'}}>
-              {saving ? '...' : 'Log'}
+            <input type="number" step="0.1" value={weight}
+              onChange={e => setWeight(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && logWeight()}
+              placeholder="kg (e.g. 83.0)" className="input-glass flex-1" />
+            <button onClick={logWeight} disabled={savingWeight || !weight}
+              className="px-5 py-2.5 rounded-xl font-semibold text-white disabled:opacity-50"
+              style={{background:`linear-gradient(135deg,${VIOLET},#6d28d9)`}}>
+              {savingWeight ? '…' : 'Log'}
             </button>
           </div>
           {latest && (
-            <div className="flex gap-4 mt-3 text-sm">
-              <div><span className="text-2">Latest: </span><span className="font-semibold text-1">{latest.weightKg} kg</span></div>
-              <div><span className="text-2">BMI: </span><span className="font-semibold text-1">{latest.bmi}</span></div>
-              <span className="text-xs text-2 self-end">{getBMICategory(latest.bmi)}</span>
+            <div className="flex gap-4 mt-2 text-xs text-2">
+              <span>Latest: <strong className="text-1">{latest.weightKg} kg</strong></span>
+              <span>BMI: <strong className="text-1">{latest.bmi}</strong> ({getBMICategory(latest.bmi)})</span>
             </div>
           )}
-          {alert && <p className="mt-2 text-amber-400 text-xs">{alert}</p>}
+          {alert && <p className="mt-1.5 text-xs" style={{color: AMBER}}>{alert}</p>}
         </div>
 
-        {/* Chart */}
-        <div className="bg-card-sbh rounded-2xl p-4 border border-sbh">
+        {/* Weekly measurements */}
+        <div className="glass rounded-2xl p-4">
+          <button className="w-full flex items-center justify-between"
+            onClick={() => setShowMeasureForm(s => !s)}>
+            <h2 className="text-xs font-semibold text-2 uppercase tracking-widest flex items-center gap-2">
+              <Ruler size={13} style={{color: CYAN}} /> Weekly Measurements
+            </h2>
+            <div className="flex items-center gap-2">
+              {latestMeas && <span className="text-xs text-3">{latestMeas.date.slice(5)}</span>}
+              {measureSaved && <Check size={13} style={{color: LIME}} />}
+              {showMeasureForm ? <ChevronUp size={15} className="text-2" /> : <ChevronDown size={15} className="text-2" />}
+            </div>
+          </button>
+
+          {latestMeas && !showMeasureForm && (
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {[
+                { label:'Chest', val: latestMeas.chestCm, color: VIOLET },
+                { label:'Waist', val: latestMeas.waistCm, color: ROSE },
+                { label:'Neck',  val: latestMeas.neckCm,  color: CYAN },
+              ].map(item => (
+                <div key={item.label} className="glass rounded-xl p-2.5 text-center">
+                  <p className="text-xs text-2">{item.label}</p>
+                  <p className="font-bold text-sm" style={{color: item.color}}>{item.val}cm</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showMeasureForm && (
+            <div className="space-y-3 mt-3">
+              <div className="grid grid-cols-3 gap-2">
+                {([['Chest*','chest'],['Waist*','waist'],['Neck*','neck']] as const).map(([l,k]) => (
+                  <div key={k}>
+                    <label className="text-xs text-2 mb-1 block">{l} (cm)</label>
+                    <input type="number" step="0.1" value={mForm[k]}
+                      onChange={e => setMForm(f => ({...f, [k]: e.target.value}))}
+                      placeholder="cm" className="input-glass" />
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {([['Hips','hips'],['Bicep','bicep']] as const).map(([l,k]) => (
+                  <div key={k}>
+                    <label className="text-xs text-3 mb-1 block">{l} (cm) optional</label>
+                    <input type="number" step="0.1" value={mForm[k]}
+                      onChange={e => setMForm(f => ({...f, [k]: e.target.value}))}
+                      placeholder="cm" className="input-glass" />
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setShowMeasureForm(false)} className="flex-1 py-2.5 rounded-xl text-sm text-2 glass">Cancel</button>
+                <button onClick={logMeasurements} disabled={savingMeasure}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
+                  style={{background:`linear-gradient(135deg,${CYAN},#0891b2)`}}>
+                  {savingMeasure ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Charts */}
+        <div className="glass rounded-2xl p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-semibold text-2 uppercase tracking-widest">Weight Trend</h2>
-            <div className="flex gap-1">
-              {([7,30,90] as const).map(r => (
-                <button key={r} onClick={() => setRange(r)}
-                  className="px-2.5 py-1 text-xs rounded-lg font-medium transition-colors"
+            <div className="flex gap-1.5">
+              {(['weight','measurements'] as const).map(tab => (
+                <button key={tab} onClick={() => setChartTab(tab)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
                   style={{
-                    background: range === r ? '#10b981' : '#1a2744',
-                    color: range === r ? '#fff' : '#94a3b8'
+                    background: chartTab === tab ? VIOLET : 'rgba(124,58,237,0.1)',
+                    color: chartTab === tab ? '#fff' : '#94a3b8',
                   }}>
-                  {r}d
+                  {tab === 'weight' ? '⚖️ Weight' : '📏 Body'}
                 </button>
               ))}
             </div>
+            {chartTab === 'weight' && (
+              <div className="flex gap-1">
+                {([7,30,90] as const).map(r => (
+                  <button key={r} onClick={() => setRange(r)}
+                    className="px-2.5 py-1 text-xs rounded-lg font-medium transition-all"
+                    style={{background: range===r ? VIOLET : 'rgba(124,58,237,0.1)', color: range===r ? '#fff' : '#94a3b8'}}>
+                    {r}d
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          {chartData.length > 1 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2744" />
-                <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                <YAxis domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                <Tooltip contentStyle={{ background: '#0D1526', border: '1px solid #1a2744', borderRadius: 12 }} labelStyle={{color:'#f1f5f9'}} />
-                <ReferenceLine y={targetWeight} stroke="#10b981" strokeDasharray="5 5" label={{ value: 'Target', fill: '#10b981', fontSize: 10 }} />
-                <Line type="monotone" dataKey="weight" stroke="#6366f1" dot={false} strokeWidth={2} name="Weight" />
-                <Line type="monotone" dataKey="avg" stroke="#f59e0b" dot={false} strokeWidth={2} strokeDasharray="4 4" name="7d Avg" />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-2 text-sm text-center py-8">Log at least 2 weights to see your trend</p>
+
+          {chartTab === 'weight' && (
+            weightChartData.length > 1 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={weightChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(124,58,237,0.12)" />
+                  <XAxis dataKey="date" tick={{fill:'#94a3b8',fontSize:11}} />
+                  <YAxis domain={['auto','auto']} tick={{fill:'#94a3b8',fontSize:11}} />
+                  <Tooltip contentStyle={{background:'rgba(10,8,25,0.95)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:12}} labelStyle={{color:'#f1f5f9'}} />
+                  <ReferenceLine y={targetWeight} stroke={CYAN} strokeDasharray="5 5" label={{value:'Target',fill:CYAN,fontSize:10}} />
+                  <Line type="monotone" dataKey="weight" stroke={VIOLET} dot={false} strokeWidth={2.5} name="Weight (kg)" />
+                  <Line type="monotone" dataKey="avg" stroke={AMBER} dot={false} strokeWidth={2} strokeDasharray="4 4" name="7d Avg" />
+                  <Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : <p className="text-2 text-sm text-center py-10">Log at least 2 weights to see your trend</p>
+          )}
+
+          {chartTab === 'measurements' && (
+            measChartData.length > 1 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={measChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(124,58,237,0.12)" />
+                  <XAxis dataKey="date" tick={{fill:'#94a3b8',fontSize:11}} />
+                  <YAxis domain={['auto','auto']} tick={{fill:'#94a3b8',fontSize:11}} unit="cm" />
+                  <Tooltip contentStyle={{background:'rgba(10,8,25,0.95)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:12}} labelStyle={{color:'#f1f5f9'}} />
+                  <Line type="monotone" dataKey="chest" stroke={VIOLET} dot={{r:3}} strokeWidth={2} name="Chest" />
+                  <Line type="monotone" dataKey="waist" stroke={ROSE}   dot={{r:3}} strokeWidth={2} name="Waist" />
+                  <Line type="monotone" dataKey="neck"  stroke={CYAN}   dot={{r:3}} strokeWidth={2} name="Neck" />
+                  <Line type="monotone" dataKey="hips"  stroke={AMBER}  dot={{r:3}} strokeWidth={2} name="Hips" />
+                  <Line type="monotone" dataKey="bicep" stroke={LIME}   dot={{r:3}} strokeWidth={2} name="Bicep" />
+                  <Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : <p className="text-2 text-sm text-center py-10">Log measurements weekly to track body composition</p>
           )}
         </div>
 
-        {/* Badges */}
-        <div className="bg-card-sbh rounded-2xl p-4 border border-sbh">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-semibold text-2 uppercase tracking-widest">Achievements</h2>
-            <span className="text-xs text-amber-400">{earnedBadges.length}/{badges.length} earned</span>
+        {/* Measurement history table */}
+        {measurements.length > 0 && (
+          <div className="glass rounded-2xl p-4">
+            <h2 className="text-xs font-semibold text-2 uppercase tracking-widest mb-3">History</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-3 border-b" style={{borderColor:'rgba(124,58,237,0.15)'}}>
+                    <th className="text-left pb-2">Date</th>
+                    <th className="text-right pb-2" style={{color:VIOLET}}>Chest</th>
+                    <th className="text-right pb-2" style={{color:ROSE}}>Waist</th>
+                    <th className="text-right pb-2" style={{color:CYAN}}>Neck</th>
+                    <th className="text-right pb-2 text-3">Hips</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {measurements.slice().reverse().slice(0,8).map(m => (
+                    <tr key={m.date} className="border-b" style={{borderColor:'rgba(124,58,237,0.08)'}}>
+                      <td className="py-2 text-2">{m.date.slice(5)}</td>
+                      <td className="text-right py-2 font-semibold" style={{color:VIOLET}}>{m.chestCm}</td>
+                      <td className="text-right py-2 font-semibold" style={{color:ROSE}}>{m.waistCm}</td>
+                      <td className="text-right py-2 font-semibold" style={{color:CYAN}}>{m.neckCm}</td>
+                      <td className="text-right py-2 text-3">{m.hipsCm ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="grid grid-cols-4 gap-2">
-            {badges.map(b => (
-              <div key={b.id} className="flex flex-col items-center gap-1 p-2 rounded-xl border transition-opacity"
-                style={{
-                  background: b.earned ? '#111d35' : '#0D1526',
-                  borderColor: b.earned ? b.color + '40' : '#1a2744',
-                  opacity: b.earned ? 1 : 0.35,
-                }}>
-                <span className="text-2xl">{b.icon}</span>
-                <p className="text-xs font-semibold text-center leading-tight" style={{color: b.earned ? b.color : '#475569', fontSize:10}}>{b.name}</p>
-              </div>
-            ))}
-          </div>
+        )}
+
+        {/* Badges (collapsible) */}
+        <div className="glass rounded-2xl p-4">
+          <button className="w-full flex items-center justify-between" onClick={() => setShowBadges(s => !s)}>
+            <div className="flex items-center gap-2">
+              <Trophy size={14} style={{color:AMBER}} />
+              <h2 className="text-xs font-semibold text-2 uppercase tracking-widest">Achievements</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{color:AMBER}}>{earnedBadges.length}/{badges.length}</span>
+              {showBadges ? <ChevronUp size={14} className="text-2" /> : <ChevronDown size={14} className="text-2" />}
+            </div>
+          </button>
+          {showBadges && (
+            <div className="grid grid-cols-4 gap-2 mt-3">
+              {badges.map(b => (
+                <div key={b.id} className="flex flex-col items-center gap-1 p-2 rounded-xl border"
+                  style={{
+                    background: b.earned ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.02)',
+                    borderColor: b.earned ? b.color + '40' : 'rgba(124,58,237,0.1)',
+                    opacity: b.earned ? 1 : 0.35,
+                  }}>
+                  <span className="text-2xl">{b.icon}</span>
+                  <p className="text-center leading-tight font-semibold" style={{color: b.earned ? b.color : '#475569', fontSize:9}}>{b.name}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Level + XP summary */}
-        <div className="bg-card-2 rounded-2xl p-4 border border-sbh text-center">
+        {/* Level */}
+        <div className="glass rounded-2xl p-4 text-center">
           <p className="text-xs text-2 mb-1">Current Level</p>
           <p className="text-3xl font-bold gradient-text">Level {level}</p>
           <p className="text-sm text-1 font-semibold">{levelTitle}</p>

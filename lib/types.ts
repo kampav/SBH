@@ -1,6 +1,5 @@
 import { Timestamp, FieldValue } from 'firebase/firestore'
 
-// Timestamp fields can be a Timestamp (when read) or FieldValue (when writing serverTimestamp())
 export type FirestoreTimestamp = Timestamp | FieldValue
 
 // ─── User Profile ────────────────────────────────────────────────────────────
@@ -31,11 +30,23 @@ export interface UserProfile {
 
 // ─── Daily Metrics ────────────────────────────────────────────────────────────
 export interface DailyMetric {
-  date: string // YYYY-MM-DD
+  date: string
   weightKg: number
   bmi: number
   bodyFatPct?: number
   leanMassKg?: number
+  notes?: string
+  loggedAt: FirestoreTimestamp
+}
+
+// ─── Body Measurements (weekly) ───────────────────────────────────────────────
+export interface BodyMeasurement {
+  date: string            // YYYY-MM-DD (week anchor)
+  chestCm: number
+  waistCm: number
+  neckCm: number
+  hipsCm?: number
+  bicepCm?: number
   notes?: string
   loggedAt: FirestoreTimestamp
 }
@@ -63,6 +74,21 @@ export interface DailyNutrition {
   totalFatG: number
   waterGlasses: number
   calorieTarget: number
+}
+
+// ─── Favourite Foods ──────────────────────────────────────────────────────────
+export interface FavouriteFood {
+  id: string
+  name: string
+  brand?: string
+  emoji?: string
+  calories: number        // per serving
+  proteinG: number
+  carbsG: number
+  fatG: number
+  servingSize: string     // e.g. "100g" or "1 cup"
+  barcode?: string
+  createdAt: FirestoreTimestamp
 }
 
 // ─── Workouts ─────────────────────────────────────────────────────────────────
@@ -98,7 +124,7 @@ export type ProgrammeSplit = 'full_body' | 'ppl' | 'upper_lower' | 'home' | 'fat
 export interface Exercise {
   name: string
   sets: number
-  reps: string // e.g. "8-12"
+  reps: string
   restSeconds: number
   videoUrl?: string
   muscleGroup: string
@@ -108,7 +134,7 @@ export interface Exercise {
 }
 
 export interface WorkoutDay {
-  name: string // e.g. "Push Day" or "Full Body A"
+  name: string
   exercises: Exercise[]
   estimatedMinutes: number
 }
@@ -119,7 +145,7 @@ export interface Programme {
   split: ProgrammeSplit
   daysPerWeek: number
   phase: 1 | 2 | 3
-  weeks: WorkoutDay[][] // [week][day]
+  weeks: WorkoutDay[][]
   description: string
   bwsVideoRef?: string
 }

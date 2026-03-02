@@ -2,21 +2,42 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
-import { getProfile, getNutrition, saveNutrition } from '@/lib/firestore'
-import { DailyNutrition, Meal, MealType } from '@/lib/types'
-import { Droplets, Plus, X } from 'lucide-react'
+import { getProfile, getNutrition, saveNutrition, getFavouriteFoods, saveFavouriteFood, deleteFavouriteFood } from '@/lib/firestore'
+import { DailyNutrition, Meal, MealType, FavouriteFood } from '@/lib/types'
+import { serverTimestamp } from 'firebase/firestore'
+import { Droplets, Plus, X, Camera, ScanLine, Heart, HeartOff, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import nextDynamic from 'next/dynamic'
+
+const BarcodeScanner = nextDynamic(() => import('@/components/nutrition/BarcodeScanner'), { ssr: false })
 
 const today = new Date().toISOString().slice(0, 10)
-
 const EMPTY: DailyNutrition = {
   date: today, meals: [],
   totalCalories: 0, totalProteinG: 0, totalCarbsG: 0, totalFatG: 0,
   waterGlasses: 0, calorieTarget: 2050,
 }
+const VIOLET = '#7c3aed'
+const CYAN   = '#06b6d4'
+const ROSE   = '#f43f5e'
+
+// Quick-add preset foods (common Indian + international)
+const PRESETS: Array<{emoji: string; name: string; calories: number; proteinG: number; carbsG: number; fatG: number; servingSize: string}> = [
+  { emoji:'🥚', name:'Eggs (2 large)',      calories:140, proteinG:12, carbsG:1,  fatG:10, servingSize:'2 eggs' },
+  { emoji:'🥣', name:'Oats (50g dry)',      calories:185, proteinG:7,  carbsG:32, fatG:4,  servingSize:'50g' },
+  { emoji:'🍗', name:'Chicken Breast 150g', calories:248, proteinG:46, carbsG:0,  fatG:5,  servingSize:'150g' },
+  { emoji:'🫙', name:'Greek Yogurt 200g',   calories:130, proteinG:20, carbsG:8,  fatG:2,  servingSize:'200g' },
+  { emoji:'🫘', name:'Dal (1 cup cooked)',  calories:230, proteinG:18, carbsG:40, fatG:1,  servingSize:'240g' },
+  { emoji:'🧀', name:'Paneer 100g',         calories:265, proteinG:18, carbsG:2,  fatG:20, servingSize:'100g' },
+  { emoji:'🌾', name:'Rice (1 cup cooked)', calories:206, proteinG:4,  carbsG:45, fatG:0,  servingSize:'186g' },
+  { emoji:'🥤', name:'Protein Shake',       calories:120, proteinG:25, carbsG:5,  fatG:2,  servingSize:'1 scoop' },
+]
+
+type Mode = 'idle' | 'form' | 'barcode' | 'photo'
+type FormFill = { name: string; calories: string; proteinG: string; carbsG: string; fatG: string; brand?: string; servingSize?: string }
 
 export default function NutritionPage() {
   const router = useRouter()
@@ -24,8 +45,17 @@ export default function NutritionPage() {
   const [authReady, setAuthReady] = useState(false)
   const [data, setData] = useState<DailyNutrition>(EMPTY)
   const [targets, setTargets] = useState({ cal: 2050, protein: 166, carbs: 180, fat: 65 })
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', calories: '', proteinG: '', carbsG: '', fatG: '', mealType: 'lunch' as MealType })
+  const [mode, setMode] = useState<Mode>('idle')
+  const [form, setForm] = useState<FormFill>({ name: '', calories: '', proteinG: '', carbsG: '', fatG: '' })
+  const [mealType, setMealType] = useState<MealType>('lunch')
+  const [saving, setSaving] = useState(false)
+  const [analysing, setAnalysing] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const [favourites, setFavourites] = useState<FavouriteFood[]>([])
+  const [showFavs, setShowFavs] = useState(false)
+  const [showPresets, setShowPresets] = useState(false)
+  const [savingFav, setSavingFav] = useState(false)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -34,15 +64,76 @@ export default function NutritionPage() {
       setUid(user.uid)
       const p = await getProfile(user.uid)
       if (p) setTargets({ cal: p.calorieTarget, protein: p.proteinTargetG, carbs: p.carbTargetG, fat: p.fatTargetG })
-      const n = await getNutrition(user.uid, today)
+      const [n, favs] = await Promise.all([
+        getNutrition(user.uid, today),
+        getFavouriteFoods(user.uid),
+      ])
       if (n) setData(n)
       else setData({ ...EMPTY, calorieTarget: p?.calorieTarget ?? 2050 })
+      setFavourites(favs)
     })
     return unsub
   }, [router])
 
+  function fillForm(f: Partial<FormFill>) {
+    setForm(prev => ({...prev, ...f}))
+    setMode('form')
+  }
+
+  // ── AI photo analysis ─────────────────────────────────────────────────────
+  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAnalysing(true)
+    setAiError('')
+    setMode('form')
+    try {
+      const reader = new FileReader()
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve((reader.result as string).split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      const res = await fetch('/api/analyze-food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mimeType: file.type }),
+      })
+      if (!res.ok) throw new Error('AI analysis failed')
+      const result = await res.json()
+      if (result.error) throw new Error(result.error)
+      fillForm({
+        name: result.name ?? '',
+        calories: String(result.calories ?? ''),
+        proteinG: String(result.proteinG ?? ''),
+        carbsG: String(result.carbsG ?? ''),
+        fatG: String(result.fatG ?? ''),
+        servingSize: result.servingSize ?? '',
+      })
+    } catch (err: unknown) {
+      setAiError(err instanceof Error ? err.message : 'Analysis failed. Please fill in manually.')
+    } finally {
+      setAnalysing(false)
+      if (photoInputRef.current) photoInputRef.current.value = ''
+    }
+  }
+
+  // ── Barcode result ────────────────────────────────────────────────────────
+  function onBarcodeResult(r: {name:string;brand?:string;calories:number;proteinG:number;carbsG:number;fatG:number;servingSize:string}) {
+    fillForm({
+      name: r.brand ? `${r.name} (${r.brand})` : r.name,
+      calories: String(r.calories),
+      proteinG: String(r.proteinG),
+      carbsG: String(r.carbsG),
+      fatG: String(r.fatG),
+      servingSize: r.servingSize,
+    })
+  }
+
+  // ── Add meal ──────────────────────────────────────────────────────────────
   async function addMeal() {
     if (!uid || !form.name || !form.calories) return
+    setSaving(true)
     const meal: Meal = {
       id: Date.now().toString(),
       name: form.name,
@@ -51,7 +142,7 @@ export default function NutritionPage() {
       carbsG: Number(form.carbsG) || 0,
       fatG: Number(form.fatG) || 0,
       time: new Date().toTimeString().slice(0, 5),
-      mealType: form.mealType,
+      mealType,
     }
     const updated: DailyNutrition = {
       ...data,
@@ -63,8 +154,76 @@ export default function NutritionPage() {
     }
     await saveNutrition(uid, updated)
     setData(updated)
-    setShowForm(false)
-    setForm({ name: '', calories: '', proteinG: '', carbsG: '', fatG: '', mealType: 'lunch' })
+    setMode('idle')
+    setForm({ name: '', calories: '', proteinG: '', carbsG: '', fatG: '' })
+    setSaving(false)
+  }
+
+  // ── Save to favourites ────────────────────────────────────────────────────
+  async function saveToFavourites() {
+    if (!uid || !form.name) return
+    setSavingFav(true)
+    const fav: FavouriteFood = {
+      id: Date.now().toString(),
+      name: form.name,
+      calories: Number(form.calories) || 0,
+      proteinG: Number(form.proteinG) || 0,
+      carbsG: Number(form.carbsG) || 0,
+      fatG: Number(form.fatG) || 0,
+      servingSize: form.servingSize || '1 serving',
+      createdAt: serverTimestamp(),
+    }
+    await saveFavouriteFood(uid, fav)
+    setFavourites(prev => [...prev, fav].sort((a,b) => a.name.localeCompare(b.name)))
+    setSavingFav(false)
+  }
+
+  // ── Delete favourite ──────────────────────────────────────────────────────
+  async function deleteFav(id: string) {
+    if (!uid) return
+    await deleteFavouriteFood(uid, id)
+    setFavourites(prev => prev.filter(f => f.id !== id))
+  }
+
+  // ── Quick-add from favourite / preset ────────────────────────────────────
+  async function quickAdd(item: {name:string;calories:number;proteinG:number;carbsG:number;fatG:number}) {
+    if (!uid) return
+    const meal: Meal = {
+      id: Date.now().toString(),
+      name: item.name,
+      calories: item.calories,
+      proteinG: item.proteinG,
+      carbsG: item.carbsG,
+      fatG: item.fatG,
+      time: new Date().toTimeString().slice(0, 5),
+      mealType,
+    }
+    const updated: DailyNutrition = {
+      ...data, meals: [...data.meals, meal],
+      totalCalories: data.totalCalories + meal.calories,
+      totalProteinG: data.totalProteinG + meal.proteinG,
+      totalCarbsG: data.totalCarbsG + meal.carbsG,
+      totalFatG: data.totalFatG + meal.fatG,
+    }
+    await saveNutrition(uid, updated)
+    setData(updated)
+  }
+
+  // ── Remove meal ───────────────────────────────────────────────────────────
+  async function removeMeal(id: string) {
+    if (!uid) return
+    const meal = data.meals.find(m => m.id === id)
+    if (!meal) return
+    const updated: DailyNutrition = {
+      ...data,
+      meals: data.meals.filter(m => m.id !== id),
+      totalCalories: data.totalCalories - meal.calories,
+      totalProteinG: data.totalProteinG - meal.proteinG,
+      totalCarbsG: data.totalCarbsG - meal.carbsG,
+      totalFatG: data.totalFatG - meal.fatG,
+    }
+    await saveNutrition(uid, updated)
+    setData(updated)
   }
 
   async function addWater() {
@@ -77,132 +236,233 @@ export default function NutritionPage() {
   const calPct = Math.min((data.totalCalories / targets.cal) * 100, 100)
 
   if (!authReady) return (
-    <main className="min-h-screen bg-app flex items-center justify-center">
-      <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    <main className="min-h-screen mesh-bg flex items-center justify-center">
+      <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
     </main>
   )
 
   return (
-    <main className="min-h-screen bg-app page-pad">
+    <main className="min-h-screen mesh-bg page-pad">
+      {/* Barcode scanner overlay */}
+      {mode === 'barcode' && (
+        <BarcodeScanner onResult={onBarcodeResult} onClose={() => setMode('idle')} />
+      )}
+
+      {/* Hidden photo input */}
+      <input ref={photoInputRef} type="file" accept="image/*" capture="environment"
+        className="hidden" onChange={handlePhoto} />
+
       <header className="px-4 pt-12 pb-4">
-        <p className="text-xs text-2 mb-0.5">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        <p className="text-xs text-2 mb-0.5">
+          {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </p>
         <h1 className="text-xl font-bold text-1">Nutrition</h1>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 space-y-4">
 
         {/* Calorie summary */}
-        <div className="bg-card-sbh rounded-2xl p-4 border border-sbh">
+        <div className="glass rounded-2xl p-4">
           <div className="flex items-end justify-between mb-3">
             <div>
-              <p className="text-4xl font-bold text-emerald-400">{data.totalCalories}</p>
+              <p className="text-4xl font-bold" style={{color: VIOLET}}>{data.totalCalories}</p>
               <p className="text-xs text-2 mt-0.5">of {targets.cal} kcal eaten</p>
             </div>
             <div className="text-right">
-              <p className={`text-2xl font-bold ${remaining < 0 ? 'text-rose-400' : 'text-1'}`}>{Math.abs(remaining)}</p>
+              <p className="text-2xl font-bold" style={{color: remaining < 0 ? ROSE : '#f1f5f9'}}>
+                {Math.abs(remaining)}
+              </p>
               <p className="text-xs text-2">{remaining < 0 ? 'over target' : 'remaining'}</p>
             </div>
           </div>
-          {/* Calorie bar */}
-          <div className="w-full rounded-full h-2 mb-4" style={{background:'#1a2744'}}>
+          <div className="w-full rounded-full h-2 mb-4" style={{background:'rgba(124,58,237,0.12)'}}>
             <div className="h-2 rounded-full transition-all" style={{
               width:`${calPct}%`,
-              background: calPct > 100 ? '#ef4444' : 'linear-gradient(90deg,#10b981,#059669)'
+              background: calPct > 100 ? ROSE : `linear-gradient(90deg,${VIOLET},${CYAN})`,
             }} />
           </div>
-          {/* Macros */}
-          <div className="grid grid-cols-3 gap-3">
-            <MacroRing label="Protein" current={data.totalProteinG} target={targets.protein} color="#6366f1" />
-            <MacroRing label="Carbs"   current={data.totalCarbsG}   target={targets.carbs}   color="#f59e0b" />
-            <MacroRing label="Fat"     current={data.totalFatG}      target={targets.fat}     color="#f87171" />
+          {/* Macro rings */}
+          <div className="flex items-center justify-around">
+            <MacroRing label="Protein" current={data.totalProteinG} target={targets.protein} color={VIOLET} />
+            <MacroRing label="Carbs"   current={data.totalCarbsG}   target={targets.carbs}   color={CYAN} />
+            <MacroRing label="Fat"     current={data.totalFatG}      target={targets.fat}     color={ROSE} />
           </div>
         </div>
 
-        {/* Water tracker */}
-        <div className="bg-card-sbh rounded-2xl p-4 border border-sbh flex items-center justify-between">
+        {/* Water */}
+        <div className="glass rounded-2xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Droplets size={18} className="text-blue-400" />
-            <span className="font-semibold text-sm text-1">Water</span>
+            <span className="font-semibold text-sm text-1">Water ({data.waterGlasses}/8 glasses)</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="flex gap-1">
-              {Array.from({ length: 8 }).map((_, i) => (
+              {Array.from({length:8}).map((_,i) => (
                 <div key={i} className="w-3 h-3 rounded-full transition-colors"
-                  style={{background: i < data.waterGlasses ? '#60a5fa' : '#1a2744'}} />
+                  style={{background: i < data.waterGlasses ? '#60a5fa' : 'rgba(96,165,250,0.15)'}} />
               ))}
             </div>
-            <span className="text-xs text-2 w-10 text-right">{data.waterGlasses}/8</span>
             <button onClick={addWater}
-              className="w-8 h-8 bg-blue-500 hover:bg-blue-600 rounded-full text-white text-sm font-bold transition-colors flex items-center justify-center">
-              +
-            </button>
+              className="w-8 h-8 rounded-full text-white font-bold flex items-center justify-center"
+              style={{background:'#3b82f6'}}>+</button>
           </div>
         </div>
 
-        {/* Add meal button */}
-        <button onClick={() => setShowForm(true)}
-          className="w-full py-3 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-colors glow-emerald"
-          style={{background:'linear-gradient(135deg,#059669,#047857)'}}>
-          <Plus size={18} />
-          Add Meal / Snack
-        </button>
+        {/* Scan / Add buttons */}
+        <div className="grid grid-cols-3 gap-2.5">
+          <button onClick={() => photoInputRef.current?.click()}
+            disabled={analysing}
+            className="py-3 rounded-2xl font-semibold text-sm text-white flex flex-col items-center gap-1.5 transition-all disabled:opacity-50"
+            style={{background:`linear-gradient(135deg,${VIOLET},#6d28d9)`}}>
+            {analysing ? <Loader2 size={20} className="animate-spin" /> : <Camera size={20} />}
+            <span className="text-xs">{analysing ? 'Analysing…' : 'AI Photo'}</span>
+          </button>
+          <button onClick={() => setMode('barcode')}
+            className="py-3 rounded-2xl font-semibold text-sm text-white flex flex-col items-center gap-1.5 transition-all"
+            style={{background:`linear-gradient(135deg,${CYAN},#0891b2)`}}>
+            <ScanLine size={20} />
+            <span className="text-xs">Barcode</span>
+          </button>
+          <button onClick={() => setMode('form')}
+            className="py-3 rounded-2xl font-semibold text-sm text-white flex flex-col items-center gap-1.5 transition-all glass-strong hover:bg-violet-500/20">
+            <Plus size={20} />
+            <span className="text-xs">Manual</span>
+          </button>
+        </div>
+
+        {aiError && (
+          <div className="glass rounded-xl p-3 text-sm" style={{borderColor: ROSE + '40', color: ROSE}}>
+            ⚠ {aiError}
+          </div>
+        )}
 
         {/* Add meal form */}
-        {showForm && (
-          <div className="bg-card-sbh rounded-2xl p-4 border border-sbh space-y-3">
+        {mode === 'form' && (
+          <div className="glass-strong rounded-2xl p-4 space-y-3 slide-up">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-1">Add meal</h3>
-              <button onClick={() => setShowForm(false)} className="text-slate-500 hover:text-slate-300">
+              <h3 className="font-semibold text-1">Add to log</h3>
+              <button onClick={() => setMode('idle')} className="text-slate-500 hover:text-slate-300">
                 <X size={18} />
               </button>
             </div>
             <input type="text" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))}
-              placeholder="Meal name (e.g. Chicken & rice)"
-              className="w-full px-3 py-2.5 rounded-xl border text-sm text-1 outline-none transition-colors"
-              style={{background:'#111d35',borderColor:'#1a2744'}}
-              onFocus={e => e.target.style.borderColor='#10b981'}
-              onBlur={e => e.target.style.borderColor='#1a2744'}
-            />
+              placeholder="Food name" className="input-glass" />
             <div className="grid grid-cols-2 gap-2">
-              {([['Calories (kcal)','calories'],['Protein (g)','proteinG'],['Carbs (g)','carbsG'],['Fat (g)','fatG']] as const).map(([label, field]) => (
-                <input key={field} type="number" value={form[field]} onChange={e => setForm(f => ({...f, [field]: e.target.value}))}
-                  placeholder={label}
-                  className="px-3 py-2.5 rounded-xl border text-sm text-1 outline-none"
-                  style={{background:'#111d35',borderColor:'#1a2744'}}
-                />
+              {([
+                ['Calories (kcal)', 'calories'],
+                ['Protein (g)',     'proteinG'],
+                ['Carbs (g)',       'carbsG'],
+                ['Fat (g)',         'fatG'],
+              ] as const).map(([label, field]) => (
+                <input key={field} type="number" value={form[field] ?? ''}
+                  onChange={e => setForm(f => ({...f, [field]: e.target.value}))}
+                  placeholder={label} className="input-glass" />
               ))}
             </div>
-            <select value={form.mealType} onChange={e => setForm(f => ({...f, mealType: e.target.value as MealType}))}
-              className="w-full px-3 py-2.5 rounded-xl border text-sm text-1 outline-none"
-              style={{background:'#111d35',borderColor:'#1a2744'}}>
+            <select value={mealType} onChange={e => setMealType(e.target.value as MealType)} className="input-glass">
               {(['breakfast','lunch','dinner','snack','pre_workout','post_workout'] as const).map(t => (
-                <option key={t} value={t}>{t.replace('_', ' ')}</option>
+                <option key={t} value={t} style={{background:'#0a0819'}}>{t.replace('_',' ')}</option>
               ))}
             </select>
             <div className="flex gap-2">
-              <button onClick={() => setShowForm(false)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium text-2 transition-colors"
-                style={{background:'#1a2744'}}>Cancel</button>
-              <button onClick={addMeal}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
-                style={{background:'#10b981'}}>Add Meal</button>
+              <button onClick={saveToFavourites} disabled={savingFav || !form.name}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs glass disabled:opacity-40"
+                style={{color: ROSE}}>
+                <Heart size={13} /> {savingFav ? 'Saving…' : 'Save to Favs'}
+              </button>
+              <div className="flex-1 flex gap-2">
+                <button onClick={() => setMode('idle')} className="flex-1 py-2.5 rounded-xl text-sm text-2 glass">Cancel</button>
+                <button onClick={addMeal} disabled={saving || !form.name || !form.calories}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
+                  style={{background:`linear-gradient(135deg,${VIOLET},#6d28d9)`}}>
+                  {saving ? '…' : 'Add'}
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Meal list */}
+        {/* Favourites */}
+        {favourites.length > 0 && (
+          <div className="glass rounded-2xl p-4">
+            <button className="w-full flex items-center justify-between mb-0"
+              onClick={() => setShowFavs(s => !s)}>
+              <h2 className="text-xs font-semibold text-2 uppercase tracking-widest flex items-center gap-2">
+                <Heart size={12} style={{color:ROSE}} /> Favourites ({favourites.length})
+              </h2>
+              {showFavs ? <ChevronUp size={14} className="text-2" /> : <ChevronDown size={14} className="text-2" />}
+            </button>
+            {showFavs && (
+              <div className="space-y-2 mt-3">
+                {favourites.map(f => (
+                  <div key={f.id} className="flex items-center gap-3 glass rounded-xl p-2.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-1 truncate">{f.name}</p>
+                      <p className="text-xs text-2">{f.servingSize} · {f.calories}kcal · P:{f.proteinG}g</p>
+                    </div>
+                    <button onClick={() => quickAdd(f)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white flex-shrink-0"
+                      style={{background:`linear-gradient(135deg,${VIOLET},#6d28d9)`}}>+Add</button>
+                    <button onClick={() => deleteFav(f.id)}
+                      className="p-1.5 rounded-lg glass text-slate-500 hover:text-rose-400 flex-shrink-0">
+                      <HeartOff size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Quick-add presets */}
+        <div className="glass rounded-2xl p-4">
+          <button className="w-full flex items-center justify-between"
+            onClick={() => setShowPresets(s => !s)}>
+            <h2 className="text-xs font-semibold text-2 uppercase tracking-widest">
+              ⚡ Quick Add
+            </h2>
+            {showPresets ? <ChevronUp size={14} className="text-2" /> : <ChevronDown size={14} className="text-2" />}
+          </button>
+          {showPresets && (
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              {PRESETS.map(p => (
+                <button key={p.name} onClick={() => quickAdd(p)}
+                  className="glass rounded-xl p-3 text-left hover:bg-violet-500/10 transition-all">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">{p.emoji}</span>
+                    <span className="text-xs font-semibold text-1 leading-tight">{p.name}</span>
+                  </div>
+                  <div className="flex gap-2 text-xs text-2">
+                    <span style={{color: VIOLET}}>{p.calories}kcal</span>
+                    <span>P:{p.proteinG}g</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Today's meals */}
         {data.meals.length > 0 && (
           <div className="space-y-2">
-            <h2 className="text-xs font-semibold text-2 uppercase tracking-widest">Today&#39;s meals</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-semibold text-2 uppercase tracking-widest">Today&apos;s Log</h2>
+              <span className="text-xs text-2">{data.meals.length} items</span>
+            </div>
             {data.meals.map(meal => (
-              <div key={meal.id} className="bg-card-sbh rounded-2xl p-3 border border-sbh flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-sm text-1">{meal.name}</p>
-                  <p className="text-xs text-2 mt-0.5">{meal.time} &middot; {meal.mealType.replace('_', ' ')}</p>
+              <div key={meal.id} className="glass rounded-2xl p-3 flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-1 truncate">{meal.name}</p>
+                  <p className="text-xs text-2 mt-0.5">
+                    {meal.time} · {meal.mealType.replace('_',' ')}
+                  </p>
+                  <p className="text-xs text-3 mt-0.5">P:{meal.proteinG}g C:{meal.carbsG}g F:{meal.fatG}g</p>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-sm text-emerald-400">{meal.calories} kcal</p>
-                  <p className="text-xs text-3">P:{meal.proteinG}g C:{meal.carbsG}g F:{meal.fatG}g</p>
+                <div className="flex items-center gap-2 ml-3">
+                  <p className="font-bold text-sm" style={{color: VIOLET}}>{meal.calories} kcal</p>
+                  <button onClick={() => removeMeal(meal.id)} className="p-1 rounded-lg text-slate-500 hover:text-rose-400 transition-colors">
+                    <X size={14} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -213,15 +473,16 @@ export default function NutritionPage() {
   )
 }
 
-function MacroRing({ label, current, target, color }: { label: string; current: number; target: number; color: string }) {
-  const pct = Math.min((current / target) * 100, 100)
-  const r = 22, circ = 2 * Math.PI * r
+function MacroRing({ label, current, target, color }: { label:string; current:number; target:number; color:string }) {
+  const pct  = Math.min((current / target) * 100, 100)
+  const r    = 22
+  const circ = 2 * Math.PI * r
   const offset = circ - (pct / 100) * circ
   return (
     <div className="flex flex-col items-center gap-1">
       <div className="relative flex items-center justify-center" style={{width:56,height:56}}>
         <svg width={56} height={56} style={{transform:'rotate(-90deg)'}}>
-          <circle cx={28} cy={28} r={r} fill="none" stroke="#1a2744" strokeWidth={6} />
+          <circle cx={28} cy={28} r={r} fill="none" stroke="rgba(124,58,237,0.12)" strokeWidth={6} />
           <circle cx={28} cy={28} r={r} fill="none" stroke={color} strokeWidth={6}
             strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
             style={{transition:'stroke-dashoffset .7s ease'}} />
