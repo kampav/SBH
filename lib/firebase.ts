@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { initializeAuth, getAuth, browserLocalPersistence, indexedDBLocalPersistence } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
@@ -12,13 +12,25 @@ const firebaseConfig = {
 }
 
 // Only initialise in the browser — never during Next.js SSR/build phase.
-// All pages using Firebase have 'use client' + force-dynamic so this is safe.
 const isBrowser = typeof window !== 'undefined'
 const app = isBrowser
   ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
   : null
 
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-export const auth = isBrowser ? getAuth(app!) : null as never
+// Use initializeAuth with IndexedDB persistence to avoid sessionStorage errors
+// in Capacitor WebView (where sessionStorage-based redirect flows are blocked).
+// Falls back to getAuth() if auth was already initialized (e.g. hot reload).
+function createAuth() {
+  if (!app) return null as never
+  try {
+    return initializeAuth(app, {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+    })
+  } catch {
+    return getAuth(app)
+  }
+}
+
+export const auth = isBrowser ? createAuth() : null as never
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export const db = isBrowser ? getFirestore(app!) : null as never
