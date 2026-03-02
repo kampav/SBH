@@ -29,7 +29,16 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password)
       router.push('/dashboard')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Sign in failed')
+      const code = (err as { code?: string }).code
+      if (code === 'auth/invalid-credential' || code === 'auth/invalid-credentials' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+        setError('Incorrect email or password. Please try again or create an account.')
+      } else if (code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please wait a few minutes and try again.')
+      } else if (code === 'auth/network-request-failed') {
+        setError('Network error. Check your internet connection and try again.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Sign in failed')
+      }
     } finally {
       setLoading(false)
     }

@@ -25,7 +25,16 @@ export default function RegisterPage() {
       await updateProfile(cred.user, { displayName: name })
       router.push('/onboarding')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Registration failed')
+      const code = (err as { code?: string }).code
+      if (code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists. Try signing in instead.')
+      } else if (code === 'auth/weak-password') {
+        setError('Password must be at least 6 characters.')
+      } else if (code === 'auth/network-request-failed') {
+        setError('Network error. Check your internet connection and try again.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Registration failed')
+      }
     } finally {
       setLoading(false)
     }
