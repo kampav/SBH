@@ -16,6 +16,23 @@
     --text-1: #f1f5f9;
     --text-2: #94a3b8;
     --text-3: #475569;
+    /* glass tokens */
+    --glass-bg:      rgba(124,58,237,0.04);
+    --glass-border:  rgba(124,58,237,0.12);
+    --glass-s-bg:    rgba(124,58,237,0.08);
+    --glass-s-bdr:   rgba(124,58,237,0.18);
+    --glass-d-bg:    rgba(3,5,10,0.75);
+    --glass-d-bdr:   rgba(124,58,237,0.10);
+    --glass-c-bg:    rgba(6,182,212,0.05);
+    --glass-c-bdr:   rgba(6,182,212,0.15);
+    --mesh-color-a:  rgba(124,58,237,0.18);
+    --mesh-color-b:  rgba(6,182,212,0.14);
+    --mesh-color-c:  rgba(244,63,94,0.06);
+    --shimmer-1:     #0a0819;
+    --shimmer-2:     #150f2e;
+    --input-bg:      rgba(124,58,237,0.05);
+    --input-border:  rgba(124,58,237,0.18);
+    --nav-bg:        rgba(3,5,10,0.75);
 
     /* shadcn compat */
     --background: 250 50% 4%;
@@ -40,6 +57,34 @@
     --radius: 0.875rem;
   }
 }
+
+  /* ── Light theme overrides ──────────────────────── */
+  [data-theme="light"] {
+    --bg: #f0f1ff;
+    --bg-card: rgba(255,255,255,0.95);
+    --bg-card-2: rgba(240,241,255,0.85);
+    --border: rgba(124,58,237,0.18);
+    --border-bright: rgba(124,58,237,0.32);
+    --text-1: #1e1b4b;
+    --text-2: #5b54a0;
+    --text-3: #9893c8;
+    --glass-bg:      rgba(255,255,255,0.72);
+    --glass-border:  rgba(124,58,237,0.18);
+    --glass-s-bg:    rgba(255,255,255,0.88);
+    --glass-s-bdr:   rgba(124,58,237,0.24);
+    --glass-d-bg:    rgba(230,228,255,0.80);
+    --glass-d-bdr:   rgba(124,58,237,0.16);
+    --glass-c-bg:    rgba(6,182,212,0.07);
+    --glass-c-bdr:   rgba(6,182,212,0.22);
+    --mesh-color-a:  rgba(124,58,237,0.12);
+    --mesh-color-b:  rgba(6,182,212,0.10);
+    --mesh-color-c:  rgba(124,58,237,0.06);
+    --shimmer-1:     #e8e6ff;
+    --shimmer-2:     #d4d0f8;
+    --input-bg:      rgba(255,255,255,0.8);
+    --input-border:  rgba(124,58,237,0.22);
+    --nav-bg:        rgba(240,241,255,0.92);
+  }
 
 * { box-sizing: border-box; }
 
@@ -100,37 +145,37 @@ html, body {
 
   /* ── Glassmorphism ───────────────────────────────── */
   .glass {
-    background: rgba(124,58,237,0.04);
+    background: var(--glass-bg);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(124,58,237,0.12);
+    border: 1px solid var(--glass-border);
   }
   .glass-strong {
-    background: rgba(124,58,237,0.08);
+    background: var(--glass-s-bg);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(124,58,237,0.18);
+    border: 1px solid var(--glass-s-bdr);
   }
   .glass-dark {
-    background: rgba(3,5,10,0.75);
+    background: var(--glass-d-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(124,58,237,0.10);
+    border: 1px solid var(--glass-d-bdr);
   }
   .glass-cyan {
-    background: rgba(6,182,212,0.05);
+    background: var(--glass-c-bg);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(6,182,212,0.15);
+    border: 1px solid var(--glass-c-bdr);
   }
 
   /* ── Mesh background ─────────────────────────────── */
   .mesh-bg {
     background:
-      radial-gradient(ellipse 70% 55% at 5% 5%,   rgba(124,58,237,0.18) 0%, transparent 65%),
-      radial-gradient(ellipse 60% 45% at 95% 85%,  rgba(6,182,212,0.14) 0%, transparent 65%),
-      radial-gradient(ellipse 45% 35% at 50% 50%,  rgba(244,63,94,0.06) 0%, transparent 60%),
-      #03050a;
+      radial-gradient(ellipse 70% 55% at 5% 5%,   var(--mesh-color-a) 0%, transparent 65%),
+      radial-gradient(ellipse 60% 45% at 95% 85%,  var(--mesh-color-b) 0%, transparent 65%),
+      radial-gradient(ellipse 45% 35% at 50% 50%,  var(--mesh-color-c) 0%, transparent 60%),
+      var(--bg);
   }
 
   /* ── Phase badges ────────────────────────────────── */
@@ -150,7 +195,7 @@ html, body {
   /* ── Animations ──────────────────────────────────── */
   @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
   .shimmer {
-    background: linear-gradient(90deg, #0a0819 25%, #150f2e 50%, #0a0819 75%);
+    background: linear-gradient(90deg, var(--shimmer-1) 25%, var(--shimmer-2) 50%, var(--shimmer-1) 75%);
     background-size: 800px 100%;
     animation: shimmer 1.5s infinite;
   }
@@ -168,8 +213,8 @@ html, body {
 
   /* ── Input glass style ───────────────────────────── */
   .input-glass {
-    background: rgba(124,58,237,0.05);
-    border: 1px solid rgba(124,58,237,0.18);
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
     color: var(--text-1);
     border-radius: 0.75rem;
     padding: 0.625rem 0.875rem;

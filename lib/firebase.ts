@@ -17,23 +17,25 @@ const app = isBrowser
   ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
   : null
 
-// In Capacitor WebView, sessionStorage is blocked — use IndexedDB persistence.
-// In regular browsers, getAuth() uses the default persistence chain which
-// includes browserSessionPersistence (required by signInWithPopup internals).
+// @capacitor/core is bundled into the web app, so window.Capacitor exists
+// in ALL environments. Use isNativePlatform() to distinguish a real Android/iOS
+// binary (where sessionStorage is blocked) from a regular browser session.
 function createAuth() {
   if (!app) return null as never
-  const isCapacitor = !!(window as { Capacitor?: unknown }).Capacitor
-  if (isCapacitor) {
+  const cap = (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
+  const isNative = !!(cap?.isNativePlatform?.())
+  if (isNative) {
+    // Native WebView: sessionStorage blocked — use IndexedDB instead
     try {
       return initializeAuth(app, {
         persistence: [indexedDBLocalPersistence, browserLocalPersistence],
       })
     } catch {
-      // Already initialized on hot reload
       return getAuth(app)
     }
   }
-  // Regular browser: getAuth() includes sessionStorage + localStorage + IndexedDB
+  // Regular browser: getAuth() uses full default persistence chain
+  // (includes browserSessionPersistence required by signInWithPopup)
   return getAuth(app)
 }
 

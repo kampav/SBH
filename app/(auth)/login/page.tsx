@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth'
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail, browserPopupRedirectResolver } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -70,7 +70,7 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider())
+      await signInWithPopup(auth, new GoogleAuthProvider(), browserPopupRedirectResolver)
       router.push('/dashboard')
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''
@@ -80,6 +80,8 @@ export default function LoginPage() {
         setError('Sign in cancelled.')
       } else if (code === 'auth/unauthorized-domain') {
         setError('This domain is not authorised for Google sign in. Contact support.')
+      } else if (code === 'auth/argument-error') {
+        setError('Google sign in configuration error. Please try again or use email/password.')
       } else {
         setError((err as { message?: string }).message ?? 'Google sign in failed')
       }
