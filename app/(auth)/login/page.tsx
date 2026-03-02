@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [isNativeApp, setIsNativeApp] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   useEffect(() => {
     // Capacitor sets window.Capacitor when running as a native app
@@ -38,6 +39,25 @@ export default function LoginPage() {
         setError('Network error. Check your internet connection and try again.')
       } else {
         setError(err instanceof Error ? err.message : 'Sign in failed')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleForgotPassword() {
+    if (!email) { setError('Enter your email above first, then click Forgot password.'); return }
+    setLoading(true)
+    setError('')
+    try {
+      await sendPasswordResetEmail(auth, email)
+      setResetSent(true)
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code
+      if (code === 'auth/user-not-found') {
+        setError('No account found with that email.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to send reset email')
       }
     } finally {
       setLoading(false)
@@ -101,12 +121,21 @@ export default function LoginPage() {
             className="w-full px-4 py-2.5 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-emerald-500 focus:outline-none"
           />
           {error && <p className="text-red-400 text-sm">{error}</p>}
+          {resetSent && <p className="text-emerald-400 text-sm">Password reset email sent — check your inbox, then log in with your new password.</p>}
           <button
             type="submit"
             disabled={loading}
             className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
           >
             {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+          <button
+            type="button"
+            onClick={handleForgotPassword}
+            disabled={loading}
+            className="w-full text-slate-400 text-sm hover:text-slate-200 transition-colors"
+          >
+            Forgot password / set password for Google account
           </button>
         </form>
 
