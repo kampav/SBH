@@ -17,18 +17,24 @@ const app = isBrowser
   ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
   : null
 
-// Use initializeAuth with IndexedDB persistence to avoid sessionStorage errors
-// in Capacitor WebView (where sessionStorage-based redirect flows are blocked).
-// Falls back to getAuth() if auth was already initialized (e.g. hot reload).
+// In Capacitor WebView, sessionStorage is blocked — use IndexedDB persistence.
+// In regular browsers, getAuth() uses the default persistence chain which
+// includes browserSessionPersistence (required by signInWithPopup internals).
 function createAuth() {
   if (!app) return null as never
-  try {
-    return initializeAuth(app, {
-      persistence: [indexedDBLocalPersistence, browserLocalPersistence],
-    })
-  } catch {
-    return getAuth(app)
+  const isCapacitor = !!(window as { Capacitor?: unknown }).Capacitor
+  if (isCapacitor) {
+    try {
+      return initializeAuth(app, {
+        persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+      })
+    } catch {
+      // Already initialized on hot reload
+      return getAuth(app)
+    }
   }
+  // Regular browser: getAuth() includes sessionStorage + localStorage + IndexedDB
+  return getAuth(app)
 }
 
 export const auth = isBrowser ? createAuth() : null as never

@@ -18,8 +18,10 @@ export default function LoginPage() {
   const [resetSent, setResetSent] = useState(false)
 
   useEffect(() => {
-    // Capacitor sets window.Capacitor when running as a native app
-    setIsNativeApp(!!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.())
+    // window.Capacitor exists in all Capacitor WebViews (native and web platform)
+    // isNativePlatform() returns true only when running as a real native binary
+    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean; platform?: string } }).Capacitor
+    setIsNativeApp(!!(cap && (cap.isNativePlatform?.() || cap.platform === 'android' || cap.platform === 'ios')))
   }, [])
 
   async function handleEmailLogin(e: React.FormEvent) {
@@ -71,7 +73,16 @@ export default function LoginPage() {
       await signInWithPopup(auth, new GoogleAuthProvider())
       router.push('/dashboard')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Google sign in failed')
+      const code = (err as { code?: string }).code ?? ''
+      if (code === 'auth/popup-blocked') {
+        setError('Popup blocked by your browser. Allow popups for this site and try again.')
+      } else if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        setError('Sign in cancelled.')
+      } else if (code === 'auth/unauthorized-domain') {
+        setError('This domain is not authorised for Google sign in. Contact support.')
+      } else {
+        setError((err as { message?: string }).message ?? 'Google sign in failed')
+      }
     } finally {
       setLoading(false)
     }
