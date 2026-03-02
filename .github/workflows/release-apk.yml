@@ -1,0 +1,80 @@
+name: Release APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v0.1.0-beta)'
+        required: true
+        default: 'v0.1.0-beta'
+
+jobs:
+  build:
+    name: Build & Release Debug APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required to create GitHub Releases
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Set up Java 21
+        id: setup-java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        working-directory: android
+        env:
+          JAVA_HOME: ${{ steps.setup-java.outputs.path }}
+        run: ./gradlew assembleDebug --no-daemon "-Dorg.gradle.java.home=$JAVA_HOME"
+
+      - name: Rename APK
+        run: mv android/app/build/outputs/apk/debug/app-debug.apk sbh-${{ github.event.inputs.version }}.apk
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.event.inputs.version }}" \
+            "sbh-${{ github.event.inputs.version }}.apk" \
+            --title "SBH ${{ github.event.inputs.version }}" \
+            --notes "## SBH — Science Based Health
+
+Debug APK for direct installation on Android (sideload).
+
+### How to install
+1. Download the APK file below
+2. On your Android phone: Settings → Apps → Special app access → Install unknown apps → enable for your browser/Files app
+3. Open the downloaded APK and tap Install
+
+### What to test
+- Register / log in
+- Complete onboarding
+- Log a workout from the 4-day programme
+- Log food using search or AI lookup
+- Weight tracking and metrics chart
+
+### Notes
+- This is a debug build for testing only
+- The app loads live from the server — internet connection required
+- Report any issues to the developer" \
+            --prerelease
