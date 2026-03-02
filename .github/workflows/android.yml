@@ -26,10 +26,17 @@ jobs:
           cache: 'npm'
 
       - name: Set up Java 21
+        id: setup-java
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
+
+      - name: Verify Java version
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+          javac -version
 
       - name: Install Node dependencies
         run: npm ci
@@ -50,7 +57,8 @@ jobs:
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-        run: ./gradlew bundleRelease --no-daemon
+          JAVA_HOME: ${{ steps.setup-java.outputs.path }}
+        run: ./gradlew bundleRelease --no-daemon "-Dorg.gradle.java.home=$JAVA_HOME"
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
