@@ -9,7 +9,8 @@ import { auth } from '@/lib/firebase'
 import { getProfile, getNutrition, saveNutrition, getFavouriteFoods, saveFavouriteFood, deleteFavouriteFood } from '@/lib/firestore'
 import { DailyNutrition, Meal, MealType, FavouriteFood } from '@/lib/types'
 import { serverTimestamp } from 'firebase/firestore'
-import { Droplets, Plus, X, Camera, ScanLine, Heart, HeartOff, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Droplets, Plus, X, Camera, ScanLine, Heart, HeartOff, Loader2, ChevronDown, ChevronUp, Search } from 'lucide-react'
+import { FOOD_DATABASE, FoodEntry } from '@/lib/foodDatabase'
 import nextDynamic from 'next/dynamic'
 
 const BarcodeScanner = nextDynamic(() => import('@/components/nutrition/BarcodeScanner'), { ssr: false })
@@ -59,7 +60,12 @@ export default function NutritionPage() {
   const [favSearch, setFavSearch] = useState('')
   const [recentFoods, setRecentFoods] = useState<string[]>([])
   const [quickAddTab, setQuickAddTab] = useState<'recent' | 'presets'>('presets')
+  const [foodSearch, setFoodSearch] = useState('')
+  const [aiLookupLoading, setAiLookupLoading] = useState(false)
+  const [aiLookupError, setAiLookupError] = useState('')
+  const [showSearchResults, setShowSearchResults] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
+  const searchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -80,6 +86,16 @@ export default function NutritionPage() {
     })
     return unsub
   }, [router])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSearchResults(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   function fillForm(f: Partial<FormFill>) {
     setForm(prev => ({...prev, ...f}))
@@ -232,6 +248,48 @@ export default function NutritionPage() {
     })
   }
 
+  // ── Food search helpers ───────────────────────────────────────────────────
+  async function lookupFoodWithAI() {
+    if (!foodSearch.trim()) return
+    setAiLookupLoading(true)
+    setAiLookupError('')
+    try {
+      const res = await fetch('/api/lookup-food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ foodName: foodSearch }),
+      })
+      const result = await res.json()
+      if (result.error) throw new Error(result.error)
+      fillForm({
+        name: result.name,
+        calories: String(result.calories),
+        proteinG: String(result.proteinG),
+        carbsG: String(result.carbsG),
+        fatG: String(result.fatG),
+        servingSize: result.servingSize,
+      })
+      setFoodSearch('')
+      setShowSearchResults(false)
+    } catch {
+      setAiLookupError('AI lookup failed — fill in manually')
+    } finally {
+      setAiLookupLoading(false)
+    }
+  }
+
+  function addFromSearch(food: FoodEntry) {
+    quickAdd({
+      name: `${food.name} (${food.servingSize})`,
+      calories: food.calories,
+      proteinG: food.proteinG,
+      carbsG: food.carbsG,
+      fatG: food.fatG,
+    })
+    setFoodSearch('')
+    setShowSearchResults(false)
+  }
+
   // ── Remove meal ───────────────────────────────────────────────────────────
   async function removeMeal(id: string) {
     if (!uid) return
@@ -263,6 +321,13 @@ export default function NutritionPage() {
   const recentPresetItems = recentFoods
     .map(n => PRESETS.find(p => p.name === n))
     .filter((p): p is typeof PRESETS[0] => p !== undefined)
+  const searchResults = foodSearch.trim().length >= 2
+    ? FOOD_DATABASE.filter(f =>
+        f.name.toLowerCase().includes(foodSearch.toLowerCase()) ||
+        f.tags.some(t => t.includes(foodSearch.toLowerCase()))
+      ).slice(0, 8)
+    : []
+  const noLocalResults = foodSearch.trim().length >= 2 && searchResults.length === 0
 
   if (!authReady) return (
     <main className="min-h-screen mesh-bg flex items-center justify-center">
@@ -289,6 +354,69 @@ export default function NutritionPage() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 space-y-4">
+
+        {/* Food Search — always visible */}
+        <div ref={searchRef} className="glass rounded-2xl p-3 relative">
+          <div className="flex items-center gap-2">
+            <Search size={16} className="text-2 shrink-0 ml-1" />
+            <input
+              type="text"
+              value={foodSearch}
+              onChange={e => { setFoodSearch(e.target.value); setShowSearchResults(true) }}
+              onFocus={() => setShowSearchResults(true)}
+              placeholder="Search foods… e.g. Dal Makhani, Roti, Chicken Tikka"
+              className="flex-1 bg-transparent text-sm text-1 outline-none placeholder:text-slate-500"
+            />
+            {foodSearch && (
+              <button onClick={() => { setFoodSearch(''); setShowSearchResults(false) }}
+                className="text-slate-500 hover:text-slate-300 p-1">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {showSearchResults && foodSearch.trim().length >= 2 && (
+            <div className="mt-2 space-y-1">
+              {searchResults.map(food => (
+                <button key={food.name} onClick={() => addFromSearch(food)}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left hover:bg-violet-500/10 transition-all glass">
+                  <span className="text-xl shrink-0">{food.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-1 truncate">{food.name}</p>
+                    <p className="text-xs text-2">{food.servingSize}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold" style={{color: VIOLET}}>{food.calories}kcal</p>
+                    <p className="text-xs text-2">P:{food.proteinG}g</p>
+                  </div>
+                </button>
+              ))}
+
+              {noLocalResults && (
+                <div className="p-2.5 rounded-xl glass">
+                  <p className="text-xs text-2 mb-2">Not in the list — ask AI?</p>
+                  <button onClick={lookupFoodWithAI} disabled={aiLookupLoading}
+                    className="w-full py-2 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50"
+                    style={{background:`linear-gradient(135deg,${VIOLET},#6d28d9)`}}>
+                    {aiLookupLoading
+                      ? <><Loader2 size={14} className="animate-spin" /> Looking up…</>
+                      : <>✨ Ask AI: nutrients for &quot;{foodSearch}&quot;</>}
+                  </button>
+                  {aiLookupError && <p className="text-xs mt-1.5" style={{color: ROSE}}>{aiLookupError}</p>}
+                </div>
+              )}
+
+              {searchResults.length > 0 && (
+                <button onClick={lookupFoodWithAI} disabled={aiLookupLoading}
+                  className="w-full py-2 rounded-xl text-xs text-2 glass hover:bg-violet-500/10 transition-all flex items-center justify-center gap-1.5">
+                  {aiLookupLoading
+                    ? <><Loader2 size={12} className="animate-spin" /> Looking up…</>
+                    : <>✨ Ask AI for exact portion: &quot;{foodSearch}&quot;</>}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Calorie summary */}
         <div className="glass rounded-2xl p-4">
