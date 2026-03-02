@@ -3,6 +3,17 @@ import Anthropic from '@anthropic-ai/sdk'
 
 export const runtime = 'nodejs'
 
+// CORS headers for Capacitor WebView (origin: https://localhost)
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS })
+}
+
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: NextRequest) {
@@ -43,8 +54,8 @@ No markdown, no extra text — just the JSON object.`,
 
   try {
     const data = JSON.parse(cleaned)
-    return NextResponse.json(data)
+    return NextResponse.json(data, { headers: CORS })
   } catch {
-    return NextResponse.json({ error: 'Could not parse AI response', raw: text }, { status: 422 })
+    return NextResponse.json({ error: 'Could not parse AI response', raw: text }, { status: 422, headers: CORS })
   }
 }

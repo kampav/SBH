@@ -39,6 +39,17 @@ next-env.d.ts
 .secrets/
 *.json.key
 
+# Android — keystore files must never be committed
+*.keystore
+*.jks
+
+# Android — local machine config only (not CI)
+android/local.properties
+android/.gradle/
+android/app/.cxx/
+android/build/
+android/app/build/
+
 # temp scripts + local files
 _write_*.py
 *.xlsx

@@ -1,0 +1,64 @@
+name: Build Android AAB
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'android/**'
+      - 'capacitor.config.ts'
+      - 'public/icons/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:   # Manual trigger from GitHub Actions UI
+
+jobs:
+  build:
+    name: Build Signed AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Sync Capacitor (updates server.url config in Android project)
+        run: npx cap sync android
+
+      - name: Decode keystore from secret
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/sbh-release.keystore
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x android/gradlew
+
+      - name: Build release AAB
+        working-directory: android
+        env:
+          KEYSTORE_PATH: sbh-release.keystore
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: ./gradlew bundleRelease --no-daemon
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbh-release-${{ github.run_number }}.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f android/app/sbh-release.keystore
