@@ -46,6 +46,12 @@ export async function getNutrition(uid: string, date: string): Promise<DailyNutr
   return snap.exists() ? (snap.data() as DailyNutrition) : null
 }
 
+export async function getNutritionHistory(uid: string, days = 90): Promise<DailyNutrition[]> {
+  const q = query(collection(db, 'users', uid, 'nutrition'), orderBy('date', 'desc'), limit(days))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => d.data() as DailyNutrition).reverse()
+}
+
 export async function saveNutrition(uid: string, data: DailyNutrition) {
   await setDoc(doc(db, 'users', uid, 'nutrition', data.date), data)
 }

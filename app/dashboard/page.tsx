@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { getProfile, getNutrition, getRecentWorkouts, getMetrics } from '@/lib/firestore'
+import { getProfile, getNutrition, getRecentWorkouts, getMetrics, getNutritionHistory } from '@/lib/firestore'
 import { UserProfile } from '@/lib/types'
 import Link from 'next/link'
 import { LogOut, Zap, Trophy, ChevronRight, User } from 'lucide-react'
@@ -37,6 +37,8 @@ export default function DashboardPage() {
   const [xp, setXp] = useState(0)
   const [badgeCount, setBadgeCount] = useState(0)
   const [programmeWeek, setProgrammeWeek] = useState(1)
+  const [aiInsights, setAiInsights] = useState<{ quote: string; insights: string[]; recommendation: string } | null>(null)
+  const [insightsLoading, setInsightsLoading] = useState(false)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -75,6 +77,37 @@ export default function DashboardPage() {
         xp: totalXp,
       })
       setBadgeCount(badges.filter(b => b.earned).length)
+
+      // AI Insights — cached once per day per user
+      const cacheKey = `sbh_insights_${user.uid}_${today}`
+      const cached = sessionStorage.getItem(cacheKey)
+      if (cached) {
+        try { setAiInsights(JSON.parse(cached)) } catch { /* ignore */ }
+      } else {
+        const last7Dates = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(); d.setDate(d.getDate() - (6 - i))
+          return d.toISOString().slice(0, 10)
+        })
+        const last7Nutrition = await getNutritionHistory(user.uid, 7)
+        const last7Days = last7Dates.map(date => {
+          const nutEntry = last7Nutrition.find(n => n.date === date)
+          const workout  = workouts.find(w => w.date === date)
+          const metric   = metrics.find(m => m.date === date)
+          return { date, calories: nutEntry?.totalCalories ?? 0, proteinG: nutEntry?.totalProteinG ?? 0, hadWorkout: !!workout, weightKg: metric?.weightKg ?? null }
+        })
+        if (p && last7Days.some(d => d.calories > 0 || d.hadWorkout)) {
+          setInsightsLoading(true)
+          fetch('/api/ai-insights', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ profile: { calorieTarget: p.calorieTarget, proteinTargetG: p.proteinTargetG, weightKg: p.weightKg, goal: p.goal }, last7Days }),
+          })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data?.quote) { setAiInsights(data); sessionStorage.setItem(cacheKey, JSON.stringify(data)) } })
+            .catch(() => {})
+            .finally(() => setInsightsLoading(false))
+        }
+      }
     })
     return unsub
   }, [router])
@@ -252,6 +285,37 @@ export default function DashboardPage() {
               label={`${todayProtein}g`} sublabel="protein" />
           </div>
         </div>
+
+        {/* AI Coach Insights */}
+        {(insightsLoading || aiInsights) && (
+          <div className="glass rounded-2xl p-4">
+            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{color:'#7c3aed'}}>✨ AI Coach Insights</p>
+            {insightsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-2 py-2">
+                <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+                Analysing your last 7 days…
+              </div>
+            ) : aiInsights && (
+              <div className="space-y-3">
+                <p className="text-sm italic leading-relaxed border-l-2 pl-3" style={{borderColor:'#7c3aed', color:'#c4b5fd'}}>
+                  &ldquo;{aiInsights.quote}&rdquo;
+                </p>
+                <ul className="space-y-1.5">
+                  {aiInsights.insights.map((insight, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-2">
+                      <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{background:'#7c3aed'}} />
+                      {insight}
+                    </li>
+                  ))}
+                </ul>
+                <div className="rounded-xl p-3 text-xs" style={{background:'rgba(6,182,212,0.08)', border:'1px solid rgba(6,182,212,0.2)'}}>
+                  <p className="font-semibold mb-1" style={{color:'#06b6d4'}}>This week → try this</p>
+                  <p className="text-2">{aiInsights.recommendation}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Daily Tip */}
         <div className="glass rounded-2xl p-4">

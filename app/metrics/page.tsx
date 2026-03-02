@@ -6,16 +6,15 @@ import { useEffect, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
-import { getProfile, getMetrics, saveMetric, getMeasurements, saveMeasurement } from '@/lib/firestore'
+import { getProfile, getMetrics, saveMetric, getMeasurements, saveMeasurement, getRecentWorkouts, getNutrition, getNutritionHistory } from '@/lib/firestore'
 import { calcBMI, getBMICategory, movingAverage, getWeightAlert } from '@/lib/calculations'
-import { DailyMetric, BodyMeasurement } from '@/lib/types'
+import { DailyMetric, BodyMeasurement, UserProfile } from '@/lib/types'
 import { serverTimestamp } from 'firebase/firestore'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Legend,
 } from 'recharts'
 import { computeBadges, computeStreak, computeXP, getLevel } from '@/lib/gamification'
-import { getRecentWorkouts, getNutrition } from '@/lib/firestore'
 import { Scale, Ruler, Trophy, ChevronDown, ChevronUp, Check } from 'lucide-react'
 
 const today = new Date().toISOString().slice(0, 10)
@@ -29,9 +28,11 @@ export default function MetricsPage() {
   const router = useRouter()
   const [uid, setUid] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [targetWeight, setTargetWeight] = useState(70)
   const [metrics, setMetrics] = useState<DailyMetric[]>([])
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([])
+  const [nutritionHistory, setNutritionHistory] = useState<{ date: string; calories: number; target: number }[]>([])
   const [weight, setWeight] = useState('')
   const [savingWeight, setSavingWeight] = useState(false)
   const [range, setRange] = useState<7 | 30 | 90>(30)
@@ -43,7 +44,7 @@ export default function MetricsPage() {
   const [savingMeasure, setSavingMeasure] = useState(false)
   const [measureSaved, setMeasureSaved] = useState(false)
   const [mForm, setMForm] = useState({ chest: '', waist: '', neck: '', hips: '', bicep: '' })
-  const [chartTab, setChartTab] = useState<'weight' | 'measurements'>('weight')
+  const [chartTab, setChartTab] = useState<'weight' | 'measurements' | 'calories'>('weight')
   const [showBadges, setShowBadges] = useState(false)
 
   useEffect(() => {
@@ -51,16 +52,22 @@ export default function MetricsPage() {
       setAuthReady(true)
       if (!user) { router.push('/login'); return }
       setUid(user.uid)
-      const [p, m, meas, workouts, nutrition] = await Promise.all([
+      const [p, m, meas, workouts, nutrition, nutHistory] = await Promise.all([
         getProfile(user.uid),
         getMetrics(user.uid, 90),
         getMeasurements(user.uid, 20),
         getRecentWorkouts(user.uid, 90),
         getNutrition(user.uid, today),
+        getNutritionHistory(user.uid, 90),
       ])
-      if (p) setTargetWeight(p.targetWeightKg)
+      if (p) { setTargetWeight(p.targetWeightKg); setProfile(p) }
       setMetrics(m)
       setMeasurements(meas)
+      setNutritionHistory(nutHistory.map(n => ({
+        date: n.date.slice(5),
+        calories: n.totalCalories,
+        target: n.calorieTarget ?? p?.calorieTarget ?? 2000,
+      })))
       const wDates = workouts.map(w => w.date)
       const nDates = nutrition ? [today] : []
       const mDates = m.map(mt => mt.date)
@@ -85,7 +92,7 @@ export default function MetricsPage() {
     const kg = parseFloat(weight)
     if (isNaN(kg)) return
     setSavingWeight(true)
-    const metric: DailyMetric = { date: today, weightKg: kg, bmi: calcBMI(kg, 165), loggedAt: serverTimestamp() }
+    const metric: DailyMetric = { date: today, weightKg: kg, bmi: calcBMI(kg, profile?.heightCm ?? 170), loggedAt: serverTimestamp() }
     await saveMetric(uid, metric)
     setMetrics(prev => [...prev.filter(m => m.date !== today), metric].sort((a, b) => a.date.localeCompare(b.date)))
     setWeight('')
@@ -116,7 +123,13 @@ export default function MetricsPage() {
 
   const displayed     = metrics.slice(-range)
   const avgWeights    = movingAverage(displayed.map(m => m.weightKg))
-  const weightChartData = displayed.map((m, i) => ({ date: m.date.slice(5), weight: m.weightKg, avg: avgWeights[i] }))
+  const heightCm      = profile?.heightCm ?? 170
+  const weightChartData = displayed.map((m, i) => ({
+    date: m.date.slice(5),
+    weight: m.weightKg,
+    avg: avgWeights[i],
+    bmi: calcBMI(m.weightKg, heightCm),
+  }))
   const measChartData   = measurements.slice(-16).map(m => ({
     date: m.date.slice(5), chest: m.chestCm, waist: m.waistCm, neck: m.neckCm, hips: m.hipsCm, bicep: m.bicepCm,
   }))
@@ -152,8 +165,8 @@ export default function MetricsPage() {
           {[
             { label:'Weight',  value: latest ? `${latest.weightKg}kg` : '—',           delta: wDelta, emoji:'⚖️', color: VIOLET },
             { label:'Waist',   value: latestMeas ? `${latestMeas.waistCm}cm` : '—',     delta: wstDelta, emoji:'📏', color: ROSE },
-            { label:'BMI',     value: latest ? String(latest.bmi) : '—',
-              sub: latest ? getBMICategory(latest.bmi) : undefined, emoji:'🧮', color: CYAN },
+            { label:'BMI',     value: latest ? String(calcBMI(latest.weightKg, heightCm)) : '—',
+              sub: latest ? getBMICategory(calcBMI(latest.weightKg, heightCm)) : undefined, emoji:'🧮', color: CYAN },
           ].map(c => (
             <div key={c.label} className="glass rounded-2xl p-3 text-center">
               <div className="text-xl mb-1">{c.emoji}</div>
@@ -188,7 +201,7 @@ export default function MetricsPage() {
           {latest && (
             <div className="flex gap-4 mt-2 text-xs text-2">
               <span>Latest: <strong className="text-1">{latest.weightKg} kg</strong></span>
-              <span>BMI: <strong className="text-1">{latest.bmi}</strong> ({getBMICategory(latest.bmi)})</span>
+              <span>BMI: <strong className="text-1">{calcBMI(latest.weightKg, heightCm)}</strong> ({getBMICategory(calcBMI(latest.weightKg, heightCm))})</span>
             </div>
           )}
           {alert && <p className="mt-1.5 text-xs" style={{color: AMBER}}>{alert}</p>}
@@ -261,14 +274,14 @@ export default function MetricsPage() {
         <div className="glass rounded-2xl p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex gap-1.5">
-              {(['weight','measurements'] as const).map(tab => (
+              {([['weight','⚖️ Weight'],['measurements','📏 Body'],['calories','🔥 Calories']] as const).map(([tab, label]) => (
                 <button key={tab} onClick={() => setChartTab(tab)}
                   className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
                   style={{
                     background: chartTab === tab ? VIOLET : 'rgba(124,58,237,0.1)',
                     color: chartTab === tab ? '#fff' : '#94a3b8',
                   }}>
-                  {tab === 'weight' ? '⚖️ Weight' : '📏 Body'}
+                  {label}
                 </button>
               ))}
             </div>
@@ -291,11 +304,13 @@ export default function MetricsPage() {
                 <LineChart data={weightChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(124,58,237,0.12)" />
                   <XAxis dataKey="date" tick={{fill:'#94a3b8',fontSize:11}} />
-                  <YAxis domain={['auto','auto']} tick={{fill:'#94a3b8',fontSize:11}} />
+                  <YAxis yAxisId="weight" domain={['auto','auto']} tick={{fill:'#94a3b8',fontSize:11}} />
+                  <YAxis yAxisId="bmi" orientation="right" domain={[15,40]} tick={{fill:'#06b6d4',fontSize:10}} label={{value:'BMI',angle:90,position:'insideRight',fill:'#06b6d4',fontSize:10}} />
                   <Tooltip contentStyle={{background:'rgba(10,8,25,0.95)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:12}} labelStyle={{color:'#f1f5f9'}} />
-                  <ReferenceLine y={targetWeight} stroke={CYAN} strokeDasharray="5 5" label={{value:'Target',fill:CYAN,fontSize:10}} />
-                  <Line type="monotone" dataKey="weight" stroke={VIOLET} dot={false} strokeWidth={2.5} name="Weight (kg)" />
-                  <Line type="monotone" dataKey="avg" stroke={AMBER} dot={false} strokeWidth={2} strokeDasharray="4 4" name="7d Avg" />
+                  <ReferenceLine yAxisId="weight" y={targetWeight} stroke={CYAN} strokeDasharray="5 5" label={{value:'Target',fill:CYAN,fontSize:10}} />
+                  <Line yAxisId="weight" type="monotone" dataKey="weight" stroke={VIOLET} dot={false} strokeWidth={2.5} name="Weight (kg)" />
+                  <Line yAxisId="weight" type="monotone" dataKey="avg" stroke={AMBER} dot={false} strokeWidth={2} strokeDasharray="4 4" name="7d Avg" />
+                  <Line yAxisId="bmi" type="monotone" dataKey="bmi" stroke={CYAN} dot={false} strokeWidth={1.5} strokeDasharray="3 3" name="BMI" />
                   <Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}} />
                 </LineChart>
               </ResponsiveContainer>
@@ -320,6 +335,31 @@ export default function MetricsPage() {
               </ResponsiveContainer>
             ) : <p className="text-2 text-sm text-center py-10">Log measurements weekly to track body composition</p>
           )}
+
+          {chartTab === 'calories' && (() => {
+            const calData = nutritionHistory.slice(-range)
+            const daysOnTarget = calData.filter(d => d.calories >= d.target * 0.9 && d.calories <= d.target * 1.1).length
+            const avgCal = calData.length > 0 ? Math.round(calData.reduce((s, d) => s + d.calories, 0) / calData.length) : 0
+            const targetVal = calData[0]?.target ?? profile?.calorieTarget ?? 2000
+            return calData.length > 0 ? (
+              <div>
+                <div className="flex gap-4 mb-3 text-xs">
+                  <span className="text-2">Avg: <strong style={{color:VIOLET}}>{avgCal} kcal</strong></span>
+                  <span className="text-2">On target: <strong style={{color:LIME}}>{daysOnTarget}/{calData.length} days</strong></span>
+                </div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={calData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(124,58,237,0.12)" />
+                    <XAxis dataKey="date" tick={{fill:'#94a3b8',fontSize:10}} />
+                    <YAxis domain={[0,'auto']} tick={{fill:'#94a3b8',fontSize:11}} />
+                    <Tooltip contentStyle={{background:'rgba(10,8,25,0.95)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:12}} labelStyle={{color:'#f1f5f9'}} />
+                    <ReferenceLine y={targetVal} stroke={CYAN} strokeDasharray="5 5" label={{value:'Target',fill:CYAN,fontSize:10}} />
+                    <Bar dataKey="calories" fill={VIOLET} name="Calories" radius={[3,3,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : <p className="text-2 text-sm text-center py-10">Log nutrition to see your calorie history</p>
+          })()}
         </div>
 
         {/* Measurement history table */}

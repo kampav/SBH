@@ -8,7 +8,8 @@ import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { getProfile, saveProfile } from '@/lib/firestore'
 import { UserProfile, ProgrammeKey } from '@/lib/types'
-import { LogOut, ChevronRight, Target, Activity, Scale, Zap, Calendar, Edit3, Check, Dumbbell } from 'lucide-react'
+import { LogOut, ChevronRight, Target, Activity, Scale, Zap, Calendar, Edit3, Check, Dumbbell, X } from 'lucide-react'
+import { calcMacros } from '@/lib/calculations'
 
 const PHASE_INFO = [
   { num: 1, name: 'Fat Loss Foundation',  weeks: '1–4',  color: '#10b981', desc: 'High frequency cardio, fat oxidation, mobility work' },
@@ -35,6 +36,9 @@ export default function ProfilePage() {
   const [saved] = useState(false)
   const [selectedProgramme, setSelectedProgramme] = useState<ProgrammeKey>('home_6day')
   const [savingProgramme, setSavingProgramme] = useState(false)
+  const [editingCalories, setEditingCalories] = useState(false)
+  const [calorieInput, setCalorieInput] = useState('')
+  const [savingCalories, setSavingCalories] = useState(false)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -54,6 +58,24 @@ export default function ProfilePage() {
   function updateWeek(w: number) {
     setProgrammeWeek(w)
     if (uid) localStorage.setItem(`sbh_week_${uid}`, String(w))
+  }
+
+  async function saveCalorieTarget() {
+    if (!uid || !profile) return
+    const cal = Number(calorieInput)
+    if (!cal || cal < 800 || cal > 6000) return
+    setSavingCalories(true)
+    const macros = calcMacros(cal, profile.weightKg)
+    const updates = {
+      calorieTarget: cal,
+      proteinTargetG: macros.proteinTargetG,
+      carbTargetG: macros.carbTargetG,
+      fatTargetG: macros.fatTargetG,
+    }
+    await saveProfile(uid, updates)
+    setProfile(p => p ? { ...p, ...updates } : p)
+    setEditingCalories(false)
+    setSavingCalories(false)
   }
 
   async function changeProgramme(key: ProgrammeKey) {
@@ -239,16 +261,56 @@ export default function ProfilePage() {
 
         {/* Nutrition Targets */}
         <div className="glass rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Target size={16} className="text-emerald-400" />
-            <p className="text-xs font-semibold uppercase tracking-widest text-2">Daily Targets</p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Target size={16} className="text-emerald-400" />
+              <p className="text-xs font-semibold uppercase tracking-widest text-2">Daily Targets</p>
+            </div>
+            <p className="text-xs text-3">Macros auto-adjust when you edit calories</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
+            {/* Calories — editable */}
+            <div className="glass rounded-xl p-3 col-span-2">
+              {editingCalories ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🔥</span>
+                  <input
+                    type="number"
+                    value={calorieInput}
+                    onChange={e => setCalorieInput(e.target.value)}
+                    min={800} max={6000}
+                    className="flex-1 bg-transparent text-emerald-400 font-bold text-sm outline-none border-b border-emerald-500/50 pb-0.5"
+                    placeholder="e.g. 2000"
+                    autoFocus
+                  />
+                  <span className="text-xs text-2">kcal</span>
+                  <button onClick={saveCalorieTarget} disabled={savingCalories}
+                    className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition-colors">
+                    <Check size={14} />
+                  </button>
+                  <button onClick={() => setEditingCalories(false)}
+                    className="p-1.5 rounded-lg text-slate-500 hover:bg-white/10 transition-colors">
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">🔥</span>
+                  <div className="flex-1">
+                    <p className="text-xs text-2">Calories</p>
+                    <p className="font-bold text-sm" style={{color:'#10b981'}}>{profile?.calorieTarget ?? '--'} kcal</p>
+                  </div>
+                  <button onClick={() => { setCalorieInput(String(profile?.calorieTarget ?? '')); setEditingCalories(true) }}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/10 transition-colors">
+                    <Edit3 size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
             {[
-              { label: 'Calories',  value: `${profile?.calorieTarget ?? '--'} kcal`, color: '#10b981', emoji: '🔥' },
-              { label: 'Protein',   value: `${profile?.proteinTargetG ?? '--'}g`,    color: '#6366f1', emoji: '🥩' },
-              { label: 'Carbs',     value: `${profile?.carbTargetG ?? '--'}g`,       color: '#f59e0b', emoji: '🍚' },
-              { label: 'Fat',       value: `${profile?.fatTargetG ?? '--'}g`,        color: '#ec4899', emoji: '🥑' },
+              { label: 'Protein', value: `${profile?.proteinTargetG ?? '--'}g`, color: '#6366f1', emoji: '🥩' },
+              { label: 'Carbs',   value: `${profile?.carbTargetG ?? '--'}g`,    color: '#f59e0b', emoji: '🍚' },
+              { label: 'Fat',     value: `${profile?.fatTargetG ?? '--'}g`,     color: '#ec4899', emoji: '🥑' },
             ].map(item => (
               <div key={item.label} className="glass rounded-xl p-3 flex items-center gap-2.5">
                 <span className="text-xl">{item.emoji}</span>
