@@ -16,6 +16,7 @@ export interface UserProfile {
   goal: 'fat_loss' | 'muscle_gain' | 'recomp' | 'endurance'
   experienceLevel: 'beginner' | 'intermediate' | 'advanced'
   equipmentAccess: 'full_gym' | 'dumbbells' | 'home' | 'none'
+  programme?: ProgrammeKey
   trainingDaysPerWeek: 2 | 3 | 4 | 5 | 6
   bmr: number
   tdee: number
@@ -119,6 +120,8 @@ export interface DailyWorkout {
 }
 
 // ─── Programme ────────────────────────────────────────────────────────────────
+export type ProgrammeKey = 'home_6day' | 'gym_upper_lower' | 'beginner_3day'
+
 export type ProgrammeSplit = 'full_body' | 'ppl' | 'upper_lower' | 'home' | 'fat_loss'
 
 export interface Exercise {

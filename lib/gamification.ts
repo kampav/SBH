@@ -100,6 +100,55 @@ export function computeStreak(sortedDates: string[]): number {
   return streak
 }
 
+// ─── Streak Helpers ───────────────────────────────────────────────────────────
+export function computeWorkoutStreak(sortedWorkoutDates: string[]): number {
+  return computeStreak(sortedWorkoutDates)
+}
+
+export const STREAK_MILESTONES = [7, 14, 30, 60, 100]
+
+export function isStreakMilestone(streak: number): boolean {
+  return STREAK_MILESTONES.includes(streak)
+}
+
+// ─── Week Calendar ────────────────────────────────────────────────────────────
+export interface WeekDayStatus {
+  date: string
+  dayName: string
+  hasWorkout: boolean
+  hasNutrition: boolean
+  isToday: boolean
+}
+
+export function computeWeekCalendar(
+  workoutDates: string[],
+  nutritionDates: string[],
+): WeekDayStatus[] {
+  const today = new Date()
+  const dow = today.getDay() // 0=Sun
+  const diffToMon = dow === 0 ? -6 : 1 - dow
+  const monday = new Date(today)
+  monday.setDate(today.getDate() + diffToMon)
+
+  const wSet = new Set(workoutDates)
+  const nSet = new Set(nutritionDates)
+  const todayStr = today.toISOString().slice(0, 10)
+  const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    const dateStr = d.toISOString().slice(0, 10)
+    return {
+      date: dateStr,
+      dayName: DAY_NAMES[i],
+      hasWorkout: wSet.has(dateStr),
+      hasNutrition: nSet.has(dateStr),
+      isToday: dateStr === todayStr,
+    }
+  })
+}
+
 // ─── Badges ───────────────────────────────────────────────────────────────────
 export interface Badge {
   id: string

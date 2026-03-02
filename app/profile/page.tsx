@@ -6,9 +6,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { getProfile } from '@/lib/firestore'
-import { UserProfile } from '@/lib/types'
-import { LogOut, ChevronRight, Target, Activity, Scale, Zap, Calendar, Edit3, Check } from 'lucide-react'
+import { getProfile, saveProfile } from '@/lib/firestore'
+import { UserProfile, ProgrammeKey } from '@/lib/types'
+import { LogOut, ChevronRight, Target, Activity, Scale, Zap, Calendar, Edit3, Check, Dumbbell } from 'lucide-react'
 
 const PHASE_INFO = [
   { num: 1, name: 'Fat Loss Foundation',  weeks: '1–4',  color: '#10b981', desc: 'High frequency cardio, fat oxidation, mobility work' },
@@ -33,6 +33,8 @@ export default function ProfilePage() {
   const [programmeWeek, setProgrammeWeek] = useState(1)
   const [editingWeek, setEditingWeek] = useState(false)
   const [saved] = useState(false)
+  const [selectedProgramme, setSelectedProgramme] = useState<ProgrammeKey>('home_6day')
+  const [savingProgramme, setSavingProgramme] = useState(false)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -44,6 +46,7 @@ export default function ProfilePage() {
       const p = await getProfile(user.uid)
       if (!p) { router.push('/onboarding'); return }
       setProfile(p)
+      if (p.programme) setSelectedProgramme(p.programme)
     })
     return unsub
   }, [router])
@@ -53,9 +56,23 @@ export default function ProfilePage() {
     if (uid) localStorage.setItem(`sbh_week_${uid}`, String(w))
   }
 
+  async function changeProgramme(key: ProgrammeKey) {
+    if (!uid) return
+    setSelectedProgramme(key)
+    setSavingProgramme(true)
+    await saveProfile(uid, { programme: key })
+    setSavingProgramme(false)
+  }
+
+  const PROGRAMME_OPTIONS: Array<{key: ProgrammeKey; label: string; days: string; desc: string; color: string; emoji: string}> = [
+    { key: 'home_6day',       label: '6-Day Home Transformation',  days: 'Mon–Sat',        desc: 'Push/Pull/HIIT/Recovery · No equipment needed', color: '#10b981', emoji: '🏠' },
+    { key: 'gym_upper_lower', label: '4-Day Gym Upper/Lower',      days: 'Mon/Tue/Thu/Fri', desc: 'Barbell compounds · Gym required',               color: '#7c3aed', emoji: '🏋️' },
+    { key: 'beginner_3day',   label: '3-Day Beginner Bodyweight',  days: 'Mon/Wed/Fri',    desc: 'Full body circuits · Perfect for beginners',     color: '#f59e0b', emoji: '🌱' },
+  ]
+
   if (!authReady) return (
     <main className="min-h-screen mesh-bg flex items-center justify-center">
-      <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
     </main>
   )
 
@@ -142,10 +159,50 @@ export default function ProfilePage() {
           )}
         </div>
 
+        {/* Training Programme Selector */}
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Dumbbell size={16} className="text-violet-400" />
+              <p className="text-xs font-semibold uppercase tracking-widest text-2">Training Programme</p>
+            </div>
+            {savingProgramme && <span className="text-xs text-2 animate-pulse">Saving…</span>}
+          </div>
+          <div className="space-y-2">
+            {PROGRAMME_OPTIONS.map(opt => {
+              const isActive = selectedProgramme === opt.key
+              return (
+                <button key={opt.key} onClick={() => changeProgramme(opt.key)}
+                  className="w-full text-left glass rounded-xl p-3 transition-all"
+                  style={{
+                    background: isActive ? opt.color + '15' : undefined,
+                    border: isActive ? `1px solid ${opt.color}40` : '1px solid transparent',
+                  }}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{opt.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-1 truncate">{opt.label}</p>
+                        {isActive && (
+                          <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold shrink-0"
+                            style={{background: opt.color + '20', color: opt.color}}>
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-2 mt-0.5">{opt.days} · {opt.desc}</p>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Body Stats */}
         <div className="glass rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Scale size={16} className="text-indigo-400" />
+            <Scale size={16} className="text-violet-400" />
             <p className="text-xs font-semibold uppercase tracking-widest text-2">Body Metrics</p>
           </div>
 
@@ -274,7 +331,7 @@ export default function ProfilePage() {
           Sign Out
         </button>
 
-        <p className="text-center text-xs text-3 pb-4">SBH · Science Based Health · v0.6</p>
+        <p className="text-center text-xs text-3 pb-4">SBH · Science Based Health · v0.8</p>
       </div>
     </main>
   )

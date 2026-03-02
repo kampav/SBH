@@ -55,6 +55,10 @@ export default function NutritionPage() {
   const [showFavs, setShowFavs] = useState(false)
   const [showPresets, setShowPresets] = useState(false)
   const [savingFav, setSavingFav] = useState(false)
+  const [presetMultiplier, setPresetMultiplier] = useState<0.5 | 1 | 1.5 | 2>(1)
+  const [favSearch, setFavSearch] = useState('')
+  const [recentFoods, setRecentFoods] = useState<string[]>([])
+  const [quickAddTab, setQuickAddTab] = useState<'recent' | 'presets'>('presets')
   const photoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -62,6 +66,8 @@ export default function NutritionPage() {
       setAuthReady(true)
       if (!user) { router.push('/login'); return }
       setUid(user.uid)
+      const raw = localStorage.getItem('sbh_recent_foods')
+      if (raw) { try { setRecentFoods(JSON.parse(raw)) } catch { /* ignore */ } }
       const p = await getProfile(user.uid)
       if (p) setTargets({ cal: p.calorieTarget, protein: p.proteinTargetG, carbs: p.carbTargetG, fat: p.fatTargetG })
       const [n, favs] = await Promise.all([
@@ -207,6 +213,23 @@ export default function NutritionPage() {
     }
     await saveNutrition(uid, updated)
     setData(updated)
+    // Track recently used
+    setRecentFoods(prev => {
+      const updated2 = [item.name, ...prev.filter(n => n !== item.name)].slice(0, 5)
+      localStorage.setItem('sbh_recent_foods', JSON.stringify(updated2))
+      return updated2
+    })
+  }
+
+  // ── Quick-add preset with multiplier ─────────────────────────────────────
+  function quickAddPreset(p: typeof PRESETS[0]) {
+    quickAdd({
+      name: presetMultiplier === 1 ? p.name : `${p.name} ×${presetMultiplier}`,
+      calories: Math.round(p.calories * presetMultiplier),
+      proteinG: Math.round(p.proteinG * presetMultiplier * 10) / 10,
+      carbsG:   Math.round(p.carbsG   * presetMultiplier * 10) / 10,
+      fatG:     Math.round(p.fatG     * presetMultiplier * 10) / 10,
+    })
   }
 
   // ── Remove meal ───────────────────────────────────────────────────────────
@@ -234,6 +257,12 @@ export default function NutritionPage() {
 
   const remaining = targets.cal - data.totalCalories
   const calPct = Math.min((data.totalCalories / targets.cal) * 100, 100)
+  const filteredFavourites = favSearch.trim()
+    ? favourites.filter(f => f.name.toLowerCase().includes(favSearch.toLowerCase()))
+    : favourites
+  const recentPresetItems = recentFoods
+    .map(n => PRESETS.find(p => p.name === n))
+    .filter((p): p is typeof PRESETS[0] => p !== undefined)
 
   if (!authReady) return (
     <main className="min-h-screen mesh-bg flex items-center justify-center">
@@ -393,22 +422,31 @@ export default function NutritionPage() {
               {showFavs ? <ChevronUp size={14} className="text-2" /> : <ChevronDown size={14} className="text-2" />}
             </button>
             {showFavs && (
-              <div className="space-y-2 mt-3">
-                {favourites.map(f => (
-                  <div key={f.id} className="flex items-center gap-3 glass rounded-xl p-2.5">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-1 truncate">{f.name}</p>
-                      <p className="text-xs text-2">{f.servingSize} · {f.calories}kcal · P:{f.proteinG}g</p>
+              <div className="mt-3">
+                {favourites.length > 3 && (
+                  <input type="text" value={favSearch} onChange={e => setFavSearch(e.target.value)}
+                    placeholder="Search favourites…" className="input-glass mb-2 text-sm" />
+                )}
+                <div className="space-y-2">
+                  {filteredFavourites.map(f => (
+                    <div key={f.id} className="flex items-center gap-3 glass rounded-xl p-2.5">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-1 truncate">{f.name}</p>
+                        <p className="text-xs text-2">{f.servingSize} · {f.calories}kcal · P:{f.proteinG}g</p>
+                      </div>
+                      <button onClick={() => quickAdd(f)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white flex-shrink-0"
+                        style={{background:`linear-gradient(135deg,${VIOLET},#6d28d9)`}}>+Add</button>
+                      <button onClick={() => deleteFav(f.id)}
+                        className="p-1.5 rounded-lg glass text-slate-500 hover:text-rose-400 flex-shrink-0">
+                        <HeartOff size={13} />
+                      </button>
                     </div>
-                    <button onClick={() => quickAdd(f)}
-                      className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white flex-shrink-0"
-                      style={{background:`linear-gradient(135deg,${VIOLET},#6d28d9)`}}>+Add</button>
-                    <button onClick={() => deleteFav(f.id)}
-                      className="p-1.5 rounded-lg glass text-slate-500 hover:text-rose-400 flex-shrink-0">
-                      <HeartOff size={13} />
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                  {filteredFavourites.length === 0 && favSearch && (
+                    <p className="text-xs text-3 text-center py-2">No matches for &quot;{favSearch}&quot;</p>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -424,21 +462,57 @@ export default function NutritionPage() {
             {showPresets ? <ChevronUp size={14} className="text-2" /> : <ChevronDown size={14} className="text-2" />}
           </button>
           {showPresets && (
-            <div className="grid grid-cols-2 gap-2 mt-3">
-              {PRESETS.map(p => (
-                <button key={p.name} onClick={() => quickAdd(p)}
-                  className="glass rounded-xl p-3 text-left hover:bg-violet-500/10 transition-all">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xl">{p.emoji}</span>
-                    <span className="text-xs font-semibold text-1 leading-tight">{p.name}</span>
-                  </div>
-                  <div className="flex gap-2 text-xs text-2">
-                    <span style={{color: VIOLET}}>{p.calories}kcal</span>
-                    <span>P:{p.proteinG}g</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+            <>
+              {/* Serving size multiplier */}
+              <div className="flex items-center gap-2 mt-3 mb-1">
+                <span className="text-xs text-2">Serving:</span>
+                {([0.5, 1, 1.5, 2] as const).map(m => (
+                  <button key={m} onClick={() => setPresetMultiplier(m)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all"
+                    style={{
+                      background: presetMultiplier === m ? VIOLET + '30' : 'rgba(255,255,255,0.04)',
+                      color: presetMultiplier === m ? VIOLET : '#64748b',
+                      border: `1px solid ${presetMultiplier === m ? VIOLET + '50' : 'transparent'}`,
+                    }}>
+                    ×{m}
+                  </button>
+                ))}
+              </div>
+
+              {/* Recent / Presets tabs */}
+              <div className="flex gap-2 mb-3">
+                {(['recent', 'presets'] as const).map(tab => (
+                  <button key={tab} onClick={() => setQuickAddTab(tab)}
+                    className="px-3 py-1 rounded-lg text-xs font-semibold transition-all capitalize"
+                    style={{
+                      background: quickAddTab === tab ? VIOLET + '20' : 'transparent',
+                      color: quickAddTab === tab ? VIOLET : '#64748b',
+                    }}>
+                    {tab === 'recent' ? `Recent (${recentPresetItems.length})` : 'Presets'}
+                  </button>
+                ))}
+              </div>
+
+              {quickAddTab === 'recent' && recentPresetItems.length === 0 && (
+                <p className="text-xs text-3 text-center py-3">No recent adds yet — use Presets first</p>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                {(quickAddTab === 'recent' ? recentPresetItems : PRESETS).map(p => (
+                  <button key={p.name} onClick={() => quickAddPreset(p)}
+                    className="glass rounded-xl p-3 text-left hover:bg-violet-500/10 transition-all">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xl">{p.emoji}</span>
+                      <span className="text-xs font-semibold text-1 leading-tight">{p.name}</span>
+                    </div>
+                    <div className="flex gap-2 text-xs text-2">
+                      <span style={{color: VIOLET}}>{Math.round(p.calories * presetMultiplier)}kcal</span>
+                      <span>P:{Math.round(p.proteinG * presetMultiplier * 10) / 10}g</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
 

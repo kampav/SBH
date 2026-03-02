@@ -13,7 +13,8 @@ import { LogOut, Zap, Trophy, ChevronRight, User } from 'lucide-react'
 import ProgressRing from '@/components/ui/ProgressRing'
 import {
   getDailyTip, computeXP, getLevel, getLevelProgress,
-  computeStreak, computeBadges,
+  computeStreak, computeWorkoutStreak, computeWeekCalendar,
+  isStreakMilestone, computeBadges, WeekDayStatus,
 } from '@/lib/gamification'
 
 const today = new Date().toISOString().slice(0, 10)
@@ -31,6 +32,8 @@ export default function DashboardPage() {
   const [todayCalories, setTodayCalories] = useState(0)
   const [todayProtein, setTodayProtein] = useState(0)
   const [workoutStreak, setWorkoutStreak] = useState(0)
+  const [allStreak, setAllStreak] = useState(0)
+  const [weekCalendar, setWeekCalendar] = useState<WeekDayStatus[]>([])
   const [xp, setXp] = useState(0)
   const [badgeCount, setBadgeCount] = useState(0)
   const [programmeWeek, setProgrammeWeek] = useState(1)
@@ -56,16 +59,19 @@ export default function DashboardPage() {
       const wDates = workouts.map(w => w.date)
       const nDates = nutrition ? [today] : []
       const mDates = metrics.map(m => m.date)
-      const streak = computeStreak(wDates)
-      setWorkoutStreak(streak)
+      const wStreak = computeWorkoutStreak(wDates)
+      setWorkoutStreak(wStreak)
+      const aStreak = computeStreak(Array.from(new Set([...wDates, ...nDates, ...mDates])).sort())
+      setAllStreak(aStreak)
+      setWeekCalendar(computeWeekCalendar(wDates, nDates))
       const totalXp = computeXP(wDates, nDates, mDates)
       setXp(totalXp)
       const badges = computeBadges({
         totalWorkouts: workouts.length,
         totalNutritionDays: nDates.length,
         totalWeightLogs: mDates.length,
-        workoutStreak: streak,
-        allStreak: computeStreak(Array.from(new Set([...wDates, ...nDates, ...mDates])).sort()),
+        workoutStreak: wStreak,
+        allStreak: aStreak,
         xp: totalXp,
       })
       setBadgeCount(badges.filter(b => b.earned).length)
@@ -76,7 +82,7 @@ export default function DashboardPage() {
   if (!authReady) return (
     <main className="min-h-screen mesh-bg flex items-center justify-center">
       <div className="text-center space-y-3">
-        <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+        <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto" />
         <p className="text-2 text-sm">Loading your stats...</p>
       </div>
     </main>
@@ -87,6 +93,7 @@ export default function DashboardPage() {
   const { level, title: levelTitle } = getLevel(xp)
   const lvlPct  = getLevelProgress(xp)
   const tip     = getDailyTip()
+  const showMilestoneBanner = isStreakMilestone(workoutStreak) && workoutStreak > 0
   const greeting = getGreeting(profile?.displayName)
   const dayStr  = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
   const phase   = programmeWeek <= 4 ? 1 : programmeWeek <= 8 ? 2 : 3
@@ -159,23 +166,76 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Streak + badges */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="glass rounded-2xl p-4 flex items-center gap-3">
-            <span className="text-3xl leading-none flame">🔥</span>
+        {/* Streak card — expanded with week calendar */}
+        <div className="glass rounded-2xl p-4 space-y-3">
+          {/* Milestone banner */}
+          {showMilestoneBanner && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold"
+              style={{background:'rgba(245,158,11,0.12)', color:'#f59e0b'}}>
+              🎉 {workoutStreak}-day workout streak milestone!
+            </div>
+          )}
+
+          {/* Streak numbers */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-3xl leading-none flame">🔥</span>
+              <div>
+                <p className="text-2xl font-bold text-1">{workoutStreak}</p>
+                <p className="text-xs text-2">workout streak</p>
+              </div>
+            </div>
+            <div className="h-8 w-px shrink-0" style={{background:'rgba(255,255,255,0.08)'}} />
             <div>
-              <p className="text-2xl font-bold text-1">{workoutStreak}</p>
-              <p className="text-xs text-2">day streak</p>
+              <p className="text-2xl font-bold text-1">{allStreak}</p>
+              <p className="text-xs text-2">all-activity streak</p>
             </div>
           </div>
-          <Link href="/metrics" className="glass rounded-2xl p-4 flex items-center gap-3 card-hover">
-            <Trophy size={28} className="text-amber-400 shrink-0" />
+
+          {/* This week mini-calendar */}
+          {weekCalendar.length > 0 && (
             <div>
-              <p className="text-2xl font-bold text-1">{badgeCount}</p>
-              <p className="text-xs text-2">badges earned</p>
+              <p className="text-xs text-3 uppercase tracking-widest mb-2">This Week</p>
+              <div className="grid grid-cols-7 gap-1">
+                {weekCalendar.map(day => {
+                  const dotColor = day.hasWorkout ? '#10b981' : day.hasNutrition ? '#7c3aed' : null
+                  return (
+                    <div key={day.date} className="flex flex-col items-center gap-1">
+                      <p className="text-xs text-3">{day.dayName}</p>
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                        style={{
+                          background: dotColor ? dotColor + '20' : 'rgba(255,255,255,0.03)',
+                          border: day.isToday ? `1px solid ${dotColor ?? '#475569'}60` : '1px solid transparent',
+                        }}>
+                        <div className="w-2.5 h-2.5 rounded-full"
+                          style={{background: dotColor ?? 'rgba(255,255,255,0.08)'}} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="flex gap-3 mt-1.5 text-xs text-3">
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full inline-block" style={{background:'#10b981'}} />
+                  Workout
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full inline-block" style={{background:'#7c3aed'}} />
+                  Nutrition
+                </span>
+              </div>
             </div>
-          </Link>
+          )}
         </div>
+
+        {/* Badges */}
+        <Link href="/metrics" className="glass rounded-2xl p-4 flex items-center gap-3 card-hover">
+          <Trophy size={28} className="text-amber-400 shrink-0" />
+          <div>
+            <p className="text-2xl font-bold text-1">{badgeCount}</p>
+            <p className="text-xs text-2">badges earned</p>
+          </div>
+        </Link>
 
         {/* Progress rings */}
         <div className="glass rounded-2xl p-4">
