@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Utensils, Dumbbell, TrendingUp, User } from 'lucide-react'
+import { Home, Utensils, Dumbbell, TrendingUp, User, Sun, Moon } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 const NAV = [
   { href: '/dashboard', label: 'Home',     Icon: Home },
@@ -14,6 +15,19 @@ const NAV = [
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const [dark, setDark] = useState(true)
+
+  useEffect(() => {
+    setDark(localStorage.getItem('sbh_theme') !== 'light')
+  }, [])
+
+  function toggleTheme() {
+    const next = dark ? 'light' : 'dark'
+    localStorage.setItem('sbh_theme', next)
+    document.documentElement.setAttribute('data-theme', next)
+    setDark(!dark)
+  }
+
   const hide = ['/', '/login', '/register', '/onboarding'].some(p => pathname === p || pathname.startsWith('/onboarding'))
   if (hide) return null
 
@@ -51,6 +65,19 @@ export default function BottomNav() {
           </Link>
         )
       })}
+
+      {/* Theme toggle */}
+      <button
+        onClick={toggleTheme}
+        className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-all active:scale-90"
+        style={{ color: dark ? '#f59e0b' : '#7c3aed' }}
+        aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      >
+        {dark ? <Sun size={20} strokeWidth={1.75} /> : <Moon size={20} strokeWidth={1.75} />}
+        <span className="font-medium text-[10px] leading-none mt-0.5" style={{ color: 'var(--text-3)' }}>
+          {dark ? 'Light' : 'Dark'}
+        </span>
+      </button>
     </nav>
   )
 }
