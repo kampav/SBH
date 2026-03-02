@@ -385,6 +385,7 @@ export default function WorkoutPage() {
     return Math.min(mapped, 5)
   })
   const [exercises, setExercises] = useState<ExerciseLog[]>([])
+  const [userWeightKg, setUserWeightKg] = useState(83)
   const [lastWeekWorkout, setLastWeekWorkout] = useState<DailyWorkout | null>(null)
   const [startTime] = useState(Date.now())
   const [restTimer, setRestTimer] = useState<number | null>(null)
@@ -406,14 +407,36 @@ export default function WorkoutPage() {
       setProgrammeWeek(saved ? Math.min(Math.max(parseInt(saved), 1), 12) : 1)
       const profile = await getProfile(user.uid)
       if (profile?.programme) setProgrammeKey(profile.programme)
+      if (profile?.weightKg) setUserWeightKg(profile.weightKg)
     })
     return unsub
   }, [router])
 
   useEffect(() => {
     const day = PROGRAMME[selectedDay]
-    if (!day.isRest) setExercises(buildExerciseLogs(selectedDay, programmeKey))
-    else setExercises([])
+    if (!day.isRest) {
+      const base = buildExerciseLogs(selectedDay, programmeKey)
+      // Restore today's draft if available
+      if (uid) {
+        const todayStr = new Date().toISOString().slice(0, 10)
+        const draftKey = `sbh_workout_draft_${uid}_${todayStr}_${selectedDay}`
+        const savedDraft = localStorage.getItem(draftKey)
+        if (savedDraft) {
+          try {
+            const draft = JSON.parse(savedDraft) as ExerciseLog[]
+            setExercises(draft.length === base.length ? draft : base)
+          } catch {
+            setExercises(base)
+          }
+        } else {
+          setExercises(base)
+        }
+      } else {
+        setExercises(base)
+      }
+    } else {
+      setExercises([])
+    }
     setCompleted(false)
     setLastWeekWorkout(null)
 
@@ -428,6 +451,14 @@ export default function WorkoutPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDay, uid, programmeKey])
+
+  // Auto-save draft to localStorage whenever exercises change
+  useEffect(() => {
+    if (!uid || exercises.length === 0 || completed) return
+    const todayStr = new Date().toISOString().slice(0, 10)
+    const draftKey = `sbh_workout_draft_${uid}_${todayStr}_${selectedDay}`
+    localStorage.setItem(draftKey, JSON.stringify(exercises))
+  }, [exercises, uid, selectedDay, completed])
 
   useEffect(() => {
     if (restTimer === null) return
@@ -452,20 +483,23 @@ export default function WorkoutPage() {
   async function finishWorkout() {
     if (!uid) return
     setSaving(true)
+    const todayStr = new Date().toISOString().slice(0, 10)
     const durationMinutes = Math.round((Date.now() - startTime) / 60000)
     const totalVolumeKg = exercises.reduce((t, ex) =>
       t + ex.sets.filter(s => s.completed).reduce((tt, s) => tt + s.weightKg * s.reps, 0), 0)
     const prog = PROGRAMME[selectedDay]
     const workout: DailyWorkout = {
-      date: new Date().toISOString().slice(0, 10),
+      date: todayStr,
       programmeDay: prog.label,
       exercises,
       durationMinutes,
       totalVolumeKg,
-      estimatedCaloriesBurned: estimateCaloriesBurned(durationMinutes, 83),
+      estimatedCaloriesBurned: estimateCaloriesBurned(durationMinutes, userWeightKg),
       completedAt: serverTimestamp(),
     }
     await saveWorkout(uid, workout)
+    // Clear draft after successful save
+    localStorage.removeItem(`sbh_workout_draft_${uid}_${todayStr}_${selectedDay}`)
     setSaving(false)
     setCompleted(true)
   }
@@ -496,7 +530,7 @@ export default function WorkoutPage() {
             {[
               ['Duration', `${duration} min`],
               ['Total Volume', `${volume.toFixed(1)} kg`],
-              ['Est. Burned', `${estimateCaloriesBurned(duration, 83)} kcal`],
+              ['Est. Burned', `${estimateCaloriesBurned(duration, userWeightKg)} kcal`],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between">
                 <span className="text-2">{k}</span>

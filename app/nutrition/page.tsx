@@ -126,10 +126,10 @@ export default function NutritionPage() {
       if (result.error) throw new Error(result.error)
       fillForm({
         name: result.name ?? '',
-        calories: String(result.calories ?? ''),
-        proteinG: String(result.proteinG ?? ''),
-        carbsG: String(result.carbsG ?? ''),
-        fatG: String(result.fatG ?? ''),
+        calories: result.calories != null ? String(Math.round(result.calories)) : '',
+        proteinG: result.proteinG != null ? String(Math.round(result.proteinG * 10) / 10) : '',
+        carbsG: result.carbsG != null ? String(Math.round(result.carbsG * 10) / 10) : '',
+        fatG: result.fatG != null ? String(Math.round(result.fatG * 10) / 10) : '',
         servingSize: result.servingSize ?? '',
       })
     } catch (err: unknown) {
@@ -144,10 +144,10 @@ export default function NutritionPage() {
   function onBarcodeResult(r: {name:string;brand?:string;calories:number;proteinG:number;carbsG:number;fatG:number;servingSize:string}) {
     fillForm({
       name: r.brand ? `${r.name} (${r.brand})` : r.name,
-      calories: String(r.calories),
-      proteinG: String(r.proteinG),
-      carbsG: String(r.carbsG),
-      fatG: String(r.fatG),
+      calories: String(Math.round(r.calories)),
+      proteinG: String(Math.round(r.proteinG * 10) / 10),
+      carbsG: String(Math.round(r.carbsG * 10) / 10),
+      fatG: String(Math.round(r.fatG * 10) / 10),
       servingSize: r.servingSize,
     })
   }
@@ -159,10 +159,10 @@ export default function NutritionPage() {
     const meal: Meal = {
       id: Date.now().toString(),
       name: form.name,
-      calories: Number(form.calories),
-      proteinG: Number(form.proteinG) || 0,
-      carbsG: Number(form.carbsG) || 0,
-      fatG: Number(form.fatG) || 0,
+      calories: Math.round(Number(form.calories)),
+      proteinG: Math.round((Number(form.proteinG) || 0) * 10) / 10,
+      carbsG: Math.round((Number(form.carbsG) || 0) * 10) / 10,
+      fatG: Math.round((Number(form.fatG) || 0) * 10) / 10,
       time: new Date().toTimeString().slice(0, 5),
       mealType,
     }
@@ -263,10 +263,10 @@ export default function NutritionPage() {
       if (result.error) throw new Error(result.error)
       fillForm({
         name: result.name,
-        calories: String(result.calories),
-        proteinG: String(result.proteinG),
-        carbsG: String(result.carbsG),
-        fatG: String(result.fatG),
+        calories: String(Math.round(result.calories)),
+        proteinG: String(Math.round(result.proteinG * 10) / 10),
+        carbsG: String(Math.round(result.carbsG * 10) / 10),
+        fatG: String(Math.round(result.fatG * 10) / 10),
         servingSize: result.servingSize,
       })
       setFoodSearch('')
@@ -658,7 +658,7 @@ export default function NutritionPage() {
                   <p className="text-xs text-2 mt-0.5">
                     {meal.time} · {meal.mealType.replace('_',' ')}
                   </p>
-                  <p className="text-xs text-3 mt-0.5">P:{meal.proteinG}g C:{meal.carbsG}g F:{meal.fatG}g</p>
+                  <p className="text-xs text-3 mt-0.5">P:{Math.round(meal.proteinG * 10) / 10}g C:{Math.round(meal.carbsG * 10) / 10}g F:{Math.round(meal.fatG * 10) / 10}g</p>
                 </div>
                 <div className="flex items-center gap-2 ml-3">
                   <p className="font-bold text-sm" style={{color: VIOLET}}>{meal.calories} kcal</p>
@@ -691,7 +691,7 @@ function MacroRing({ label, current, target, color }: { label:string; current:nu
         </svg>
         <span className="absolute text-xs font-bold" style={{color}}>{Math.round(pct)}%</span>
       </div>
-      <p className="text-xs font-bold text-1">{current}g</p>
+      <p className="text-xs font-bold text-1">{Math.round(current * 10) / 10}g</p>
       <p className="text-xs text-3">/ {target}g</p>
       <p className="text-xs text-2">{label}</p>
     </div>
