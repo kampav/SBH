@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { useRouter } from 'next/navigation'
@@ -14,6 +14,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isNativeApp, setIsNativeApp] = useState(false)
+
+  useEffect(() => {
+    // Capacitor sets window.Capacitor when running as a native app
+    setIsNativeApp(!!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.())
+  }, [])
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -50,19 +56,23 @@ export default function LoginPage() {
           <p className="text-slate-400 text-sm mt-1">Sign in to your account</p>
         </div>
 
-        <button
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          className="w-full py-2.5 px-4 bg-white text-slate-900 rounded-lg font-semibold hover:bg-slate-100 transition-colors disabled:opacity-50"
-        >
-          Continue with Google
-        </button>
+        {!isNativeApp && (
+          <>
+            <button
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full py-2.5 px-4 bg-white text-slate-900 rounded-lg font-semibold hover:bg-slate-100 transition-colors disabled:opacity-50"
+            >
+              Continue with Google
+            </button>
 
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-px bg-slate-700" />
-          <span className="text-slate-500 text-xs">or</span>
-          <div className="flex-1 h-px bg-slate-700" />
-        </div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-slate-700" />
+              <span className="text-slate-500 text-xs">or</span>
+              <div className="flex-1 h-px bg-slate-700" />
+            </div>
+          </>
+        )}
 
         <form onSubmit={handleEmailLogin} className="space-y-4">
           <input
