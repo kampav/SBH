@@ -1,0 +1,146 @@
+name: Play Store — Build & Upload AAB
+
+# Triggers:
+#  • Manual dispatch from GitHub Actions UI (recommended for releases)
+#  • On tag push matching v* (e.g. v1.0.0, v1.1.0)
+#
+# Required GitHub Secrets:
+#   ANDROID_KEYSTORE_BASE64     — base64-encoded .keystore file
+#   ANDROID_KEY_ALIAS           — key alias inside the keystore
+#   ANDROID_STORE_PASSWORD      — keystore password
+#   ANDROID_KEY_PASSWORD        — key password
+#   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON — full JSON of GCP service account
+#                                      (with Play Developer API access)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Version name shown to users (e.g. 1.2.0)'
+        required: true
+        default: '1.0.0'
+      track:
+        description: 'Play Store track'
+        required: true
+        default: 'internal'
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+
+env:
+  # versionCode = GitHub run number (auto-incrementing, always higher than prev)
+  VERSION_CODE: ${{ github.run_number }}
+  VERSION_NAME: ${{ github.event.inputs.version_name || github.ref_name }}
+  TRACK: ${{ github.event.inputs.track || 'internal' }}
+
+jobs:
+  build-and-upload:
+    name: Build Signed AAB → Play Store
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # for creating GitHub Release
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Node / npm ────────────────────────────────────────────────────────
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Capacitor sync (embeds server URL into Android project)
+        run: npx cap sync android
+
+      # ── Java ──────────────────────────────────────────────────────────────
+      - name: Set up Java 21
+        id: setup-java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # ── Signing keystore ──────────────────────────────────────────────────
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d \
+            > android/app/sbh-release.keystore
+          echo "Keystore size: $(stat -c%s android/app/sbh-release.keystore) bytes"
+
+      # ── Build ─────────────────────────────────────────────────────────────
+      - name: Make Gradle wrapper executable
+        run: chmod +x android/gradlew
+
+      - name: Build release AAB
+        working-directory: android
+        env:
+          KEYSTORE_PATH: sbh-release.keystore
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          JAVA_HOME: ${{ steps.setup-java.outputs.path }}
+        run: |
+          ./gradlew bundleRelease --no-daemon \
+            "-Dorg.gradle.java.home=$JAVA_HOME" \
+            "-PVERSION_CODE=$VERSION_CODE" \
+            "-PVERSION_NAME=$VERSION_NAME"
+          echo "AAB built:"
+          ls -lh app/build/outputs/bundle/release/
+
+      # ── Rename artifact ───────────────────────────────────────────────────
+      - name: Rename AAB
+        run: |
+          AAB_SRC=android/app/build/outputs/bundle/release/app-release.aab
+          AAB_DST=sbh-v${VERSION_NAME}-${VERSION_CODE}.aab
+          cp "$AAB_SRC" "$AAB_DST"
+          echo "AAB_FILE=$AAB_DST" >> $GITHUB_ENV
+
+      # ── Upload AAB as artifact (always) ───────────────────────────────────
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.AAB_FILE }}
+          path: ${{ env.AAB_FILE }}
+          retention-days: 90
+
+      # ── GitHub Release (on tag push) ──────────────────────────────────────
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            "${{ env.AAB_FILE }}" \
+            --title "SBH ${{ github.ref_name }}" \
+            --notes "Play Store AAB — version code \`${VERSION_CODE}\`, version name \`${VERSION_NAME}\`" \
+            --latest
+
+      # ── Upload to Play Store ───────────────────────────────────────────────
+      - name: Upload to Google Play
+        if: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.sciencebasedhealth.sbh
+          releaseFiles: ${{ env.AAB_FILE }}
+          track: ${{ env.TRACK }}
+          status: completed
+          releaseName: ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
+          changesNotSentForReview: false
+
+      # ── Cleanup ───────────────────────────────────────────────────────────
+      - name: Clean up keystore
+        if: always()
+        run: rm -f android/app/sbh-release.keystore
