@@ -2,11 +2,11 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
-import { saveWorkout, getWorkout, getProfile } from '@/lib/firestore'
+import { saveWorkout, getWorkout, getProfile, getRecentWorkouts } from '@/lib/firestore'
 import { estimateCaloriesBurned } from '@/lib/calculations'
 import { DailyWorkout, ExerciseLog, SetLog, ProgrammeKey } from '@/lib/types'
 import { serverTimestamp } from 'firebase/firestore'
@@ -393,7 +393,20 @@ export default function WorkoutPage() {
   const [completed, setCompleted] = useState(false)
   const [programmeWeek, setProgrammeWeek] = useState(1)
   const [cardioLogged, setCardioLogged] = useState(false)
+  const [completedWorkoutDates, setCompletedWorkoutDates] = useState<Set<string>>(new Set())
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // ISO date strings for Mon–Sun of the current week (index 0=Mon, 6=Sun)
+  const weekDates = useMemo(() => {
+    const today = new Date()
+    const dow = today.getDay() // 0=Sun
+    const mondayOffset = dow === 0 ? -6 : 1 - dow
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today)
+      d.setDate(today.getDate() + mondayOffset + i)
+      return d.toISOString().slice(0, 10)
+    })
+  }, [])
 
   // Derived from state — reactive to programmeKey
   const PROGRAMME = PROGRAMMES[programmeKey]
@@ -408,6 +421,10 @@ export default function WorkoutPage() {
       const profile = await getProfile(user.uid)
       if (profile?.programme) setProgrammeKey(profile.programme)
       if (profile?.weightKg) setUserWeightKg(profile.weightKg)
+      // Load completed workout dates to grey out finished days in the week view
+      getRecentWorkouts(user.uid, 14).then(recent => {
+        setCompletedWorkoutDates(new Set(recent.map(w => w.date)))
+      })
     })
     return unsub
   }, [router])
@@ -500,6 +517,7 @@ export default function WorkoutPage() {
     await saveWorkout(uid, workout)
     // Clear draft after successful save
     localStorage.removeItem(`sbh_workout_draft_${uid}_${todayStr}_${selectedDay}`)
+    setCompletedWorkoutDates(prev => new Set(Array.from(prev).concat(todayStr)))
     setSaving(false)
     setCompleted(true)
   }
@@ -602,18 +620,24 @@ export default function WorkoutPage() {
         <div className="glass rounded-2xl p-3">
           <div className="grid grid-cols-7 gap-1.5">
             {PROGRAMME.map((p, i) => {
-              const isToday = i === selectedDay
+              const isSelected = i === selectedDay
+              const dayDate = weekDates[i]
+              const isDone = !p.isRest && completedWorkoutDates.has(dayDate)
               return (
                 <button key={i} onClick={() => setSelectedDay(i)}
                   className="flex flex-col items-center gap-1.5 transition-all">
                   <p className="text-xs text-3">{p.dayName}</p>
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold transition-all"
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold transition-all relative"
                     style={{
-                      background: isToday ? p.color : p.isRest ? '#0D1526' : p.color + '15',
-                      color: isToday ? '#fff' : p.isRest ? '#475569' : p.color,
-                      boxShadow: isToday ? `0 0 16px -4px ${p.color}80` : 'none',
+                      background: isSelected
+                        ? p.color
+                        : isDone ? p.color + '22'
+                        : p.isRest ? '#0D1526' : p.color + '15',
+                      color: isSelected ? '#fff' : isDone ? p.color : p.isRest ? '#475569' : p.color,
+                      boxShadow: isSelected ? `0 0 16px -4px ${p.color}80` : 'none',
+                      opacity: isDone && !isSelected ? 0.65 : 1,
                     }}>
-                    {p.isRest ? '—' : p.dayName.charAt(0)}
+                    {isDone && !isSelected ? <Check size={12} /> : p.isRest ? '—' : p.dayName.charAt(0)}
                   </div>
                 </button>
               )
@@ -736,37 +760,50 @@ export default function WorkoutPage() {
                   <span>{def?.isTime ? 'done' : 'reps'}</span>
                   <span>✓</span>
                 </div>
-                {ex.sets.map((set, setIdx) => (
-                  <div key={setIdx} className={`grid grid-cols-4 gap-2 items-center ${set.completed ? 'opacity-40' : ''}`}>
-                    <span className="text-center text-xs text-2">#{set.setNumber}</span>
-                    {def?.isTime ? (
-                      <span className="text-center text-xs text-2 col-span-2">{def.repRange}</span>
-                    ) : (
-                      <>
-                        <input type="number" step="0.5" value={set.weightKg || ''}
-                          onChange={e => updateSet(exIdx, setIdx, 'weightKg', Number(e.target.value))}
-                          disabled={set.completed} placeholder="0"
-                          className="px-2 py-1.5 rounded-lg text-sm text-1 text-center outline-none w-full glass"
-                          style={{background:'rgba(255,255,255,0.04)'}}
-                        />
-                        <input type="number" value={set.reps || ''}
-                          onChange={e => updateSet(exIdx, setIdx, 'reps', Number(e.target.value))}
-                          disabled={set.completed} placeholder="0"
-                          className="px-2 py-1.5 rounded-lg text-sm text-1 text-center outline-none w-full glass"
-                          style={{background:'rgba(255,255,255,0.04)'}}
-                        />
-                      </>
-                    )}
-                    <button onClick={() => completeSet(exIdx, setIdx)} disabled={set.completed}
-                      className="w-9 h-9 mx-auto rounded-full text-sm font-bold transition-all flex items-center justify-center"
-                      style={{
-                        background: set.completed ? prog.color + '25' : 'rgba(255,255,255,0.06)',
-                        color: set.completed ? prog.color : '#94a3b8',
-                      }}>
-                      {set.completed ? <Check size={14} /> : '○'}
-                    </button>
-                  </div>
-                ))}
+                {ex.sets.map((set, setIdx) => {
+                  const lastEx = lastWeekWorkout?.exercises.find(e => e.exerciseName === ex.exerciseName)
+                  const lastSet = lastEx?.sets[setIdx]
+                  const hasPrev = lastSet && lastSet.completed && !def?.isTime
+                  return (
+                    <div key={setIdx}>
+                      <div className={`grid grid-cols-4 gap-2 items-center ${set.completed ? 'opacity-40' : ''}`}>
+                        <span className="text-center text-xs text-2">#{set.setNumber}</span>
+                        {def?.isTime ? (
+                          <span className="text-center text-xs text-2 col-span-2">{def.repRange}</span>
+                        ) : (
+                          <>
+                            <input type="number" step="0.5" value={set.weightKg || ''}
+                              onChange={e => updateSet(exIdx, setIdx, 'weightKg', Number(e.target.value))}
+                              disabled={set.completed} placeholder={hasPrev ? String(lastSet.weightKg) : '0'}
+                              className="px-2 py-1.5 rounded-lg text-sm text-1 text-center outline-none w-full glass"
+                              style={{background:'rgba(255,255,255,0.04)'}}
+                            />
+                            <input type="number" value={set.reps || ''}
+                              onChange={e => updateSet(exIdx, setIdx, 'reps', Number(e.target.value))}
+                              disabled={set.completed} placeholder={hasPrev ? String(lastSet.reps) : '0'}
+                              className="px-2 py-1.5 rounded-lg text-sm text-1 text-center outline-none w-full glass"
+                              style={{background:'rgba(255,255,255,0.04)'}}
+                            />
+                          </>
+                        )}
+                        <button onClick={() => completeSet(exIdx, setIdx)} disabled={set.completed}
+                          className="w-9 h-9 mx-auto rounded-full text-sm font-bold transition-all flex items-center justify-center"
+                          style={{
+                            background: set.completed ? prog.color + '25' : 'rgba(255,255,255,0.06)',
+                            color: set.completed ? prog.color : '#94a3b8',
+                          }}>
+                          {set.completed ? <Check size={14} /> : '○'}
+                        </button>
+                      </div>
+                      {hasPrev && (
+                        <p className="text-center text-xs mt-0.5 col-span-4"
+                          style={{color:'#334155', paddingLeft:'25%', paddingRight:'25%'}}>
+                          prev: {lastSet.weightKg}kg × {lastSet.reps}
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )

@@ -3,6 +3,7 @@ import {
   collection, getDocs,
   query, orderBy, limit,
   serverTimestamp,
+  writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood } from './types'
@@ -85,4 +86,16 @@ export async function getRecentWorkouts(uid: string, days = 30): Promise<DailyWo
   const q = query(collection(db, 'users', uid, 'workouts'), orderBy('date', 'desc'), limit(days))
   const snap = await getDocs(q)
   return snap.docs.map(d => d.data() as DailyWorkout)
+}
+
+// ─── Account Deletion ─────────────────────────────────────────────────────────
+export async function deleteAllUserData(uid: string): Promise<void> {
+  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites']
+  for (const sub of subcollections) {
+    const snap = await getDocs(collection(db, 'users', uid, sub))
+    const batch = writeBatch(db)
+    snap.docs.forEach(d => batch.delete(d.ref))
+    if (snap.docs.length > 0) await batch.commit()
+  }
+  await deleteDoc(doc(db, 'users', uid, 'profile', 'data'))
 }

@@ -25,6 +25,7 @@ export interface UserProfile {
   carbTargetG: number
   fatTargetG: number
   onboardingComplete: boolean
+  photoUrl?: string
   createdAt: FirestoreTimestamp
   updatedAt: FirestoreTimestamp
 }

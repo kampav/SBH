@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import { initializeAuth, getAuth, browserLocalPersistence, indexedDBLocalPersistence } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -42,3 +43,5 @@ function createAuth() {
 export const auth = isBrowser ? createAuth() : null as never
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export const db = isBrowser ? getFirestore(app!) : null as never
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+export const storage = isBrowser ? getStorage(app!) : null as never
