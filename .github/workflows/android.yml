@@ -3,6 +3,7 @@ name: Build Android AAB
 # Builds a signed release AAB whenever Android-related files change on master,
 # or when manually triggered. Use the 'playstore.yml' workflow to upload to
 # Google Play Store.
+# v1.1.0 — glucose/diabetes management feature set
 
 on:
   push:
