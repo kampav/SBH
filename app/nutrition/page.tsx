@@ -6,11 +6,12 @@ import { useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
-import { getProfile, getNutrition, saveNutrition, getFavouriteFoods, saveFavouriteFood, deleteFavouriteFood } from '@/lib/firestore'
-import { DailyNutrition, Meal, MealType, FavouriteFood } from '@/lib/types'
+import { getProfile, getNutrition, saveNutrition, getFavouriteFoods, saveFavouriteFood, deleteFavouriteFood, getGlucoseSettings } from '@/lib/firestore'
+import { DailyNutrition, Meal, MealType, FavouriteFood, GlucoseSettings, MealWithGI } from '@/lib/types'
 import { serverTimestamp } from 'firebase/firestore'
-import { Droplets, Plus, X, Camera, ScanLine, Heart, HeartOff, Loader2, ChevronDown, ChevronUp, Search } from 'lucide-react'
-import { FOOD_DATABASE, FoodEntry } from '@/lib/foodDatabase'
+import { Droplets, Plus, X, Camera, ScanLine, Heart, HeartOff, Loader2, ChevronDown, ChevronUp, Search, AlertTriangle } from 'lucide-react'
+import { FOOD_DATABASE, FoodEntry, LOWER_GI_SWAPS } from '@/lib/foodDatabase'
+import { calcGL, hasMealTimingRisk, giCategory } from '@/lib/glucoseUtils'
 import nextDynamic from 'next/dynamic'
 
 const BarcodeScanner = nextDynamic(() => import('@/components/nutrition/BarcodeScanner'), { ssr: false })
@@ -66,6 +67,9 @@ export default function NutritionPage() {
   const [showSearchResults, setShowSearchResults] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const searchRef = useRef<HTMLDivElement>(null)
+  const [glucoseSettings, setGlucoseSettings] = useState<GlucoseSettings | null>(null)
+  const [mealTimingWarning, setMealTimingWarning] = useState(false)
+  const [formGI, setFormGI] = useState<{ gi: number | null; gl: number | null; fibre: number | null; freeSugars: number | null }>({ gi: null, gl: null, fibre: null, freeSugars: null })
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -76,13 +80,15 @@ export default function NutritionPage() {
       if (raw) { try { setRecentFoods(JSON.parse(raw)) } catch { /* ignore */ } }
       const p = await getProfile(user.uid)
       if (p) setTargets({ cal: p.calorieTarget, protein: p.proteinTargetG, carbs: p.carbTargetG, fat: p.fatTargetG })
-      const [n, favs] = await Promise.all([
+      const [n, favs, gs] = await Promise.all([
         getNutrition(user.uid, today),
         getFavouriteFoods(user.uid),
+        getGlucoseSettings(user.uid),
       ])
       if (n) setData(n)
       else setData({ ...EMPTY, calorieTarget: p?.calorieTarget ?? 2050 })
       setFavourites(favs)
+      if (gs?.consentGiven) setGlucoseSettings(gs)
     })
     return unsub
   }, [router])
@@ -132,6 +138,12 @@ export default function NutritionPage() {
         fatG: result.fatG != null ? String(Math.round(result.fatG * 10) / 10) : '',
         servingSize: result.servingSize ?? '',
       })
+      setFormGI({
+        gi: result.giEstimate ?? null,
+        gl: result.glEstimate ?? null,
+        fibre: result.fibreG ?? null,
+        freeSugars: result.freeSugarsG ?? null,
+      })
     } catch (err: unknown) {
       setAiError(err instanceof Error ? err.message : 'Analysis failed. Please fill in manually.')
     } finally {
@@ -156,15 +168,23 @@ export default function NutritionPage() {
   async function addMeal() {
     if (!uid || !form.name || !form.calories) return
     setSaving(true)
-    const meal: Meal = {
+    const carbsVal = Math.round((Number(form.carbsG) || 0) * 10) / 10
+    const fibreVal = formGI.fibre ?? 0
+    const giVal = formGI.gi
+    const glVal = formGI.gl ?? (giVal != null ? calcGL(giVal, carbsVal, fibreVal) : undefined)
+    const meal: MealWithGI = {
       id: Date.now().toString(),
       name: form.name,
       calories: Math.round(Number(form.calories)),
       proteinG: Math.round((Number(form.proteinG) || 0) * 10) / 10,
-      carbsG: Math.round((Number(form.carbsG) || 0) * 10) / 10,
+      carbsG: carbsVal,
       fatG: Math.round((Number(form.fatG) || 0) * 10) / 10,
       time: new Date().toTimeString().slice(0, 5),
       mealType,
+      giEstimate: giVal ?? undefined,
+      glEstimate: glVal,
+      fibreG: fibreVal > 0 ? fibreVal : undefined,
+      freeSugarsG: formGI.freeSugars ?? undefined,
     }
     const updated: DailyNutrition = {
       ...data,
@@ -176,8 +196,10 @@ export default function NutritionPage() {
     }
     await saveNutrition(uid, updated)
     setData(updated)
+    setMealTimingWarning(hasMealTimingRisk(updated.meals as MealWithGI[]))
     setMode('idle')
     setForm({ name: '', calories: '', proteinG: '', carbsG: '', fatG: '' })
+    setFormGI({ gi: null, gl: null, fibre: null, freeSugars: null })
     setSaving(false)
   }
 
@@ -269,6 +291,12 @@ export default function NutritionPage() {
         fatG: String(Math.round(result.fatG * 10) / 10),
         servingSize: result.servingSize,
       })
+      setFormGI({
+        gi: result.giEstimate ?? null,
+        gl: result.glEstimate ?? null,
+        fibre: result.fibreG ?? null,
+        freeSugars: result.freeSugarsG ?? null,
+      })
       setFoodSearch('')
       setShowSearchResults(false)
     } catch {
@@ -279,13 +307,15 @@ export default function NutritionPage() {
   }
 
   function addFromSearch(food: FoodEntry) {
+    const gl = food.gi != null ? calcGL(food.gi, food.carbsG, food.fibreG ?? 0) : undefined
     quickAdd({
       name: `${food.name} (${food.servingSize})`,
       calories: food.calories,
       proteinG: food.proteinG,
       carbsG: food.carbsG,
       fatG: food.fatG,
-    })
+      ...(food.gi != null && { giEstimate: food.gi, glEstimate: gl, fibreG: food.fibreG }),
+    } as MealWithGI)
     setFoodSearch('')
     setShowSearchResults(false)
   }
@@ -377,20 +407,37 @@ export default function NutritionPage() {
 
           {showSearchResults && foodSearch.trim().length >= 2 && (
             <div className="mt-2 space-y-1">
-              {searchResults.map(food => (
-                <button key={food.name} onClick={() => addFromSearch(food)}
-                  className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left hover:bg-violet-500/10 transition-all glass">
-                  <span className="text-xl shrink-0">{food.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-1 truncate">{food.name}</p>
-                    <p className="text-xs text-2">{food.servingSize}</p>
+              {searchResults.map(food => {
+                const swap = LOWER_GI_SWAPS[food.name]
+                const showGI = glucoseSettings && food.gi != null
+                return (
+                  <div key={food.name} className="space-y-0.5">
+                    <button onClick={() => addFromSearch(food)}
+                      className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left hover:bg-violet-500/10 transition-all glass">
+                      <span className="text-xl shrink-0">{food.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-1 truncate">{food.name}</p>
+                        <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                          <p className="text-xs text-2">{food.servingSize}</p>
+                          {showGI && (() => {
+                            const { label, color } = giCategory(food.gi!)
+                            return <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${color}15`, color }}>{label} {food.gi}</span>
+                          })()}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-bold" style={{color: VIOLET}}>{food.calories}kcal</p>
+                        <p className="text-xs text-2">P:{food.proteinG}g</p>
+                      </div>
+                    </button>
+                    {glucoseSettings && swap && (
+                      <p className="text-xs px-2.5" style={{ color: '#10b981' }}>
+                        ↓ Lower GI: {swap}
+                      </p>
+                    )}
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-bold" style={{color: VIOLET}}>{food.calories}kcal</p>
-                    <p className="text-xs text-2">P:{food.proteinG}g</p>
-                  </div>
-                </button>
-              ))}
+                )
+              })}
 
               {noLocalResults && (
                 <div className="p-2.5 rounded-xl glass">
@@ -465,6 +512,43 @@ export default function NutritionPage() {
           </div>
         </div>
 
+        {/* Carb budget bar — shown only if glucose tracking enabled */}
+        {glucoseSettings && (
+          <div className="glass rounded-2xl p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-2 uppercase tracking-widest">Carb Budget</p>
+              <p className="text-xs text-2">{Math.round(data.totalCarbsG)}g / {glucoseSettings.dailyCarbBudgetG}g</p>
+            </div>
+            {(() => {
+              const totalFibre = (data.meals as MealWithGI[]).reduce((s, m) => s + (m.fibreG ?? 0), 0)
+              const netCarbs = Math.max(0, data.totalCarbsG - totalFibre)
+              const pct = Math.min((data.totalCarbsG / glucoseSettings.dailyCarbBudgetG) * 100, 100)
+              const over = data.totalCarbsG > glucoseSettings.dailyCarbBudgetG
+              return (
+                <>
+                  <div className="flex gap-4 text-xs text-2">
+                    <span>Total: <strong className="text-1">{Math.round(data.totalCarbsG)}g</strong></span>
+                    <span style={{ color: CYAN }}>Fibre: <strong>{Math.round(totalFibre)}g</strong></span>
+                    <span style={{ color: VIOLET }}>Net: <strong>{Math.round(netCarbs)}g</strong></span>
+                  </div>
+                  <div className="w-full rounded-full h-2" style={{ background: 'rgba(6,182,212,0.12)' }}>
+                    <div className="h-2 rounded-full transition-all" style={{
+                      width: `${pct}%`,
+                      background: over ? ROSE : `linear-gradient(90deg,${CYAN},#0891b2)`,
+                    }} />
+                  </div>
+                  {mealTimingWarning && (
+                    <p className="text-xs flex items-center gap-1" style={{ color: '#f59e0b' }}>
+                      <AlertTriangle size={11} />
+                      Two high-GL meals within 2 hrs — may cause compounding glucose spikes
+                    </p>
+                  )}
+                </>
+              )
+            })()}
+          </div>
+        )}
+
         {/* Scan / Add buttons */}
         <div className="grid grid-cols-3 gap-2.5">
           <button onClick={() => photoInputRef.current?.click()}
@@ -516,6 +600,30 @@ export default function NutritionPage() {
                   placeholder={label} className="input-glass" />
               ))}
             </div>
+            {formGI.gi != null && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {(() => {
+                  const { label, color } = giCategory(formGI.gi!)
+                  return (
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: `${color}18`, color }}>
+                      GI {formGI.gi} — {label}
+                    </span>
+                  )
+                })()}
+                {formGI.gl != null && (
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: 'rgba(124,58,237,0.1)', color: VIOLET }}>
+                    GL {formGI.gl}
+                  </span>
+                )}
+                {formGI.fibre != null && (
+                  <span className="px-2.5 py-1 rounded-lg text-xs" style={{ background: 'rgba(6,182,212,0.1)', color: CYAN }}>
+                    Fibre {formGI.fibre}g
+                  </span>
+                )}
+                <span className="text-xs text-3">Informational only</span>
+              </div>
+            )}
+
             <select value={mealType} onChange={e => setMealType(e.target.value as MealType)} className="input-glass">
               {(['breakfast','lunch','dinner','snack','pre_workout','post_workout'] as const).map(t => (
                 <option key={t} value={t} style={{background:'#0a0819'}}>{t.replace('_',' ')}</option>
@@ -658,7 +766,14 @@ export default function NutritionPage() {
                   <p className="text-xs text-2 mt-0.5">
                     {meal.time} · {meal.mealType.replace('_',' ')}
                   </p>
-                  <p className="text-xs text-3 mt-0.5">P:{Math.round(meal.proteinG * 10) / 10}g C:{Math.round(meal.carbsG * 10) / 10}g F:{Math.round(meal.fatG * 10) / 10}g</p>
+                  <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                    <p className="text-xs text-3">P:{Math.round(meal.proteinG * 10) / 10}g C:{Math.round(meal.carbsG * 10) / 10}g F:{Math.round(meal.fatG * 10) / 10}g</p>
+                    {glucoseSettings && (meal as MealWithGI).giEstimate != null && (
+                      <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(6,182,212,0.1)', color: CYAN }}>
+                        GI {(meal as MealWithGI).giEstimate}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 ml-3">
                   <p className="font-bold text-sm" style={{color: VIOLET}}>{meal.calories} kcal</p>

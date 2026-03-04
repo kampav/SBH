@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Utensils, Dumbbell, TrendingUp, User, Sun, Moon } from 'lucide-react'
+import { Home, Utensils, Dumbbell, TrendingUp, User, Sun, Moon, Activity } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 const NAV = [
-  { href: '/dashboard', label: 'Home',     Icon: Home },
+  { href: '/dashboard', label: 'Home',      Icon: Home },
   { href: '/nutrition', label: 'Nutrition', Icon: Utensils },
   { href: '/workout',   label: 'Workout',   Icon: Dumbbell },
+  { href: '/glucose',   label: 'Glucose',   Icon: Activity },
   { href: '/metrics',   label: 'Progress',  Icon: TrendingUp },
   { href: '/profile',   label: 'Profile',   Icon: User },
 ]
@@ -56,9 +57,9 @@ export default function BottomNav() {
                 <span className="absolute inset-0 rounded-xl"
                   style={{ background: 'rgba(124,58,237,0.15)', transform: 'scale(1.4)' }} />
               )}
-              <Icon size={20} strokeWidth={active ? 2.5 : 1.75} className="relative" />
+              <Icon size={18} strokeWidth={active ? 2.5 : 1.75} className="relative" />
             </div>
-            <span className="font-medium text-[10px] leading-none mt-0.5"
+            <span className="font-medium text-[9px] leading-none mt-0.5"
               style={{ fontWeight: active ? 700 : 500 }}>
               {label}
             </span>
@@ -73,8 +74,8 @@ export default function BottomNav() {
         style={{ color: dark ? '#f59e0b' : '#7c3aed' }}
         aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
       >
-        {dark ? <Sun size={20} strokeWidth={1.75} /> : <Moon size={20} strokeWidth={1.75} />}
-        <span className="font-medium text-[10px] leading-none mt-0.5" style={{ color: 'var(--text-3)' }}>
+        {dark ? <Sun size={18} strokeWidth={1.75} /> : <Moon size={18} strokeWidth={1.75} />}
+        <span className="font-medium text-[9px] leading-none mt-0.5" style={{ color: 'var(--text-3)' }}>
           {dark ? 'Light' : 'Dark'}
         </span>
       </button>

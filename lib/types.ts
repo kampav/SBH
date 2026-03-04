@@ -166,3 +166,56 @@ export interface CalcResult {
 
 export type ActivityLevel = UserProfile['activityLevel']
 export type Goal = UserProfile['goal']
+
+// ─── Glucose & Diabetes Management ───────────────────────────────────────────
+export type GlucoseUnit = 'mmol/L' | 'mg/dL'
+
+export interface GlucoseReading {
+  id: string
+  time: string  // HH:MM 24hr
+  valueMmol: number
+  context: 'fasting' | 'pre_meal' | 'post_meal_1h' | 'post_meal_2h' | 'bedtime' | 'other'
+  mealRef?: string
+  notes?: string
+}
+
+export interface DailyGlucose {
+  date: string  // YYYY-MM-DD
+  readings: GlucoseReading[]
+}
+
+export interface HbA1cEntry {
+  id: string
+  date: string  // YYYY-MM-DD
+  valuePct: number
+  source: 'clinic' | 'estimated'
+  estimatedFromAvgMmol?: number
+  notes?: string
+  loggedAt: FirestoreTimestamp
+}
+
+export interface GlucoseSettings {
+  hypoThresholdMmol: number     // default 3.9
+  hyperThresholdMmol: number    // default 10.0
+  targetRangeLowMmol: number    // default 4.0
+  targetRangeHighMmol: number   // default 8.0
+  dailyCarbBudgetG: number      // default 130
+  preferredUnit: GlucoseUnit
+  consentGiven: boolean
+  consentDate?: string          // YYYY-MM-DD
+}
+
+export interface MealWithGI extends Meal {
+  giEstimate?: number
+  glEstimate?: number
+  fibreG?: number
+  freeSugarsG?: number
+}
+
+export interface GlucosePrediction {
+  curve: { minutesAfterMeal: number; predictedMmol: number }[]
+  peakMmol: number
+  peakMinutes: number
+  confidenceNote: string
+  safetyDisclaimer: string
+}

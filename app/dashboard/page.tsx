@@ -6,10 +6,11 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { getProfile, getNutrition, getRecentWorkouts, getMetrics, getNutritionHistory } from '@/lib/firestore'
-import { UserProfile } from '@/lib/types'
+import { getProfile, getNutrition, getRecentWorkouts, getMetrics, getNutritionHistory, getGlucoseSettings, getDailyGlucose } from '@/lib/firestore'
+import { UserProfile, GlucoseSettings, GlucoseReading } from '@/lib/types'
+import { displayGlucose, glucoseColor, DEFAULT_GLUCOSE_SETTINGS } from '@/lib/glucoseUtils'
 import Link from 'next/link'
-import { LogOut, Zap, Trophy, ChevronRight, User, Utensils, Dumbbell, Scale, TrendingUp, type LucideIcon } from 'lucide-react'
+import { LogOut, Zap, Trophy, ChevronRight, User, Utensils, Dumbbell, Scale, TrendingUp, Activity, type LucideIcon } from 'lucide-react'
 import ProgressRing from '@/components/ui/ProgressRing'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import {
@@ -43,6 +44,8 @@ export default function DashboardPage() {
   const [programmeWeek, setProgrammeWeek] = useState(1)
   const [aiInsights, setAiInsights] = useState<{ quote: string; insights: string[]; recommendation: string } | null>(null)
   const [insightsLoading, setInsightsLoading] = useState(false)
+  const [glucoseSettings, setGlucoseSettings] = useState<GlucoseSettings | null>(null)
+  const [latestGlucose, setLatestGlucose] = useState<GlucoseReading | null>(null)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -50,12 +53,21 @@ export default function DashboardPage() {
       if (!user) { router.push('/login'); return }
       const saved = localStorage.getItem(`sbh_week_${user.uid}`)
       setProgrammeWeek(saved ? Math.min(Math.max(parseInt(saved), 1), 12) : 1)
-      const [p, nutrition, workouts, metrics] = await Promise.all([
+      const [p, nutrition, workouts, metrics, gs, todayGlucose] = await Promise.all([
         getProfile(user.uid),
         getNutrition(user.uid, today),
         getRecentWorkouts(user.uid, 90),
         getMetrics(user.uid, 90),
+        getGlucoseSettings(user.uid),
+        getDailyGlucose(user.uid, today),
       ])
+      if (gs?.consentGiven) {
+        setGlucoseSettings(gs)
+        if (todayGlucose?.readings?.length) {
+          const sorted = [...todayGlucose.readings].sort((a, b) => a.time.localeCompare(b.time))
+          setLatestGlucose(sorted[sorted.length - 1])
+        }
+      }
       if (!p?.onboardingComplete) { router.push('/onboarding'); return }
       setProfile(p)
       if (nutrition) {
@@ -189,6 +201,37 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* ── GLUCOSE WIDGET (shown only if consent given) ── */}
+        {glucoseSettings?.consentGiven && (
+          <Link href="/glucose" className="block glass rounded-2xl p-4 card-hover">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(16,185,129,0.15)' }}>
+                  <Activity size={18} style={{ color: '#10b981' }} />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-2 uppercase tracking-widest">Glucose</p>
+                  {latestGlucose ? (
+                    <p className="font-bold text-sm"
+                      style={{ color: glucoseColor(latestGlucose.valueMmol, { ...DEFAULT_GLUCOSE_SETTINGS, ...glucoseSettings }) }}>
+                      {displayGlucose(latestGlucose.valueMmol, glucoseSettings.preferredUnit)}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-3">No reading today</p>
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                {latestGlucose && (
+                  <p className="text-xs text-2">{latestGlucose.time} · {latestGlucose.context.replace(/_/g, ' ')}</p>
+                )}
+                <p className="text-xs font-semibold" style={{ color: '#7c3aed' }}>+ Log reading →</p>
+              </div>
+            </div>
+          </Link>
+        )}
 
         {/* ── QUICK LOG (primary CTAs) ── */}
         <div className="grid grid-cols-2 gap-3">

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const message = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 512,
+    max_tokens: 768,
     messages: [{
       role: 'user',
       content: [
@@ -39,8 +39,11 @@ export async function POST(req: NextRequest) {
         {
           type: 'text',
           text: `Analyse this food image and estimate nutritional content for the visible portion.
-Return ONLY valid JSON with these exact keys:
-{"name":"food name","servingSize":"estimated portion e.g. 200g","calories":250,"proteinG":20,"carbsG":30,"fatG":8,"confidence":"low|medium|high","notes":"any relevant notes"}
+Return ONLY valid JSON with these exact keys (all numeric fields are numbers, not strings):
+{"name":"food name","servingSize":"estimated portion e.g. 200g","calories":250,"proteinG":20,"carbsG":30,"fatG":8,"fibreG":4,"freeSugarsG":2,"giEstimate":55,"glEstimate":11,"confidence":"low|medium|high","notes":"any relevant notes"}
+For giEstimate: provide the Glycaemic Index (0-100) based on food type and preparation. Low GI foods (legumes, most veg, oats) score under 55. High GI foods (white bread, white rice, sugary drinks) score over 70. If GI cannot be reliably estimated for a mixed dish, use null.
+For glEstimate: compute as (giEstimate x (carbsG - fibreG)) / 100. Use null if giEstimate is null.
+IMPORTANT: This data is for informational purposes only. Do not provide medical dosing advice.
 No markdown, no extra text — just the JSON object.`,
         },
       ],

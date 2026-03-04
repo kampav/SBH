@@ -6,7 +6,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
-import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood } from './types'
+import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings } from './types'
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 export async function getProfile(uid: string): Promise<UserProfile | null> {
@@ -88,9 +88,61 @@ export async function getRecentWorkouts(uid: string, days = 30): Promise<DailyWo
   return snap.docs.map(d => d.data() as DailyWorkout)
 }
 
+// ─── Glucose Settings ─────────────────────────────────────────────────────────
+export async function getGlucoseSettings(uid: string): Promise<GlucoseSettings | null> {
+  const snap = await getDoc(doc(db, 'users', uid, 'glucose_settings', 'config'))
+  return snap.exists() ? (snap.data() as GlucoseSettings) : null
+}
+
+export async function saveGlucoseSettings(uid: string, settings: Partial<GlucoseSettings>) {
+  await setDoc(doc(db, 'users', uid, 'glucose_settings', 'config'), settings, { merge: true })
+}
+
+// ─── Daily Glucose Readings ───────────────────────────────────────────────────
+export async function getDailyGlucose(uid: string, date: string): Promise<DailyGlucose | null> {
+  const snap = await getDoc(doc(db, 'users', uid, 'glucose', date))
+  return snap.exists() ? (snap.data() as DailyGlucose) : null
+}
+
+export async function saveGlucoseReading(uid: string, date: string, reading: GlucoseReading) {
+  const existing = await getDailyGlucose(uid, date)
+  const readings = existing
+    ? [...existing.readings.filter(r => r.id !== reading.id), reading]
+    : [reading]
+  await setDoc(doc(db, 'users', uid, 'glucose', date), { date, readings })
+}
+
+export async function deleteGlucoseReading(uid: string, date: string, readingId: string) {
+  const existing = await getDailyGlucose(uid, date)
+  if (!existing) return
+  const readings = existing.readings.filter(r => r.id !== readingId)
+  await setDoc(doc(db, 'users', uid, 'glucose', date), { date, readings })
+}
+
+export async function getGlucoseHistory(uid: string, days = 30): Promise<DailyGlucose[]> {
+  const q = query(collection(db, 'users', uid, 'glucose'), orderBy('date', 'desc'), limit(days))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => d.data() as DailyGlucose).reverse()
+}
+
+// ─── HbA1c ────────────────────────────────────────────────────────────────────
+export async function getHbA1cHistory(uid: string): Promise<HbA1cEntry[]> {
+  const q = query(collection(db, 'users', uid, 'hba1c'), orderBy('date', 'desc'), limit(24))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => d.data() as HbA1cEntry)
+}
+
+export async function saveHbA1c(uid: string, entry: HbA1cEntry) {
+  await setDoc(doc(db, 'users', uid, 'hba1c', entry.id), { ...entry, loggedAt: serverTimestamp() })
+}
+
+export async function deleteHbA1c(uid: string, id: string) {
+  await deleteDoc(doc(db, 'users', uid, 'hba1c', id))
+}
+
 // ─── Account Deletion ─────────────────────────────────────────────────────────
 export async function deleteAllUserData(uid: string): Promise<void> {
-  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites']
+  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings']
   for (const sub of subcollections) {
     const snap = await getDocs(collection(db, 'users', uid, sub))
     const batch = writeBatch(db)
