@@ -80,6 +80,59 @@ docker-compose up sbh
 
 ---
 
+---
+
+## DESIGN SYSTEM (v3 — do not change mid-build)
+- Background base: #060A12 | Surface cards: #0C1320
+- Fonts: Bebas Neue (hero numbers) · DM Sans (all UI text)
+- Accent colours:
+    Lime   #C8FF47 → calories, primary CTA
+    Cyan   #00D4FF → hydration, cardio
+    Orange #FF6B35 → protein
+    Purple #B47FFF → carbs
+    Red    #FF4757 → fat, warnings, over-target
+    Gold   #FFD700 → streaks, achievements
+- Cards: glass morphism — rgba(255,255,255,0.045) bg + 1px rgba(255,255,255,0.07) border
+- CSS: ALWAYS logical properties (margin-inline-start NOT margin-left)
+- Touch targets: 48×48px minimum
+- Motion: Framer Motion · spring(400,28) for sheets · fadeUp(350ms) for cards
+
+---
+
+## KEY PATTERNS (v3)
+- App name lives in lib/app-config.ts only — never hardcode "SBH" elsewhere
+- Pages: Server Components fetch DailyContext, pass as props to Client Components
+- Feature flags: useFlag("feature.name") → Firebase Remote Config (all true, free tier)
+- Offline: IndexedDB + Background Sync via Serwist service worker
+- Analytics: logEvent() for key actions — NO raw health values, NO PII in events
+- Sentry: strip all health data in beforeSend hook
+
+---
+
+## PRD v3 PHASE TRACKER
+### Phase 1 — Foundation upgrades
+[ ] P1.1  Design tokens (lib/design-tokens.ts) + core UI components
+[ ] P1.2  App config single source of truth (lib/app-config.ts)
+[ ] P1.4  DailyContext engine (lib/daily-context.ts)
+[ ] P1.5  Today screen redesign (hero calorie ring, macro row, hydration strip)
+[ ] P1.9  PWA manifest dynamic (app/manifest.ts) + Serwist service worker
+
+### Phase 2 — Core product upgrades
+[ ] P2.1  Barcode scanner (ZXing-JS + Open Food Facts API)
+[ ] P2.2  Food search with database (Typesense + USDA + IFCT)
+[ ] P2.4  Workout logger UX overhaul (active workout, rest timer, overload)
+[ ] P2.5  Progressive overload engine (lib/progressive-overload.ts)
+[ ] P2.7  Streak system + achievement badges
+[ ] P2.8  E2E tests (Playwright + Firebase Emulator)
+[ ] P2.9  Observability (Sentry + OpenTelemetry + Firebase Analytics)
+[ ] P2.10 Android TWA (Bubblewrap CLI)
+
+### Phase 3 — Intelligence
+[ ] P3.1  Photo food recognition (Claude Vision API)
+[ ] P3.2  Android Glance widgets (3 sizes)
+[ ] P3.3  Push notifications (FCM)
+[ ] P3.4  Weekly AI insights
+
 ## SESSION INSTRUCTIONS
 Start next session with:
 > "Continue building SBH. Here's my CONTEXT.md.
