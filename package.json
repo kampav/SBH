@@ -9,7 +9,11 @@
     "lint": "next lint",
     "cap:sync": "npx cap sync android",
     "cap:open": "npx cap open android",
-    "android:icons": "node scripts/generate-icon.mjs && npx @capacitor/assets generate --iconBackgroundColor '#0d0b1e' --iconBackgroundColorDark '#0d0b1e' --splashBackgroundColor '#03050a' --assetPath public/icons"
+    "android:icons": "node scripts/generate-icon.mjs && npx @capacitor/assets generate --iconBackgroundColor '#0d0b1e' --iconBackgroundColorDark '#0d0b1e' --splashBackgroundColor '#03050a' --assetPath public/icons",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -17,6 +21,7 @@
     "@capacitor/cli": "^8.1.0",
     "@capacitor/core": "^8.1.0",
     "@sentry/nextjs": "^10.42.0",
+    "@serwist/next": "^9.5.6",
     "@types/nodemailer": "^7.0.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -29,20 +34,28 @@
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^3.7.0",
+    "serwist": "^9.5.6",
     "stripe": "^20.4.0",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
+    "@playwright/test": "^1.58.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^5.1.4",
+    "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
+    "jsdom": "^28.1.0",
     "postcss": "^8",
     "sharp": "^0.34.5",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   }
 }

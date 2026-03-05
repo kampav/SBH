@@ -54,3 +54,8 @@ android/app/build/
 _write_*.py
 *.xlsx
 .claude/
+
+# Serwist generated service worker
+public/sw.js
+public/sw.js.map
+public/serwist-*.js

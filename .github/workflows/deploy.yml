@@ -10,8 +10,21 @@ env:
   REGION: europe-west2   # London
 
 jobs:
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: SENTRYCLI_SKIP_DOWNLOAD=1 npm ci
+      - run: npm test
+
   deploy:
     name: Build & Deploy
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
