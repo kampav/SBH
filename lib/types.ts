@@ -219,3 +219,14 @@ export interface GlucosePrediction {
   confidenceNote: string
   safetyDisclaimer: string
 }
+
+// ─── Subscription ─────────────────────────────────────────────────────────────
+export interface UserSubscription {
+  tier: 'free' | 'pro' | 'premium'
+  stripeCustomerId?: string
+  stripeSubscriptionId?: string
+  stripePriceId?: string
+  status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'none'
+  currentPeriodEnd?: number   // unix timestamp
+  cancelAtPeriodEnd?: boolean
+}

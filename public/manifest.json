@@ -2,11 +2,43 @@
   "name": "SBH — Science Based Health",
   "short_name": "SBH",
   "description": "Science-backed personal training, nutrition tracking & AI coaching",
-  "start_url": "/dashboard",
+  "start_url": "/dashboard?source=pwa",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
   "background_color": "#03050a",
   "theme_color": "#7c3aed",
   "orientation": "portrait",
+  "categories": ["health", "fitness"],
+  "shortcuts": [
+    {
+      "name": "Log Workout",
+      "short_name": "Workout",
+      "description": "Start or log today's workout",
+      "url": "/workout?source=shortcut",
+      "icons": [{ "src": "/icons/icon-96.webp", "sizes": "96x96" }]
+    },
+    {
+      "name": "Log Meal",
+      "short_name": "Nutrition",
+      "description": "Add a meal to your log",
+      "url": "/nutrition?source=shortcut",
+      "icons": [{ "src": "/icons/icon-96.webp", "sizes": "96x96" }]
+    },
+    {
+      "name": "Log Glucose",
+      "short_name": "Glucose",
+      "description": "Log a blood glucose reading",
+      "url": "/glucose?source=shortcut",
+      "icons": [{ "src": "/icons/icon-96.webp", "sizes": "96x96" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "description": "View your daily summary",
+      "url": "/dashboard?source=shortcut",
+      "icons": [{ "src": "/icons/icon-96.webp", "sizes": "96x96" }]
+    }
+  ],
   "icons": [
     { "src": "/icons/icon-48.webp",  "sizes": "48x48",  "type": "image/webp", "purpose": "any maskable" },
     { "src": "/icons/icon-72.webp",  "sizes": "72x72",  "type": "image/webp", "purpose": "any maskable" },
