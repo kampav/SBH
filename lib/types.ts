@@ -65,6 +65,22 @@ export interface Meal {
   fatG: number
   time: string
   mealType: MealType
+  // Micronutrients — AI-populated, all optional
+  fibreG?: number
+  freeSugarsG?: number
+  saturatedFatG?: number
+  omega3Mg?: number
+  sodiumMg?: number
+  potassiumMg?: number
+  vitaminCMg?: number
+  vitaminDMcg?: number
+  calciumMg?: number
+  ironMg?: number
+  magnesiumMg?: number
+  zincMg?: number
+  vitaminB12Mcg?: number
+  folateMcg?: number
+  vitaminAMcg?: number
 }
 
 export interface DailyNutrition {
@@ -208,8 +224,6 @@ export interface GlucoseSettings {
 export interface MealWithGI extends Meal {
   giEstimate?: number
   glEstimate?: number
-  fibreG?: number
-  freeSugarsG?: number
 }
 
 export interface GlucosePrediction {
@@ -218,6 +232,53 @@ export interface GlucosePrediction {
   peakMinutes: number
   confidenceNote: string
   safetyDisclaimer: string
+}
+
+// ─── Streak & Achievements ────────────────────────────────────────────────────
+export interface StreakRecord {
+  currentStreak: number
+  longestStreak: number
+  lastLogDate: string          // YYYY-MM-DD
+  streakType: 'logging' | 'workout' | 'calorie_goal'
+  milestones: number[]         // days achieved e.g. [7, 14, 30]
+  updatedAt: FirestoreTimestamp
+}
+
+export interface Achievement {
+  id: string
+  type: 'streak_7' | 'streak_14' | 'streak_30' | 'streak_50' | 'streak_100'
+       | 'first_workout' | 'first_meal' | 'goal_week' | 'protein_day'
+  title: string
+  description: string
+  unlockedAt: FirestoreTimestamp
+}
+
+// ─── DailyContext (hyper-personalisation engine) ──────────────────────────────
+export type TimeSlot = 'morning' | 'midday' | 'afternoon' | 'evening' | 'night'
+export type WeightTrend = 'losing' | 'gaining' | 'stable' | 'nodata'
+export type CalorieStatus = 'on_track' | 'ahead' | 'behind' | 'over'
+
+export interface DailyContext {
+  uid: string
+  date: string
+  calorieTarget: number
+  calorieLogged: number
+  calorieRemaining: number
+  calorieStatus: CalorieStatus
+  proteinPct: number
+  carbPct: number
+  fatPct: number
+  hydrationPct: number
+  workoutScheduledToday: boolean
+  workoutLogged: boolean
+  workoutType: string
+  weightTrend: WeightTrend
+  weeklyDeficit: number
+  streakDays: number
+  longestStreak: number
+  timeSlot: TimeSlot
+  priorityAction: 'log_meal' | 'log_workout' | 'drink_water' | 'weigh_in' | 'rest'
+  insightBadge: string | null
 }
 
 // ─── Subscription ─────────────────────────────────────────────────────────────

@@ -6,9 +6,10 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { getProfile, getNutrition, getRecentWorkouts, getMetrics, getNutritionHistory, getGlucoseSettings, getDailyGlucose } from '@/lib/firestore'
+import { getProfile, getNutrition, getRecentWorkouts, getMetrics, getNutritionHistory, getGlucoseSettings, getDailyGlucose, getStreak, updateStreak } from '@/lib/firestore'
 import { UserProfile, GlucoseSettings, GlucoseReading } from '@/lib/types'
 import { displayGlucose, glucoseColor, DEFAULT_GLUCOSE_SETTINGS } from '@/lib/glucoseUtils'
+import { computeDailyContext } from '@/lib/daily-context'
 import Link from 'next/link'
 import { LogOut, Zap, Trophy, ChevronRight, User, Utensils, Dumbbell, Scale, TrendingUp, Activity, type LucideIcon } from 'lucide-react'
 import ProgressRing from '@/components/ui/ProgressRing'
@@ -46,6 +47,7 @@ export default function DashboardPage() {
   const [insightsLoading, setInsightsLoading] = useState(false)
   const [glucoseSettings, setGlucoseSettings] = useState<GlucoseSettings | null>(null)
   const [latestGlucose, setLatestGlucose] = useState<GlucoseReading | null>(null)
+  const [insightBadge, setInsightBadge] = useState<string | null>(null)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -74,6 +76,10 @@ export default function DashboardPage() {
         setTodayCalories(nutrition.totalCalories)
         setTodayProtein(nutrition.totalProteinG)
       }
+      // Update Firestore streak and compute insight badge
+      const streak = await getStreak(user.uid).catch(() => null)
+      const hasActivity = !!(nutrition?.totalCalories || workouts.some(w => w.date === today))
+      const updatedStreak = hasActivity ? await updateStreak(user.uid, today).catch(() => streak) : streak
       setWorkoutDoneToday(workouts.some(w => w.date === today))
       const wDates = workouts.map(w => w.date)
       const nDates = nutrition ? [today] : []
@@ -82,6 +88,18 @@ export default function DashboardPage() {
       setWorkoutStreak(wStreak)
       const aStreak = computeStreak(Array.from(new Set([...wDates, ...nDates, ...mDates])).sort())
       setAllStreak(aStreak)
+      // Compute DailyContext insight badge
+      if (p) {
+        const ctx = computeDailyContext({
+          uid: user.uid, todayNutrition: nutrition, recentMetrics: metrics, recentNutrition: [],
+          todayWorkout: workouts.find(w => w.date === today) ?? null,
+          streak: updatedStreak ?? null,
+          calorieTarget: p.calorieTarget, proteinTarget: p.proteinTargetG,
+          carbTarget: p.carbTargetG, fatTarget: p.fatTargetG,
+          trainingDaysPerWeek: p.trainingDaysPerWeek,
+        })
+        setInsightBadge(ctx.insightBadge)
+      }
       setWeekCalendar(computeWeekCalendar(wDates, nDates))
       const totalXp = computeXP(wDates, nDates, mDates)
       setXp(totalXp)
@@ -201,6 +219,14 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* ── DAILY INSIGHT BADGE ── */}
+        {insightBadge && (
+          <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3">
+            <span className="text-lg">✨</span>
+            <p className="text-sm font-semibold text-1">{insightBadge}</p>
+          </div>
+        )}
 
         {/* ── GLUCOSE WIDGET (shown only if consent given) ── */}
         {glucoseSettings?.consentGiven && (

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const message = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 768,
+    max_tokens: 1024,
     messages: [{
       role: 'user',
       content: [
@@ -39,10 +39,11 @@ export async function POST(req: NextRequest) {
         {
           type: 'text',
           text: `Analyse this food image and estimate nutritional content for the visible portion.
-Return ONLY valid JSON with these exact keys (all numeric fields are numbers, not strings):
-{"name":"food name","servingSize":"estimated portion e.g. 200g","calories":250,"proteinG":20,"carbsG":30,"fatG":8,"fibreG":4,"freeSugarsG":2,"giEstimate":55,"glEstimate":11,"confidence":"low|medium|high","notes":"any relevant notes"}
-For giEstimate: provide the Glycaemic Index (0-100) based on food type and preparation. Low GI foods (legumes, most veg, oats) score under 55. High GI foods (white bread, white rice, sugary drinks) score over 70. If GI cannot be reliably estimated for a mixed dish, use null.
-For glEstimate: compute as (giEstimate x (carbsG - fibreG)) / 100. Use null if giEstimate is null.
+Return ONLY valid JSON with these exact keys (all numeric fields are numbers or null, not strings):
+{"name":"food name","servingSize":"estimated portion e.g. 200g","calories":250,"proteinG":20,"carbsG":30,"fatG":8,"fibreG":4,"freeSugarsG":2,"saturatedFatG":2.5,"omega3Mg":150,"sodiumMg":350,"potassiumMg":400,"vitaminCMg":15,"vitaminDMcg":2.5,"calciumMg":80,"ironMg":2,"magnesiumMg":35,"zincMg":1.5,"vitaminB12Mcg":0.5,"folateMcg":30,"vitaminAMcg":50,"giEstimate":55,"glEstimate":11,"confidence":"low|medium|high","notes":"any relevant notes"}
+For giEstimate: Glycaemic Index (0-100). Low GI<55 (legumes, oats, most veg), High GI>70 (white bread, white rice, sugary drinks). Use null if cannot be estimated for a mixed dish.
+For glEstimate: (giEstimate x (carbsG - fibreG)) / 100. Use null if giEstimate is null.
+Estimate all micronutrients as best you can for the food type; use null only if truly impossible.
 IMPORTANT: This data is for informational purposes only. Do not provide medical dosing advice.
 No markdown, no extra text — just the JSON object.`,
         },

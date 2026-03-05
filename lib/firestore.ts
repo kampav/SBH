@@ -6,7 +6,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
-import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings } from './types'
+import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement } from './types'
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 export async function getProfile(uid: string): Promise<UserProfile | null> {
@@ -140,9 +140,66 @@ export async function deleteHbA1c(uid: string, id: string) {
   await deleteDoc(doc(db, 'users', uid, 'hba1c', id))
 }
 
+// ─── Streaks ──────────────────────────────────────────────────────────────────
+export async function getStreak(uid: string): Promise<StreakRecord | null> {
+  const snap = await getDoc(doc(db, 'users', uid, 'streaks', 'current'))
+  return snap.exists() ? (snap.data() as StreakRecord) : null
+}
+
+const STREAK_MILESTONES = [7, 14, 30, 50, 100]
+
+export async function updateStreak(uid: string, logDate: string): Promise<StreakRecord> {
+  const existing = await getStreak(uid)
+  const today = logDate
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yStr = yesterday.toISOString().slice(0, 10)
+
+  let current = 1
+  let longest = 1
+  const milestones: number[] = existing?.milestones ?? []
+
+  if (existing) {
+    if (existing.lastLogDate === today) {
+      // Already updated today
+      return existing
+    } else if (existing.lastLogDate === yStr) {
+      // Consecutive day
+      current = existing.currentStreak + 1
+      longest = Math.max(existing.longestStreak, current)
+    } else {
+      // Streak broken
+      current = 1
+      longest = Math.max(existing.longestStreak, 1)
+    }
+  }
+
+  // Check milestones
+  STREAK_MILESTONES.forEach(m => {
+    if (current >= m && !milestones.includes(m)) milestones.push(m)
+  })
+
+  const record: StreakRecord = {
+    currentStreak: current,
+    longestStreak: longest,
+    lastLogDate: today,
+    streakType: 'logging',
+    milestones,
+    updatedAt: serverTimestamp(),
+  }
+  await setDoc(doc(db, 'users', uid, 'streaks', 'current'), record)
+  return record
+}
+
+// ─── Achievements ─────────────────────────────────────────────────────────────
+export async function getAchievements(uid: string): Promise<Achievement[]> {
+  const snap = await getDocs(collection(db, 'users', uid, 'achievements'))
+  return snap.docs.map(d => d.data() as Achievement)
+}
+
 // ─── Account Deletion ─────────────────────────────────────────────────────────
 export async function deleteAllUserData(uid: string): Promise<void> {
-  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings']
+  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings', 'subscription', 'streaks', 'achievements']
   for (const sub of subcollections) {
     const snap = await getDocs(collection(db, 'users', uid, sub))
     const batch = writeBatch(db)

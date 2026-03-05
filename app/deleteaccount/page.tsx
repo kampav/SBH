@@ -110,9 +110,12 @@ export default function DeleteAccountPage() {
           {[
             ['👤', 'Account profile & personal information'],
             ['🏋️', 'All workout history & exercise logs'],
-            ['🥗', 'All nutrition logs & meal entries'],
+            ['🥗', 'All nutrition logs & meal entries (incl. micronutrients)'],
+            ['🩸', 'Glucose readings & HbA1c history'],
+            ['⚙️', 'Glucose settings & diabetic consent records'],
             ['📏', 'Body measurements & progress records'],
             ['⭐', 'Favourite foods & app preferences'],
+            ['💳', 'Subscription & billing data'],
             ['🖼️', 'Profile photo'],
           ].map(([icon, label]) => (
             <div key={label as string} className="flex items-center gap-2.5">

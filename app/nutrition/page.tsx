@@ -40,6 +40,17 @@ const PRESETS: Array<{emoji: string; name: string; calories: number; proteinG: n
 
 type Mode = 'idle' | 'form' | 'barcode' | 'photo'
 type FormFill = { name: string; calories: string; proteinG: string; carbsG: string; fatG: string; brand?: string; servingSize?: string }
+type FormMicros = {
+  saturatedFatG: number | null; omega3Mg: number | null; sodiumMg: number | null
+  potassiumMg: number | null; vitaminCMg: number | null; vitaminDMcg: number | null
+  calciumMg: number | null; ironMg: number | null; magnesiumMg: number | null
+  zincMg: number | null; vitaminB12Mcg: number | null; folateMcg: number | null; vitaminAMcg: number | null
+}
+const EMPTY_MICROS: FormMicros = {
+  saturatedFatG: null, omega3Mg: null, sodiumMg: null, potassiumMg: null,
+  vitaminCMg: null, vitaminDMcg: null, calciumMg: null, ironMg: null,
+  magnesiumMg: null, zincMg: null, vitaminB12Mcg: null, folateMcg: null, vitaminAMcg: null,
+}
 
 export default function NutritionPage() {
   const router = useRouter()
@@ -70,6 +81,8 @@ export default function NutritionPage() {
   const [glucoseSettings, setGlucoseSettings] = useState<GlucoseSettings | null>(null)
   const [mealTimingWarning, setMealTimingWarning] = useState(false)
   const [formGI, setFormGI] = useState<{ gi: number | null; gl: number | null; fibre: number | null; freeSugars: number | null }>({ gi: null, gl: null, fibre: null, freeSugars: null })
+  const [formMicros, setFormMicros] = useState<FormMicros>(EMPTY_MICROS)
+  const [expandedMeals, setExpandedMeals] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -144,6 +157,15 @@ export default function NutritionPage() {
         fibre: result.fibreG ?? null,
         freeSugars: result.freeSugarsG ?? null,
       })
+      setFormMicros({
+        saturatedFatG: result.saturatedFatG ?? null, omega3Mg: result.omega3Mg ?? null,
+        sodiumMg: result.sodiumMg ?? null, potassiumMg: result.potassiumMg ?? null,
+        vitaminCMg: result.vitaminCMg ?? null, vitaminDMcg: result.vitaminDMcg ?? null,
+        calciumMg: result.calciumMg ?? null, ironMg: result.ironMg ?? null,
+        magnesiumMg: result.magnesiumMg ?? null, zincMg: result.zincMg ?? null,
+        vitaminB12Mcg: result.vitaminB12Mcg ?? null, folateMcg: result.folateMcg ?? null,
+        vitaminAMcg: result.vitaminAMcg ?? null,
+      })
     } catch (err: unknown) {
       setAiError(err instanceof Error ? err.message : 'Analysis failed. Please fill in manually.')
     } finally {
@@ -185,6 +207,19 @@ export default function NutritionPage() {
       glEstimate: glVal,
       fibreG: fibreVal > 0 ? fibreVal : undefined,
       freeSugarsG: formGI.freeSugars ?? undefined,
+      ...(formMicros.saturatedFatG != null && { saturatedFatG: formMicros.saturatedFatG }),
+      ...(formMicros.omega3Mg != null && { omega3Mg: formMicros.omega3Mg }),
+      ...(formMicros.sodiumMg != null && { sodiumMg: formMicros.sodiumMg }),
+      ...(formMicros.potassiumMg != null && { potassiumMg: formMicros.potassiumMg }),
+      ...(formMicros.vitaminCMg != null && { vitaminCMg: formMicros.vitaminCMg }),
+      ...(formMicros.vitaminDMcg != null && { vitaminDMcg: formMicros.vitaminDMcg }),
+      ...(formMicros.calciumMg != null && { calciumMg: formMicros.calciumMg }),
+      ...(formMicros.ironMg != null && { ironMg: formMicros.ironMg }),
+      ...(formMicros.magnesiumMg != null && { magnesiumMg: formMicros.magnesiumMg }),
+      ...(formMicros.zincMg != null && { zincMg: formMicros.zincMg }),
+      ...(formMicros.vitaminB12Mcg != null && { vitaminB12Mcg: formMicros.vitaminB12Mcg }),
+      ...(formMicros.folateMcg != null && { folateMcg: formMicros.folateMcg }),
+      ...(formMicros.vitaminAMcg != null && { vitaminAMcg: formMicros.vitaminAMcg }),
     }
     const updated: DailyNutrition = {
       ...data,
@@ -200,6 +235,7 @@ export default function NutritionPage() {
     setMode('idle')
     setForm({ name: '', calories: '', proteinG: '', carbsG: '', fatG: '' })
     setFormGI({ gi: null, gl: null, fibre: null, freeSugars: null })
+    setFormMicros(EMPTY_MICROS)
     setSaving(false)
   }
 
@@ -296,6 +332,15 @@ export default function NutritionPage() {
         gl: result.glEstimate ?? null,
         fibre: result.fibreG ?? null,
         freeSugars: result.freeSugarsG ?? null,
+      })
+      setFormMicros({
+        saturatedFatG: result.saturatedFatG ?? null, omega3Mg: result.omega3Mg ?? null,
+        sodiumMg: result.sodiumMg ?? null, potassiumMg: result.potassiumMg ?? null,
+        vitaminCMg: result.vitaminCMg ?? null, vitaminDMcg: result.vitaminDMcg ?? null,
+        calciumMg: result.calciumMg ?? null, ironMg: result.ironMg ?? null,
+        magnesiumMg: result.magnesiumMg ?? null, zincMg: result.zincMg ?? null,
+        vitaminB12Mcg: result.vitaminB12Mcg ?? null, folateMcg: result.folateMcg ?? null,
+        vitaminAMcg: result.vitaminAMcg ?? null,
       })
       setFoodSearch('')
       setShowSearchResults(false)
@@ -759,30 +804,64 @@ export default function NutritionPage() {
               <h2 className="text-xs font-semibold text-2 uppercase tracking-widest">Today&apos;s Log</h2>
               <span className="text-xs text-2">{data.meals.length} items</span>
             </div>
-            {data.meals.map(meal => (
-              <div key={meal.id} className="glass rounded-2xl p-3 flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-1 truncate">{meal.name}</p>
-                  <p className="text-xs text-2 mt-0.5">
-                    {meal.time} · {meal.mealType.replace('_',' ')}
-                  </p>
-                  <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                    <p className="text-xs text-3">P:{Math.round(meal.proteinG * 10) / 10}g C:{Math.round(meal.carbsG * 10) / 10}g F:{Math.round(meal.fatG * 10) / 10}g</p>
-                    {glucoseSettings && (meal as MealWithGI).giEstimate != null && (
-                      <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(6,182,212,0.1)', color: CYAN }}>
-                        GI {(meal as MealWithGI).giEstimate}
-                      </span>
-                    )}
+            {data.meals.map(meal => {
+              const expanded = expandedMeals.has(meal.id)
+              const m = meal as MealWithGI
+              type MicroRow = [string, string, number]
+              const rawMicros: [string, string, number | undefined][] = [
+                ['Sat fat', 'g', meal.saturatedFatG], ['Omega-3', 'mg', meal.omega3Mg],
+                ['Sodium', 'mg', meal.sodiumMg], ['Potassium', 'mg', meal.potassiumMg],
+                ['Vit C', 'mg', meal.vitaminCMg], ['Vit D', 'μg', meal.vitaminDMcg],
+                ['Calcium', 'mg', meal.calciumMg], ['Iron', 'mg', meal.ironMg],
+                ['Magnesium', 'mg', meal.magnesiumMg], ['Zinc', 'mg', meal.zincMg],
+                ['Vit B12', 'μg', meal.vitaminB12Mcg], ['Folate', 'μg', meal.folateMcg],
+                ['Vit A', 'μg', meal.vitaminAMcg],
+              ]
+              const micros: MicroRow[] = rawMicros
+                .filter((row): row is MicroRow => row[2] != null && (row[2] as number) > 0)
+              const hasMicros = micros.length > 0
+              return (
+                <div key={meal.id} className="glass rounded-2xl p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-1 truncate">{meal.name}</p>
+                      <p className="text-xs text-2 mt-0.5">{meal.time} · {meal.mealType.replace('_',' ')}</p>
+                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                        <p className="text-xs text-3">P:{Math.round(meal.proteinG * 10)/10}g C:{Math.round(meal.carbsG * 10)/10}g F:{Math.round(meal.fatG * 10)/10}g</p>
+                        {glucoseSettings && m.giEstimate != null && (
+                          <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(6,182,212,0.1)', color: CYAN }}>GI {m.giEstimate}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3">
+                      <p className="font-bold text-sm" style={{color: VIOLET}}>{meal.calories} kcal</p>
+                      {hasMicros && (
+                        <button onClick={() => setExpandedMeals(prev => { const s = new Set(prev); if (s.has(meal.id)) s.delete(meal.id); else s.add(meal.id); return s })}
+                          className="p-1 rounded-lg text-slate-500 hover:text-violet-400 transition-colors">
+                          {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        </button>
+                      )}
+                      <button onClick={() => removeMeal(meal.id)} className="p-1 rounded-lg text-slate-500 hover:text-rose-400 transition-colors">
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
+                  {expanded && hasMicros && (
+                    <div className="mt-2 pt-2 border-t border-white/5">
+                      <p className="text-xs text-slate-500 mb-1.5">Micronutrients (AI estimate · informational)</p>
+                      <div className="grid grid-cols-3 gap-x-4 gap-y-1">
+                        {micros.map(([label, unit, val]) => (
+                          <p key={label} className="text-xs text-slate-400">
+                            <span className="text-slate-500">{label}: </span>
+                            <span className="text-slate-200">{Math.round(val * 10) / 10}{unit}</span>
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 ml-3">
-                  <p className="font-bold text-sm" style={{color: VIOLET}}>{meal.calories} kcal</p>
-                  <button onClick={() => removeMeal(meal.id)} className="p-1 rounded-lg text-slate-500 hover:text-rose-400 transition-colors">
-                    <X size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
