@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import { initializeAuth, getAuth, browserLocalPersistence, indexedDBLocalPersistence } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
@@ -41,7 +41,12 @@ function createAuth() {
 }
 
 export const auth = isBrowser ? createAuth() : null as never
+// Firestore with persistent IndexedDB cache for offline support (multi-tab)
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-export const db = isBrowser ? getFirestore(app!) : null as never
+export const db = isBrowser
+  ? initializeFirestore(app!, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    })
+  : null as never
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export const storage = isBrowser ? getStorage(app!) : null as never
