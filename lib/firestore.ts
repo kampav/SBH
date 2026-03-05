@@ -197,9 +197,27 @@ export async function getAchievements(uid: string): Promise<Achievement[]> {
   return snap.docs.map(d => d.data() as Achievement)
 }
 
+// ─── FCM Tokens ───────────────────────────────────────────────────────────────
+type FcmPrefs = { streakReminder: boolean; workoutReminder: boolean; hydrationNudge: boolean }
+
+export async function saveFcmToken(uid: string, token: string, prefs: FcmPrefs): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'fcm_tokens', 'primary'), {
+    token, prefs, updatedAt: serverTimestamp(),
+  })
+}
+
+export async function getFcmTokenDoc(uid: string): Promise<{ token: string; prefs: FcmPrefs } | null> {
+  const snap = await getDoc(doc(db, 'users', uid, 'fcm_tokens', 'primary'))
+  return snap.exists() ? (snap.data() as { token: string; prefs: FcmPrefs }) : null
+}
+
+export async function deleteFcmToken(uid: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', uid, 'fcm_tokens', 'primary'))
+}
+
 // ─── Account Deletion ─────────────────────────────────────────────────────────
 export async function deleteAllUserData(uid: string): Promise<void> {
-  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings', 'subscription', 'streaks', 'achievements']
+  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings', 'subscription', 'streaks', 'achievements', 'fcm_tokens']
   for (const sub of subcollections) {
     const snap = await getDocs(collection(db, 'users', uid, sub))
     const batch = writeBatch(db)

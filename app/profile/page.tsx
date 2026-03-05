@@ -6,10 +6,11 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth, storage } from '@/lib/firebase'
-import { getProfile, saveProfile, deleteAllUserData } from '@/lib/firestore'
+import { getProfile, saveProfile, deleteAllUserData, saveFcmToken, getFcmTokenDoc, deleteFcmToken } from '@/lib/firestore'
 import { UserProfile, ProgrammeKey } from '@/lib/types'
-import { LogOut, ChevronRight, Target, Activity, Scale, Zap, Calendar, Edit3, Check, Dumbbell, X, Camera, Trash2, AlertTriangle } from 'lucide-react'
+import { LogOut, ChevronRight, Target, Activity, Scale, Zap, Calendar, Edit3, Check, Dumbbell, X, Camera, Trash2, AlertTriangle, Bell, BellOff } from 'lucide-react'
 import { calcMacros } from '@/lib/calculations'
+import { enableNotifications, isNotificationSupported } from '@/lib/fcm'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 const PHASE_INFO = [
@@ -45,6 +46,12 @@ export default function ProfilePage() {
   const photoInputRef = useRef<HTMLInputElement>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
+  // Notifications
+  const [notifEnabled, setNotifEnabled] = useState(false)
+  const [notifPrefs, setNotifPrefs] = useState({ streakReminder: true, workoutReminder: true, hydrationNudge: false })
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [notifSupported, setNotifSupported] = useState(false)
+
   // Account deletion
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState('')
@@ -62,6 +69,10 @@ export default function ProfilePage() {
       if (!p) { router.push('/onboarding'); return }
       setProfile(p)
       if (p.programme) setSelectedProgramme(p.programme)
+      // Load notification state
+      setNotifSupported(isNotificationSupported())
+      const tokenDoc = await getFcmTokenDoc(user.uid)
+      if (tokenDoc) { setNotifEnabled(true); setNotifPrefs(tokenDoc.prefs) }
     })
     return unsub
   }, [router])
@@ -533,6 +544,75 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Notifications */}
+        {notifSupported && (
+          <div className="glass rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Bell size={16} className="text-violet-400" />
+                <p className="text-xs font-semibold uppercase tracking-widest text-2">Push Notifications</p>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!uid) return
+                  setNotifLoading(true)
+                  try {
+                    if (notifEnabled) {
+                      await deleteFcmToken(uid)
+                      setNotifEnabled(false)
+                    } else {
+                      const token = await enableNotifications()
+                      if (token) {
+                        await saveFcmToken(uid, token, notifPrefs)
+                        setNotifEnabled(true)
+                      }
+                    }
+                  } finally {
+                    setNotifLoading(false)
+                  }
+                }}
+                disabled={notifLoading}
+                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                style={{ background: notifEnabled ? '#7c3aed' : 'rgba(255,255,255,0.1)' }}>
+                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            {notifEnabled ? (
+              <div className="space-y-2">
+                {([
+                  { key: 'streakReminder', label: 'Daily streak reminder', desc: 'If nothing logged by 8 pm' },
+                  { key: 'workoutReminder', label: 'Workout reminders', desc: 'On scheduled training days' },
+                  { key: 'hydrationNudge', label: 'Hydration nudge', desc: 'At noon if water intake is low' },
+                ] as const).map(({ key, label, desc }) => (
+                  <div key={key} className="glass rounded-xl px-3 py-2.5 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-1">{label}</p>
+                      <p className="text-xs text-3">{desc}</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!uid) return
+                        const next = { ...notifPrefs, [key]: !notifPrefs[key] }
+                        setNotifPrefs(next)
+                        const tokenDoc = await getFcmTokenDoc(uid)
+                        if (tokenDoc) await saveFcmToken(uid, tokenDoc.token, next)
+                      }}
+                      className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0"
+                      style={{ background: notifPrefs[key] ? '#7c3aed' : 'rgba(255,255,255,0.1)' }}>
+                      <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${notifPrefs[key] ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <BellOff size={14} />
+                <span>Enable to get streak, workout, and hydration reminders</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Saved feedback */}
         {saved && (
           <div className="fixed bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2.5 rounded-2xl glass-strong text-sm font-semibold text-emerald-400">
@@ -577,7 +657,7 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <p className="text-center text-xs text-3 pb-4">SBH · Science Based Health · v0.11</p>
+        <p className="text-center text-xs text-3 pb-4">SBH · Science Based Health · v1.4.0</p>
       </div>
     </main>
   )

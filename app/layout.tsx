@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import BottomNav from '@/components/layout/BottomNav'
 import OfflineBanner from '@/components/OfflineBanner'
+import AppInit from '@/components/AppInit'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body className={`${inter.className} antialiased bg-app text-1`}>
+        <AppInit />
         <OfflineBanner />
         {children}
         <BottomNav />

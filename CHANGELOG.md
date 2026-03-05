@@ -5,6 +5,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.4.0] — 2026-03-05
+
+### Added
+- **Firebase Remote Config** (`lib/feature-flags.ts`) — `initRemoteConfig()` async init; flags now read from Remote Config cache (12 h TTL) with fallback to `FLAGS.default`; `components/AppInit.tsx` calls init at app startup via root layout
+- **FCM Push Notifications**
+  - `lib/fcm.ts` — `enableNotifications()`, `requestNotificationPermission()`, `getFcmToken()`, `isNotificationSupported()`
+  - `lib/firebaseAdmin.ts` — added `getAdminApp()` export alongside `getAdminDb()`
+  - `lib/firestore.ts` — `saveFcmToken()`, `getFcmTokenDoc()`, `deleteFcmToken()`; `deleteAllUserData` wipes `fcm_tokens` subcollection
+  - `app/api/fcm/notify/route.ts` — POST endpoint; firebase-admin Messaging sends to specific FCM token
+  - `app/sw.ts` — `push` event listener (showNotification) + `notificationclick` event (opens URL, focuses existing tab)
+  - `app/profile/page.tsx` — Notifications card with master toggle and per-type prefs (streak reminder / workout reminder / hydration nudge)
+- **Typesense Food Search**
+  - `lib/typesense-client.ts` — typed Typesense client; `searchTypesense(query, perPage)` with `TYPESENSE_URL` + `TYPESENSE_API_KEY` env vars; returns empty array when not configured
+  - `app/api/food-search/route.ts` — unified `GET /api/food-search?q=&limit=` endpoint; Typesense first → local `FOOD_DATABASE` fallback; returns `source` field for observability
+- `.env.local.example` — comprehensive env var template with all required + optional vars
+
+### Changed
+- `app/layout.tsx` — `<AppInit />` added to root layout
+- `app/profile/page.tsx` — version label updated to v1.4.0
+
+
+---
+
 ## [1.3.0] — 2026-03-05
 
 ### Added

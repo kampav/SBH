@@ -110,13 +110,16 @@ users/{uid}/
 - [x] Glucose management (FR-01–FR-10)
 - [x] AI glucose nudge / predict / care team report
 
-### ⬜ Phase 4 — Growth (Next)
-- [ ] Typesense food search (self-hosted, sub-50ms)
-- [ ] USDA + IFCT food database (Firestore import)
-- [ ] Firebase Remote Config (replace `useFlag` stubs)
+### ✅ Phase 4 — Growth
+- [x] Firebase Remote Config (`lib/feature-flags.ts` + `components/AppInit.tsx`)
+- [x] FCM push notifications (`lib/fcm.ts`, SW push handler, `/api/fcm/notify`, profile UI)
+- [x] Typesense food search client (`lib/typesense-client.ts` + `/api/food-search`)
+
+### ⬜ Phase 5 — Scale (Next)
+- [ ] Typesense server provisioning + USDA/IFCT food data import
 - [ ] Android Glance widgets (Jetpack Glance 1.1.0)
-- [ ] FCM push notifications (daily streak reminders)
-- [ ] Multi-market compliance (India DPDP, UAE PDPL)
+- [ ] Multi-market compliance (India DPDP May 2027, UAE PDPL)
+- [ ] FCM scheduled sends (Cloud Scheduler → /api/fcm/notify)
 
 ---
 
@@ -144,4 +147,7 @@ npm run build       # production build check
 - ESLint: no-unused-expressions — use `if/else` not ternary for void side-effects
 - Meal micronutrients: 13 optional fields directly on `Meal` interface (backward-compatible)
 - Progressive overload: deload every 12th workout, not just on milestones
+- FCM: `isNotificationSupported()` guard before push API; token → `users/{uid}/fcm_tokens/primary`; `getAdminApp()` in firebaseAdmin.ts for Messaging
+- Typesense: `isTypesenseConfigured` gate; `/api/food-search` returns `source: 'typesense'|'local'`; local fallback always works
+- Remote Config: `initRemoteConfig()` in `AppInit` (layout); `isEnabled()` reads `_rcCache` first then `FLAGS.default`
 - Firebase offline: uses `initializeFirestore` with persistent cache — do NOT call `getFirestore` elsewhere
