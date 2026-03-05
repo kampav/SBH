@@ -9,8 +9,10 @@ import { auth } from '@/lib/firebase'
 import { saveWorkout, getWorkout, getProfile, getRecentWorkouts } from '@/lib/firestore'
 import { estimateCaloriesBurned } from '@/lib/calculations'
 import { DailyWorkout, ExerciseLog, SetLog, ProgrammeKey } from '@/lib/types'
+import { getSuggestion, formatSuggestion } from '@/lib/progressive-overload'
 import { serverTimestamp } from 'firebase/firestore'
-import { ExternalLink, Check, Trophy, Timer, Dumbbell, Heart, ChevronRight, Play } from 'lucide-react'
+import { ExternalLink, Check, Trophy, Timer, Dumbbell, Heart, ChevronRight, Play, History } from 'lucide-react'
+import Link from 'next/link'
 
 // ─── Exercise / Programme Types ───────────────────────────────────────────────
 interface ExerciseDef {
@@ -353,24 +355,27 @@ function buildExerciseLogs(dayIdx: number, key: ProgrammeKey): ExerciseLog[] {
 }
 
 // ─── Progressive Overload Hint ────────────────────────────────────────────────
-type OverloadHint = { type: 'reps' | 'weight'; message: string } | null
+type OverloadHint = { type: 'reps' | 'weight' | 'deload' | 'start'; message: string } | null
 
 function getOverloadHint(
   exerciseName: string,
   def: ExerciseDef,
   lastWeek: DailyWorkout | null,
+  workoutCount: number,
 ): OverloadHint {
-  if (!lastWeek || def.isTime) return null
-  const lastEx = lastWeek.exercises.find(e => e.exerciseName === exerciseName)
-  if (!lastEx) return null
-  const done = lastEx.sets.filter(s => s.completed)
-  if (done.length === 0 || done.length / lastEx.sets.length < 0.9) return null
-  const avgReps = done.reduce((t, s) => t + s.reps, 0) / done.length
-  const upperRep = parseInt(def.repRange.split('-').pop() ?? '0')
-  if (!isNaN(upperRep) && upperRep > 0 && avgReps >= upperRep) {
-    return { type: 'weight', message: `↑ +2.5kg — hit ${avgReps.toFixed(0)} reps last week` }
-  }
-  return { type: 'reps', message: `↑ +2 reps — ${avgReps.toFixed(0)} avg last week` }
+  if (def.isTime) return null
+  const lastEx = lastWeek?.exercises.find(e => e.exerciseName === exerciseName)
+  const lastSets = lastEx?.sets ?? []
+  const targetReps = parseInt(def.repRange.split('-').pop() ?? '0') || 10
+  const suggestion = getSuggestion(lastSets, exerciseName, targetReps, workoutCount)
+  if (suggestion.action === 'start' && lastSets.length === 0 && !lastWeek) return null
+  const msg = formatSuggestion(suggestion)
+  const type: OverloadHint extends null ? never : NonNullable<OverloadHint>['type'] =
+    suggestion.action === 'increase' ? 'weight'
+    : suggestion.action === 'deload'   ? 'deload'
+    : suggestion.action === 'start'    ? 'start'
+    : 'reps'
+  return { type, message: msg }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -394,6 +399,7 @@ export default function WorkoutPage() {
   const [programmeWeek, setProgrammeWeek] = useState(1)
   const [cardioLogged, setCardioLogged] = useState(false)
   const [completedWorkoutDates, setCompletedWorkoutDates] = useState<Set<string>>(new Set())
+  const [workoutCount, setWorkoutCount] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // ISO date strings for Mon–Sun of the current week (index 0=Mon, 6=Sun)
@@ -422,8 +428,9 @@ export default function WorkoutPage() {
       if (profile?.programme) setProgrammeKey(profile.programme)
       if (profile?.weightKg) setUserWeightKg(profile.weightKg)
       // Load completed workout dates to grey out finished days in the week view
-      getRecentWorkouts(user.uid, 14).then(recent => {
+      getRecentWorkouts(user.uid, 90).then(recent => {
         setCompletedWorkoutDates(new Set(recent.map(w => w.date)))
+        setWorkoutCount(recent.length)
       })
     })
     return unsub
@@ -610,6 +617,9 @@ export default function WorkoutPage() {
         <div className="flex items-center gap-2">
           <Dumbbell size={18} style={{color: prog.color}} />
           <h1 className="text-xl font-bold text-1">{prog.label}</h1>
+          <Link href="/workout/history" className="ml-auto p-2 rounded-xl glass" title="Workout history">
+            <History size={16} className="text-slate-400" />
+          </Link>
         </div>
         <p className="text-xs text-2 mt-0.5">{prog.focus}</p>
       </header>
@@ -713,7 +723,7 @@ export default function WorkoutPage() {
           const info = EXERCISE_INFO[ex.exerciseName]
           const videoUrl = info?.videoUrl ?? ex.videoUrl
           const allDone = ex.sets.every(s => s.completed)
-          const hint = getOverloadHint(ex.exerciseName, def, lastWeekWorkout)
+          const hint = getOverloadHint(ex.exerciseName, def, lastWeekWorkout, workoutCount)
           return (
             <div key={ex.exerciseName} className="glass rounded-2xl p-4 transition-all"
               style={allDone ? {border: `1px solid ${prog.color}60`} : {}}>
@@ -737,8 +747,12 @@ export default function WorkoutPage() {
                   {hint && (
                     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full mt-1 font-medium"
                       style={{
-                        background: hint.type === 'weight' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)',
-                        color: hint.type === 'weight' ? '#f59e0b' : '#10b981',
+                        background: hint.type === 'deload' ? 'rgba(99,102,241,0.12)'
+                          : hint.type === 'weight' ? 'rgba(245,158,11,0.12)'
+                          : 'rgba(16,185,129,0.12)',
+                        color: hint.type === 'deload' ? '#818cf8'
+                          : hint.type === 'weight' ? '#f59e0b'
+                          : '#10b981',
                       }}>
                       {hint.message}
                     </span>
