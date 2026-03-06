@@ -5,6 +5,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.0] — 2026-03-06
+
+### Added
+- **Cloud Scheduler cron workflow** (`.github/workflows/cron.yml`) — GitHub Actions daily schedule (20:00 UTC) that calls `/api/fcm/send-daily` with CRON_SECRET auth; manual trigger supported; Cloud Scheduler gcloud setup instructions in comments
+- **Android Glance home-screen widget** — Jetpack Glance 1.1.0
+  - `SBHWidget.kt` — `GlanceAppWidget` showing calorie progress bar, macro row (P/C/F), streak counter; brand colours (violet/cyan/rose)
+  - `WidgetDataPlugin.kt` — `@CapacitorPlugin(name="WidgetData")` that writes to SharedPreferences and triggers `GlanceAppWidgetManager.updateAll()`
+  - `sbh_widget_info.xml` — 2×2 min, resizable to 4×2
+  - `AndroidManifest.xml` — `SBHWidgetReceiver` + `APPWIDGET_UPDATE` intent-filter registered
+  - `MainActivity.java` — `registerPlugin(WidgetDataPlugin.class)` added
+  - Kotlin 2.0.21 + Compose BOM 2024.12.01 + Glance 1.1.0 wired into Gradle build files
+- **Web-side widget bridge** (`lib/widget-plugin.ts`, `lib/widget.ts`) — typed `registerPlugin('WidgetData')` wrapper; `updateWidgetData()` + `buildWidgetData()` helpers; called after every `addMeal`; silently no-ops on web and iOS
+- **A/B testing framework** (`lib/ab-testing.ts`) — deterministic `getVariant(name, uid)` via djb2 hash; `isInExperiment()` shorthand; `loadExperimentConfigs()` reads Remote Config `experiment__<name>` JSON overrides; 3 default experiments defined; loaded in `AppInit`
+- **Weekly digest API** (`app/api/digest/weekly/route.ts`) — CRON_SECRET POST endpoint; queries 7-day nutrition + workout data per user (or targeted by `uid`); computes avg calories, compliance %, workouts logged, best day of week; sends personalised FCM notification; auto-purges stale tokens
+
+### Changed
+- `components/AppInit.tsx` — `loadExperimentConfigs()` chained after `initRemoteConfig()`
+- `android/variables.gradle` — added `kotlinVersion`, `composeBomVersion`, `glanceVersion`
+- `android/build.gradle` — added Kotlin + Kotlin Compose Compiler classpaths
+- `android/app/build.gradle` — Kotlin Android + Compose plugins, `buildFeatures { compose }`, JVM 11, Glance + Compose BOM dependencies
+- `android/app/src/main/res/values/strings.xml` — added `widget_description`
+
+---
+
 ## [1.5.0] — 2026-03-05
 
 ### Added

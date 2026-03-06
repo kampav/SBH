@@ -4,4 +4,5 @@
     <string name="title_activity_main">SBH</string>
     <string name="package_name">com.sciencebasedhealth.sbh</string>
     <string name="custom_url_scheme">com.sciencebasedhealth.sbh</string>
+    <string name="widget_description">Track your daily calories, macros, and streak at a glance</string>
 </resources>

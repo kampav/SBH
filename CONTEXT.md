@@ -1,7 +1,7 @@
 # SBH — Science Based Health
 ## Session Context File — Paste at start of every Claude session
 
-> Last updated: 2026-03-05 | Version: 1.5.0
+> Last updated: 2026-03-06 | Version: 1.6.0
 
 ---
 
@@ -17,7 +17,7 @@
 
 ---
 
-## CURRENT BUILD STATUS — v1.5.0 ✅ DEPLOYED
+## CURRENT BUILD STATUS — v1.6.0 ✅ DEPLOYED
 
 ### Completed Features
 
@@ -122,11 +122,17 @@ users/{uid}/
 - [x] Multi-market compliance: India DPDP 2023 + UAE PDPL 2021 in privacy policy
 - [x] Test notification button on profile page
 
-### ⬜ Phase 6 — Platform (Next)
-- [ ] Android Glance widgets (Jetpack Glance 1.1.0) — calories ring, macros, streak
+### ✅ Phase 6 — Platform
+- [x] Cloud Scheduler cron workflow (`.github/workflows/cron.yml`)
+- [x] Android Glance widget (Jetpack Glance 1.1.0 — calories bar, macros, streak)
+- [x] WidgetDataPlugin (Capacitor bridge → SharedPreferences → widget)
+- [x] A/B testing framework (`lib/ab-testing.ts` — djb2 hash, Remote Config overrides)
+- [x] Weekly digest API (`/api/digest/weekly` — personalised weekly summary notification)
+
+### ⬜ Phase 7 — Data (Next)
 - [ ] Typesense cloud provisioning + USDA/IFCT food data import (50k+ items)
-- [ ] Cloud Scheduler CRON job → `/api/fcm/send-daily` (daily 8 pm UTC)
-- [ ] OpenFeature + Remote Config A/B testing
+- [ ] Sleep tracking log
+- [ ] OpenFeature A/B experiment reporting dashboard
 
 ---
 
@@ -156,6 +162,10 @@ npm run build       # production build check
 - Progressive overload: deload every 12th workout, not just on milestones
 - FCM: `isNotificationSupported()` guard before push API; token → `users/{uid}/fcm_tokens/primary`; `getAdminApp()` in firebaseAdmin.ts for Messaging
 - FCM batch: `/api/fcm/send-daily` requires `Authorization: Bearer ${CRON_SECRET}`; uses `collectionGroup('fcm_tokens')` (Admin SDK); rotates notif types by day of week
+- Weekly digest: `/api/digest/weekly` — same CRON_SECRET auth; supports `{ uid }` for targeted sends; queries last 7 days nutrition + workouts per user; purges stale tokens
+- Widget: `lib/widget.ts` → `WidgetDataPlugin` (Capacitor) → SharedPreferences → Glance widget refresh; called after addMeal; no-op on web/iOS
+- A/B testing: `lib/ab-testing.ts` — `getVariant(name, uid)` uses djb2 hash; Remote Config overrides via `experiment__<name>` keys (JSON); `loadExperimentConfigs()` in AppInit
+- Cron: `.github/workflows/cron.yml` — runs 20:00 UTC daily; also usable with Cloud Scheduler
 - Typesense: `isTypesenseConfigured` gate; `/api/food-search` returns `source: 'typesense'|'local'`; local fallback always works; setup/import via `scripts/typesense-setup.mjs` + `scripts/typesense-import.mjs`
 - Remote Config: `initRemoteConfig()` in `AppInit` (layout); `isEnabled()` reads `_rcCache` first then `FLAGS.default`
 - Firebase offline: uses `initializeFirestore` with persistent cache — do NOT call `getFirestore` elsewhere

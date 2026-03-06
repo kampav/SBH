@@ -12,6 +12,7 @@ import { serverTimestamp } from 'firebase/firestore'
 import { Droplets, Plus, X, Camera, ScanLine, Heart, HeartOff, Loader2, ChevronDown, ChevronUp, Search, AlertTriangle } from 'lucide-react'
 import { FOOD_DATABASE, FoodEntry, LOWER_GI_SWAPS } from '@/lib/foodDatabase'
 import { calcGL, hasMealTimingRisk, giCategory } from '@/lib/glucoseUtils'
+import { updateWidgetData, buildWidgetData } from '@/lib/widget'
 import nextDynamic from 'next/dynamic'
 
 const BarcodeScanner = nextDynamic(() => import('@/components/nutrition/BarcodeScanner'), { ssr: false })
@@ -237,6 +238,15 @@ export default function NutritionPage() {
     setFormGI({ gi: null, gl: null, fibre: null, freeSugars: null })
     setFormMicros(EMPTY_MICROS)
     setSaving(false)
+    // Update Android home-screen widget (no-op on web/iOS)
+    updateWidgetData(buildWidgetData({
+      caloriesConsumed: updated.totalCalories,
+      caloriesTarget:   updated.calorieTarget,
+      proteinConsumed:  updated.totalProteinG,
+      carbsConsumed:    updated.totalCarbsG,
+      fatConsumed:      updated.totalFatG,
+      streak: 0,
+    }))
   }
 
   // ── Save to favourites ────────────────────────────────────────────────────
