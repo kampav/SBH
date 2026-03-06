@@ -720,6 +720,7 @@ export default function WorkoutPage() {
         {/* Exercise cards */}
         {!prog.isRest && exercises.map((ex, exIdx) => {
           const def = prog.exercises[exIdx]
+          if (!def) return null  // guard: stale exercises state during day switch
           const info = EXERCISE_INFO[ex.exerciseName]
           const videoUrl = info?.videoUrl ?? ex.videoUrl
           const allDone = ex.sets.every(s => s.completed)

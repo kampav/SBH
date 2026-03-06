@@ -306,6 +306,48 @@ export interface SleepEntry {
   loggedAt: FirestoreTimestamp
 }
 
+// ─── Habits ───────────────────────────────────────────────────────────────────
+export type HabitCategory = 'hydration' | 'mindfulness' | 'movement' | 'sleep' | 'nutrition' | 'custom'
+
+export interface HabitDefinition {
+  id: string
+  name: string
+  emoji: string
+  category: HabitCategory
+  targetCount: number       // e.g. 8 for water glasses, 1 for meditation
+  unit: string              // e.g. 'glasses', 'minutes', 'steps'
+  active: boolean
+  createdAt: FirestoreTimestamp
+}
+
+export interface DailyHabitLog {
+  date: string              // YYYY-MM-DD
+  logs: Record<string, number>  // habitId → count
+  updatedAt: FirestoreTimestamp
+}
+
+// ─── Weekly Insights (cached in Firestore) ────────────────────────────────────
+export interface WeeklyInsight {
+  weekStartDate: string     // YYYY-MM-DD (Monday)
+  generatedAt: string       // ISO timestamp
+  narrative: string         // 4-6 sentence AI paragraph
+  highlights: string[]      // 3 bullet points
+  actions: string[]         // 3 concrete next-week actions
+  scores: {
+    nutrition: number       // 0-100
+    workout: number         // 0-100
+    sleep: number           // 0-100
+    overall: number         // 0-100
+  }
+  weekData: {
+    avgCalories: number
+    avgProteinG: number
+    workoutsLogged: number
+    avgSleepH: number
+    weightDeltaKg: number | null
+  }
+}
+
 // ─── Subscription ─────────────────────────────────────────────────────────────
 export interface UserSubscription {
   tier: 'free' | 'pro' | 'premium'

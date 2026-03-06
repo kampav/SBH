@@ -1,7 +1,7 @@
 # SBH — Science Based Health
 ## Session Context File — Paste at start of every Claude session
 
-> Last updated: 2026-03-06 | Version: 1.8.0
+> Last updated: 2026-03-06 | Version: 1.9.0
 
 ---
 
@@ -17,7 +17,7 @@
 
 ---
 
-## CURRENT BUILD STATUS — v1.8.0 ✅ BUILT
+## CURRENT BUILD STATUS — v1.9.0 ✅ BUILT
 
 ### Completed Features
 
@@ -45,6 +45,10 @@
 | A/B experiment dashboard | ✅ | `app/experiments/page.tsx` |
 | GDPR data export (Art 20) | ✅ | `app/api/export/route.ts` |
 | Terms of Service | ✅ | `app/terms/page.tsx` |
+| AI Weekly Insights | ✅ | `app/insights/page.tsx`, `app/api/insights/weekly/route.ts` |
+| Habit Tracker | ✅ | `app/habits/page.tsx` |
+| PWA Install Banner | ✅ | `components/PWAInstallBanner.tsx` |
+| Stats sharing (metrics + workout history) | ✅ | `app/metrics/page.tsx`, `app/workout/history/page.tsx` |
 | Unit tests (131 tests) | ✅ | `__tests__/lib/` |
 | E2E tests (19 tests) | ✅ | `e2e/` |
 | Changelog + README | ✅ | `CHANGELOG.md`, `README.md` |

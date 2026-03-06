@@ -9,7 +9,9 @@ import { auth } from '@/lib/firebase'
 import { getRecentWorkouts } from '@/lib/firebase/firestore'
 import { DailyWorkout } from '@/lib/types'
 import Link from 'next/link'
-import { ArrowLeft, Dumbbell, Calendar, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Dumbbell, Calendar, TrendingUp, Share2 } from 'lucide-react'
+import { shareStats } from '@/lib/utils'
+import { Analytics } from '@/lib/firebase/analytics'
 
 const VIOLET = '#7c3aed'
 const CYAN   = '#06b6d4'
@@ -18,6 +20,7 @@ export default function WorkoutHistoryPage() {
   const router = useRouter()
   const [workouts, setWorkouts] = useState<DailyWorkout[]>([])
   const [authReady, setAuthReady] = useState(false)
+  const [shareToast, setShareToast] = useState(false)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -58,15 +61,32 @@ export default function WorkoutHistoryPage() {
 
   return (
     <main className="min-h-screen mesh-bg page-pad">
-      <header className="px-4 pt-12 pb-4 flex items-center gap-3">
-        <Link href="/workout" className="p-2 rounded-xl glass">
-          <ArrowLeft size={16} className="text-slate-400" />
-        </Link>
-        <div>
-          <h1 className="text-xl font-bold text-1">Workout History</h1>
-          <p className="text-xs text-2">{workouts.length} sessions logged</p>
+      <header className="px-4 pt-12 pb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/workout" className="p-2 rounded-xl glass">
+            <ArrowLeft size={16} className="text-slate-400" />
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold text-1">Workout History</h1>
+            <p className="text-xs text-2">{workouts.length} sessions logged</p>
+          </div>
         </div>
+        {workouts.length > 0 && (
+          <button onClick={async () => {
+            const text = `My SBH workout totals:\n💪 ${workouts.length} workouts logged\n🏋️ ${Math.round(totalVolume / 1000)}t total volume\n⏱️ ${Math.round(totalMin / 60)}h of training\n📱 sbhealth.app`
+            const used = await shareStats('My SBH Workouts', text)
+            Analytics.statsShared('workouts')
+            if (!used) { setShareToast(true); setTimeout(() => setShareToast(false), 2500) }
+          }} className="p-2 rounded-xl glass">
+            <Share2 size={16} style={{ color: 'var(--text-2)' }} />
+          </button>
+        )}
       </header>
+      {shareToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg z-50">
+          Copied to clipboard!
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto px-4 space-y-4">
 

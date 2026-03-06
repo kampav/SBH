@@ -118,4 +118,22 @@ export const Analytics = {
   proteinTargetHit(proteinG: number) {
     track('protein_target_hit', { protein_bucket: bucketProtein(proteinG) })
   },
+
+  /** Weekly insights page viewed or generated */
+  weeklyInsightsViewed(fromCache: boolean, overallScore: number) {
+    track('weekly_insights_viewed', {
+      from_cache: fromCache,
+      score_bucket: overallScore < 40 ? '<40' : overallScore < 70 ? '40-70' : '70+',
+    })
+  },
+
+  /** Habit logged */
+  habitLogged(habitId: string, completed: boolean) {
+    track('habit_logged', { habit_id: habitId, completed })
+  },
+
+  /** Stats shared via Web Share API or clipboard */
+  statsShared(type: 'badges' | 'workouts' | 'weekly_insight') {
+    track('stats_shared', { share_type: type })
+  },
 }

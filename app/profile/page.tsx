@@ -610,8 +610,18 @@ export default function ProfilePage() {
                     if (!uid || testNotifStatus === 'sending') return
                     setTestNotifStatus('sending')
                     try {
-                      const tokenDoc = await getFcmTokenDoc(uid)
-                      if (!tokenDoc?.token) { setTestNotifStatus('err'); return }
+                      let tokenDoc = await getFcmTokenDoc(uid)
+                      // If no stored token, try to refresh it
+                      if (!tokenDoc?.token) {
+                        const freshToken = await enableNotifications()
+                        if (freshToken) {
+                          await saveFcmToken(uid, freshToken, notifPrefs)
+                          tokenDoc = { token: freshToken, prefs: notifPrefs }
+                        } else {
+                          setTestNotifStatus('err')
+                          return
+                        }
+                      }
                       const res = await fetch('/api/fcm/notify', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -638,7 +648,7 @@ export default function ProfilePage() {
                   }}>
                   {testNotifStatus === 'sending' ? 'Sending…'
                     : testNotifStatus === 'ok' ? '✓ Test sent!'
-                    : testNotifStatus === 'err' ? '✗ Failed — check token'
+                    : testNotifStatus === 'err' ? '✗ Failed — enable notifications first'
                     : 'Send test notification'}
                 </button>
               </div>

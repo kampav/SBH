@@ -16,7 +16,9 @@ import {
   ResponsiveContainer, ReferenceLine, Legend,
 } from 'recharts'
 import { computeBadges, computeStreak, computeXP, getLevel } from '@/lib/gamification'
-import { Scale, Ruler, Trophy, ChevronDown, ChevronUp, Check } from 'lucide-react'
+import { Scale, Ruler, Trophy, ChevronDown, ChevronUp, Check, Share2 } from 'lucide-react'
+import { shareStats } from '@/lib/utils'
+import { Analytics } from '@/lib/firebase/analytics'
 
 const today = new Date().toISOString().slice(0, 10)
 const VIOLET = '#7c3aed'
@@ -47,6 +49,7 @@ export default function MetricsPage() {
   const [mForm, setMForm] = useState({ chest: '', waist: '', neck: '', hips: '', bicep: '' })
   const [chartTab, setChartTab] = useState<'weight' | 'measurements' | 'calories'>('weight')
   const [showBadges, setShowBadges] = useState(false)
+  const [shareToast, setShareToast] = useState(false)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -423,13 +426,30 @@ export default function MetricsPage() {
           )}
         </div>
 
-        {/* Level */}
+        {/* Level + Share */}
         <div className="glass rounded-2xl p-4 text-center">
           <p className="text-xs text-2 mb-1">Current Level</p>
           <p className="text-3xl font-bold gradient-text">Level {level}</p>
           <p className="text-sm text-1 font-semibold">{levelTitle}</p>
           <p className="text-xs text-2 mt-1">{xp.toLocaleString()} total XP</p>
+          <button
+            onClick={async () => {
+              const text = `My SBH stats:\n🔥 Level ${level} — ${levelTitle}\n⚡ ${xp.toLocaleString()} XP\n🏆 ${earnedBadges.length} badges earned\n📱 sbhealth.app`
+              const used = await shareStats('My SBH Progress', text)
+              Analytics.statsShared('badges')
+              if (!used) { setShareToast(true); setTimeout(() => setShareToast(false), 2500) }
+            }}
+            className="mt-3 mx-auto flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold glass border border-white/10"
+            style={{ color: 'var(--text-2)' }}>
+            <Share2 size={13} /> Share my stats
+          </button>
         </div>
+
+        {shareToast && (
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg z-50">
+            Copied to clipboard!
+          </div>
+        )}
       </div>
     </main>
   )

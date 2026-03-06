@@ -6,7 +6,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from './client'
-import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement, SleepEntry } from '../types'
+import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement, SleepEntry, HabitDefinition, DailyHabitLog, WeeklyInsight } from '../types'
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 export async function getProfile(uid: string): Promise<UserProfile | null> {
@@ -235,9 +235,51 @@ export async function deleteSleep(uid: string, date: string): Promise<void> {
   await deleteDoc(doc(db, 'users', uid, 'sleep', date))
 }
 
+// ─── Habits ───────────────────────────────────────────────────────────────────
+export async function getHabits(uid: string): Promise<HabitDefinition[]> {
+  const snap = await getDocs(collection(db, 'users', uid, 'habits'))
+  return snap.docs.map(d => d.data() as HabitDefinition).filter(h => h.active)
+}
+
+export async function saveHabit(uid: string, habit: HabitDefinition): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'habits', habit.id), habit)
+}
+
+export async function deleteHabit(uid: string, id: string): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'habits', id), { active: false }, { merge: true })
+}
+
+export async function getDailyHabitLog(uid: string, date: string): Promise<DailyHabitLog | null> {
+  const snap = await getDoc(doc(db, 'users', uid, 'habit_logs', date))
+  return snap.exists() ? (snap.data() as DailyHabitLog) : null
+}
+
+export async function updateHabitLog(uid: string, date: string, habitId: string, count: number): Promise<void> {
+  const ref = doc(db, 'users', uid, 'habit_logs', date)
+  const existing = await getDailyHabitLog(uid, date)
+  const logs = { ...(existing?.logs ?? {}), [habitId]: count }
+  await setDoc(ref, { date, logs, updatedAt: serverTimestamp() }, { merge: true })
+}
+
+export async function getHabitLogHistory(uid: string, days = 30): Promise<DailyHabitLog[]> {
+  const q = query(collection(db, 'users', uid, 'habit_logs'), orderBy('date', 'desc'), limit(days))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => d.data() as DailyHabitLog)
+}
+
+// ─── Weekly Insights Cache ────────────────────────────────────────────────────
+export async function getCachedWeeklyInsight(uid: string, weekStartDate: string): Promise<WeeklyInsight | null> {
+  const snap = await getDoc(doc(db, 'users', uid, 'insights', weekStartDate))
+  return snap.exists() ? (snap.data() as WeeklyInsight) : null
+}
+
+export async function saveWeeklyInsight(uid: string, insight: WeeklyInsight): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'insights', insight.weekStartDate), insight)
+}
+
 // ─── Account Deletion ─────────────────────────────────────────────────────────
 export async function deleteAllUserData(uid: string): Promise<void> {
-  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings', 'subscription', 'streaks', 'achievements', 'fcm_tokens', 'sleep']
+  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings', 'subscription', 'streaks', 'achievements', 'fcm_tokens', 'sleep', 'habits', 'habit_logs', 'insights']
   for (const sub of subcollections) {
     const snap = await getDocs(collection(db, 'users', uid, sub))
     const batch = writeBatch(db)

@@ -5,6 +5,39 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.9.0] — 2026-03-06
+
+### Added
+- **AI Weekly Insights** (`app/insights/page.tsx`, `app/api/insights/weekly/route.ts`)
+  - Deterministic nutrition/workout/sleep/overall scores (server-side, no hallucination)
+  - Claude Haiku generates narrative, 3 highlights, 3 actionable tips
+  - 24-hour Firestore cache (`users/{uid}/insights/{weekStartDate}`)
+  - Score rings (SVG), week-at-a-glance stats grid, 7-day bar chart (calories/protein/sleep tabs)
+  - Share button via Web Share API with clipboard fallback
+- **Habit Tracker** (`app/habits/page.tsx`)
+  - 5 default habits seeded on first visit (water, steps, meditation, sleep, fruit & veg)
+  - Increment/decrement stepper per habit with target progress
+  - 7-day streak dots, add custom habit form, soft-delete habits
+  - Firestore: `users/{uid}/habits/{id}` + `users/{uid}/habit_logs/{date}`
+- **Stats sharing** on metrics and workout history pages
+  - Share2 icon buttons generate summary text and call Web Share API
+  - Clipboard toast shown when Web Share API unavailable
+- **PWA Install Banner** (`components/PWAInstallBanner.tsx`)
+  - Intercepts `beforeinstallprompt` event; shows dismissible bottom banner
+  - Dismissal persisted in `localStorage.sbh_pwa_dismissed`
+  - Added to root layout above BottomNav
+- **Dashboard QuickCards** — added Habits and Weekly Report cards
+- **Feature flags** — `core.habit_tracker`, `pro.weekly_insights`
+- **Analytics events** — `weeklyInsightsViewed`, `habitLogged`, `statsShared`
+- **Utilities** — `shareStats(title, text)`, `getWeekStart(date?)` in `lib/utils.ts`
+
+### Fixed
+- **Test notification "check token" error** — handler now attempts `enableNotifications()` to refresh stale FCM token before failing
+- **Workout page crash on Saturday** — added `if (!def) return null` guard for stale `exercises` state during day switch
+- **Insights API** — corrected `DailyNutrition` field references (`totalCalories`, `totalProteinG`) replacing incorrect `macros.*` access
+
+---
+
 ## [1.8.0] — 2026-03-06
 
 ### Added

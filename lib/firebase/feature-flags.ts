@@ -26,6 +26,10 @@ export const FLAGS = {
   'premium.care_team_share':   { default: true, tiers: ['premium'] as UserTier[] },
   'premium.glucose_predict':   { default: true, tiers: ['premium'] as UserTier[] },
 
+  // Phase 9 features
+  'core.habit_tracker':        { default: true, tiers: ['free','pro','premium'] as UserTier[] },
+  'pro.weekly_insights':       { default: true, tiers: ['pro','premium'] as UserTier[] },
+
   // Ops kill-switches
   'ops.food_photo_api':        { default: true, tiers: ['free','pro','premium'] as UserTier[] },
   'ops.ai_insights':           { default: true, tiers: ['free','pro','premium'] as UserTier[] },

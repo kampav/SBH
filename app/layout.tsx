@@ -4,6 +4,7 @@ import './globals.css'
 import BottomNav from '@/components/layout/BottomNav'
 import OfflineBanner from '@/components/OfflineBanner'
 import AppInit from '@/components/AppInit'
+import PWAInstallBanner from '@/components/PWAInstallBanner'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.className} antialiased bg-app text-1`}>
         <AppInit />
         <OfflineBanner />
+        <PWAInstallBanner />
         {children}
         <BottomNav />
       </body>
