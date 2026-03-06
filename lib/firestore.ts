@@ -6,7 +6,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
-import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement } from './types'
+import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement, SleepEntry } from './types'
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 export async function getProfile(uid: string): Promise<UserProfile | null> {
@@ -215,9 +215,29 @@ export async function deleteFcmToken(uid: string): Promise<void> {
   await deleteDoc(doc(db, 'users', uid, 'fcm_tokens', 'primary'))
 }
 
+// ─── Sleep ────────────────────────────────────────────────────────────────────
+export async function saveSleep(uid: string, entry: SleepEntry): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'sleep', entry.date), { ...entry, loggedAt: serverTimestamp() })
+}
+
+export async function getSleep(uid: string, date: string): Promise<SleepEntry | null> {
+  const snap = await getDoc(doc(db, 'users', uid, 'sleep', date))
+  return snap.exists() ? (snap.data() as SleepEntry) : null
+}
+
+export async function getSleepHistory(uid: string, days = 30): Promise<SleepEntry[]> {
+  const q = query(collection(db, 'users', uid, 'sleep'), orderBy('date', 'desc'), limit(days))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => d.data() as SleepEntry).reverse()
+}
+
+export async function deleteSleep(uid: string, date: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', uid, 'sleep', date))
+}
+
 // ─── Account Deletion ─────────────────────────────────────────────────────────
 export async function deleteAllUserData(uid: string): Promise<void> {
-  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings', 'subscription', 'streaks', 'achievements', 'fcm_tokens']
+  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings', 'subscription', 'streaks', 'achievements', 'fcm_tokens', 'sleep']
   for (const sub of subcollections) {
     const snap = await getDocs(collection(db, 'users', uid, sub))
     const batch = writeBatch(db)

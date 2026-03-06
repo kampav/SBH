@@ -281,6 +281,20 @@ export interface DailyContext {
   insightBadge: string | null
 }
 
+// ─── Sleep ────────────────────────────────────────────────────────────────────
+export type SleepQuality = 1 | 2 | 3 | 4 | 5
+
+export interface SleepEntry {
+  id: string
+  date: string        // YYYY-MM-DD — the date the user woke up
+  bedtime: string     // HH:MM 24hr (may be previous calendar day)
+  wakeTime: string    // HH:MM 24hr
+  durationH: number   // calculated hours (float)
+  quality: SleepQuality // 1=terrible … 5=excellent
+  notes?: string
+  loggedAt: FirestoreTimestamp
+}
+
 // ─── Subscription ─────────────────────────────────────────────────────────────
 export interface UserSubscription {
   tier: 'free' | 'pro' | 'premium'

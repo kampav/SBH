@@ -6,12 +6,13 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { getProfile, getNutrition, getRecentWorkouts, getMetrics, getNutritionHistory, getGlucoseSettings, getDailyGlucose, getStreak, updateStreak } from '@/lib/firestore'
-import { UserProfile, GlucoseSettings, GlucoseReading } from '@/lib/types'
+import { getProfile, getNutrition, getRecentWorkouts, getMetrics, getNutritionHistory, getGlucoseSettings, getDailyGlucose, getStreak, updateStreak, getSleepHistory } from '@/lib/firestore'
+import { UserProfile, GlucoseSettings, GlucoseReading, SleepEntry } from '@/lib/types'
 import { displayGlucose, glucoseColor, DEFAULT_GLUCOSE_SETTINGS } from '@/lib/glucoseUtils'
+import { calcSleepScore, sleepScoreLabel } from '@/lib/sleepUtils'
 import { computeDailyContext } from '@/lib/daily-context'
 import Link from 'next/link'
-import { LogOut, Zap, Trophy, ChevronRight, User, Utensils, Dumbbell, Scale, TrendingUp, Activity, type LucideIcon } from 'lucide-react'
+import { LogOut, Zap, Trophy, ChevronRight, User, Utensils, Dumbbell, Scale, TrendingUp, Activity, Moon, type LucideIcon } from 'lucide-react'
 import ProgressRing from '@/components/ui/ProgressRing'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import {
@@ -48,6 +49,7 @@ export default function DashboardPage() {
   const [glucoseSettings, setGlucoseSettings] = useState<GlucoseSettings | null>(null)
   const [latestGlucose, setLatestGlucose] = useState<GlucoseReading | null>(null)
   const [insightBadge, setInsightBadge] = useState<string | null>(null)
+  const [lastSleep, setLastSleep] = useState<SleepEntry | null>(null)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -55,13 +57,14 @@ export default function DashboardPage() {
       if (!user) { router.push('/login'); return }
       const saved = localStorage.getItem(`sbh_week_${user.uid}`)
       setProgrammeWeek(saved ? Math.min(Math.max(parseInt(saved), 1), 12) : 1)
-      const [p, nutrition, workouts, metrics, gs, todayGlucose] = await Promise.all([
+      const [p, nutrition, workouts, metrics, gs, todayGlucose, sleepHistory] = await Promise.all([
         getProfile(user.uid),
         getNutrition(user.uid, today),
         getRecentWorkouts(user.uid, 90),
         getMetrics(user.uid, 90),
         getGlucoseSettings(user.uid),
         getDailyGlucose(user.uid, today),
+        getSleepHistory(user.uid, 3),
       ])
       if (gs?.consentGiven) {
         setGlucoseSettings(gs)
@@ -70,6 +73,7 @@ export default function DashboardPage() {
           setLatestGlucose(sorted[sorted.length - 1])
         }
       }
+      if (sleepHistory.length) setLastSleep(sleepHistory[sleepHistory.length - 1])
       if (!p?.onboardingComplete) { router.push('/onboarding'); return }
       setProfile(p)
       if (nutrition) {
@@ -258,6 +262,34 @@ export default function DashboardPage() {
             </div>
           </Link>
         )}
+
+        {/* ── SLEEP WIDGET ── */}
+        <Link href="/sleep" className="block glass rounded-2xl p-4 card-hover">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(124,58,237,0.15)' }}>
+                <Moon size={18} style={{ color: '#7c3aed' }} />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-2 uppercase tracking-widest">Sleep</p>
+                {lastSleep ? (
+                  <p className="font-bold text-sm" style={{ color: sleepScoreLabel(calcSleepScore(lastSleep.durationH, lastSleep.quality)).color }}>
+                    {lastSleep.durationH}h — {sleepScoreLabel(calcSleepScore(lastSleep.durationH, lastSleep.quality)).label}
+                  </p>
+                ) : (
+                  <p className="text-xs text-3">No sleep logged</p>
+                )}
+              </div>
+            </div>
+            <div className="text-right">
+              {lastSleep && <p className="text-xs text-2">{lastSleep.date} · Q{lastSleep.quality}/5</p>}
+              <p className="text-xs font-semibold" style={{ color: '#7c3aed' }}>
+                {lastSleep ? 'View →' : '+ Log sleep →'}
+              </p>
+            </div>
+          </div>
+        </Link>
 
         {/* ── QUICK LOG (primary CTAs) ── */}
         <div className="grid grid-cols-2 gap-3">

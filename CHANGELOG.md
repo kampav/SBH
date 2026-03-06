@@ -5,6 +5,42 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.7.0] — 2026-03-06
+
+### Added
+- **Sleep tracking** (`app/sleep/page.tsx`)
+  - Log bedtime, wake time, quality (1–5 stars), optional notes
+  - Duration calculated automatically; handles midnight crossing
+  - Sleep score (0–100) combining duration fitness + quality
+  - 7-day bar chart (Recharts) with target reference line (8 h)
+  - Stats row: 7-day average, target, sleep debt
+  - History list with delete; dismissible log form
+  - Sleep widget card on dashboard (last logged sleep + score colour)
+  - Firestore path: `users/{uid}/sleep/{date}` → `SleepEntry`
+  - `lib/sleepUtils.ts` — `calcSleepDuration`, `calcSleepScore`, `sleepQualityLabel`, `sleepScoreLabel`, `avgSleepH`, `sleepDebtH`, `sleepWeekData`
+  - `SleepEntry` / `SleepQuality` types added to `lib/types.ts`
+  - Sleep CRUD in `lib/firestore.ts`; `sleep` subcollection added to `deleteAllUserData`
+- **A/B experiment reporting dashboard** (`app/experiments/page.tsx`)
+  - Lists all experiments from `EXPERIMENTS` registry (expandable rows)
+  - Shows variant weights as progress bars
+  - Shows the current user's deterministic variant assignment
+  - Displays Remote Config key + JSON payload for each experiment
+  - Developer tool — accessible at `/experiments`
+- **Typesense USDA import script** (`scripts/typesense-import-usda.mjs`)
+  - Handles USDA FoodData Central Foundation Foods, SR Legacy, and Branded Foods JSON formats
+  - Maps USDA nutrient IDs (1003/1004/1005/1008/1079/1093/2000) to SBH schema
+  - Bulk upserts in batches of 250 via JSONL endpoint
+  - Prints per-batch progress + final success/fail counts
+- **Unit tests expanded** (74 tests total, +15 new)
+  - `sleepUtils.test.ts` — 22 tests covering all pure helpers
+  - `abTesting.test.ts` — 12 tests covering variant assignment, distribution, registry invariants
+
+### Changed
+- `app/dashboard/page.tsx` — sleep widget card below glucose widget; `getSleepHistory(uid, 3)` loaded in initial Promise.all
+- `lib/firestore.ts` — 4 new sleep CRUD functions; `deleteAllUserData` includes `sleep` subcollection
+
+---
+
 ## [1.6.0] — 2026-03-06
 
 ### Added

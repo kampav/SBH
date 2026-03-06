@@ -1,7 +1,7 @@
 # SBH — Science Based Health
 ## Session Context File — Paste at start of every Claude session
 
-> Last updated: 2026-03-06 | Version: 1.6.0
+> Last updated: 2026-03-06 | Version: 1.7.0
 
 ---
 
@@ -17,7 +17,7 @@
 
 ---
 
-## CURRENT BUILD STATUS — v1.6.0 ✅ DEPLOYED
+## CURRENT BUILD STATUS — v1.7.0 ✅ BUILT
 
 ### Completed Features
 
@@ -40,7 +40,9 @@
 | Feature flags | ✅ | `lib/feature-flags.ts` |
 | Analytics (Firebase) | ✅ | `lib/analytics.ts` |
 | Design tokens | ✅ | `lib/design-tokens.ts` |
-| Unit tests (59 tests) | ✅ | `__tests__/lib/` |
+| Sleep tracking | ✅ | `app/sleep/page.tsx`, `lib/sleepUtils.ts` |
+| A/B experiment dashboard | ✅ | `app/experiments/page.tsx` |
+| Unit tests (74 tests) | ✅ | `__tests__/lib/` |
 | E2E tests (19 tests) | ✅ | `e2e/` |
 | Changelog + README | ✅ | `CHANGELOG.md`, `README.md` |
 
@@ -67,6 +69,7 @@ users/{uid}/
   glucose/{date}        → DailyGlucose (readings[])
   hba1c/{id}            → HbA1cEntry
   glucose_settings/config → GlucoseSettings
+  sleep/{date}          → SleepEntry
   streaks/current       → StreakRecord
   achievements/{id}     → Achievement
   subscription/data     → { tier, status, stripeCustomerId, ... }
@@ -129,10 +132,16 @@ users/{uid}/
 - [x] A/B testing framework (`lib/ab-testing.ts` — djb2 hash, Remote Config overrides)
 - [x] Weekly digest API (`/api/digest/weekly` — personalised weekly summary notification)
 
-### ⬜ Phase 7 — Data (Next)
-- [ ] Typesense cloud provisioning + USDA/IFCT food data import (50k+ items)
-- [ ] Sleep tracking log
-- [ ] OpenFeature A/B experiment reporting dashboard
+### ✅ Phase 7 — Data
+- [x] Sleep tracking log (`app/sleep/page.tsx`, `lib/sleepUtils.ts`, Firestore CRUD, dashboard widget)
+- [x] OpenFeature A/B experiment reporting dashboard (`app/experiments/page.tsx`)
+- [x] Typesense USDA import script (`scripts/typesense-import-usda.mjs` — Foundation/SR Legacy/Branded JSON)
+- [x] Unit tests expanded: `sleepUtils.test.ts` (22 tests) + `abTesting.test.ts` (12 tests)
+
+### ⬜ Phase 8 — (Next)
+- [ ] Typesense cloud provisioning + live USDA/IFCT data import (50k+ items)
+- [ ] IFCT import script (Indian food composition tables)
+- [ ] iOS Capacitor widget bridge (mirror of Android Glance widget)
 
 ---
 
@@ -170,3 +179,5 @@ npm run build       # production build check
 - Remote Config: `initRemoteConfig()` in `AppInit` (layout); `isEnabled()` reads `_rcCache` first then `FLAGS.default`
 - Firebase offline: uses `initializeFirestore` with persistent cache — do NOT call `getFirestore` elsewhere
 - Food database: 156 entries, categories include `fruit`, `uk_main`, `nut_seed`; `LOWER_GI_SWAPS` map has 29 entries
+- Sleep: `lib/sleepUtils.ts` — `calcSleepDuration(bedtime, wakeTime)` handles midnight crossing; `calcSleepScore(durationH, quality)` → 0-100; Firestore path `users/{uid}/sleep/{date}` (date = wake date)
+- A/B dashboard: `/experiments` page — lists EXPERIMENTS registry, shows weight bars, user's variant, RC override instructions
