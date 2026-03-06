@@ -3,7 +3,7 @@ export const dynamic = 'force-static'
 
 import Link from 'next/link'
 
-const LAST_UPDATED = '3 March 2026'
+const LAST_UPDATED = '5 March 2026'
 const CONTACT_EMAIL = 'privacy@sciencebasedhealth.app'
 const APP_NAME = 'Science Based Health (SBH)'
 
@@ -182,7 +182,84 @@ export default function PrivacyPage() {
         </Section>
 
         {/* 10 */}
-        <Section title="10. Contact Us">
+        <Section title="10. India — Digital Personal Data Protection Act 2023 (DPDP)">
+          <p>
+            If you access {APP_NAME} from India, the following additional rights and obligations
+            apply under the <strong className="text-white">Digital Personal Data Protection Act 2023</strong> (DPDP Act):
+          </p>
+          <ul className="list-disc pl-5 space-y-1 mt-2">
+            <li>
+              <strong className="text-white">Consent</strong> — We process your personal data only on the basis of your
+              free, informed, specific, and unconditional consent. You may withdraw consent at any time by deleting your
+              account (see section 7).
+            </li>
+            <li>
+              <strong className="text-white">Notice</strong> — We have provided this Policy in clear language to inform
+              you of the nature and purpose of processing before collection.
+            </li>
+            <li>
+              <strong className="text-white">Right to Correction & Erasure</strong> — You have the right to correct
+              inaccurate personal data and to erase personal data that is no longer necessary for the purpose for which
+              it was collected.
+            </li>
+            <li>
+              <strong className="text-white">Right to Grievance Redressal</strong> — To raise a grievance, contact our
+              Data Protection Officer at <a href={`mailto:${CONTACT_EMAIL}`} className="text-violet-400">{CONTACT_EMAIL}</a>.
+              We will respond within <strong className="text-white">30 days</strong>.
+            </li>
+            <li>
+              <strong className="text-white">Children&apos;s data</strong> — We do not knowingly process personal data of
+              individuals under 18 years of age. Verifiable parental consent is required for users under 18.
+            </li>
+            <li>
+              <strong className="text-white">Data Fiduciary</strong> — Science Based Health acts as the Data Fiduciary
+              under the DPDP Act for data collected through this application.
+            </li>
+            <li>
+              <strong className="text-white">Cross-border transfers</strong> — Your data is stored in Google Cloud
+              (europe-west2) and may be processed in the United States (Anthropic API). These transfers occur under
+              standard contractual safeguards consistent with DPDP requirements as notified by the Government of India.
+            </li>
+          </ul>
+        </Section>
+
+        {/* 11 */}
+        <Section title="11. UAE — Personal Data Protection Law 2021 (PDPL)">
+          <p>
+            If you access {APP_NAME} from the United Arab Emirates, the following additional rights and
+            obligations apply under <strong className="text-white">Federal Decree-Law No. 45 of 2021</strong> on the
+            Protection of Personal Data (PDPL):
+          </p>
+          <ul className="list-disc pl-5 space-y-1 mt-2">
+            <li>
+              <strong className="text-white">Lawful basis</strong> — We process your personal data based on your
+              explicit consent provided during registration and, where applicable, for the performance of our contract
+              with you.
+            </li>
+            <li>
+              <strong className="text-white">Special category data</strong> — Health and fitness information
+              constitutes sensitive personal data under UAE PDPL. We process such data only with your explicit consent
+              and implement enhanced security measures accordingly.
+            </li>
+            <li>
+              <strong className="text-white">Your rights</strong> — You have the right to: access your personal data;
+              correct inaccurate data; request erasure of data no longer required; object to processing; and request
+              restriction of processing.
+            </li>
+            <li>
+              <strong className="text-white">Cross-border transfers</strong> — We transfer personal data outside the
+              UAE to Google Cloud (EU) and Anthropic (USA). Such transfers are made under safeguards that ensure an
+              adequate level of protection consistent with UAE PDPL requirements.
+            </li>
+            <li>
+              <strong className="text-white">Data Protection Officer</strong> — For UAE-specific data requests or
+              complaints, contact us at <a href={`mailto:${CONTACT_EMAIL}`} className="text-violet-400">{CONTACT_EMAIL}</a>.
+            </li>
+          </ul>
+        </Section>
+
+        {/* 12 */}
+        <Section title="12. Contact Us">
           <p>
             For privacy-related questions, data requests, or to report a concern, contact us at:
           </p>

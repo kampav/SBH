@@ -51,6 +51,7 @@ export default function ProfilePage() {
   const [notifPrefs, setNotifPrefs] = useState({ streakReminder: true, workoutReminder: true, hydrationNudge: false })
   const [notifLoading, setNotifLoading] = useState(false)
   const [notifSupported, setNotifSupported] = useState(false)
+  const [testNotifStatus, setTestNotifStatus] = useState<'idle'|'sending'|'ok'|'err'>('idle')
 
   // Account deletion
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -603,6 +604,43 @@ export default function ProfilePage() {
                     </button>
                   </div>
                 ))}
+                {/* Test notification button */}
+                <button
+                  onClick={async () => {
+                    if (!uid || testNotifStatus === 'sending') return
+                    setTestNotifStatus('sending')
+                    try {
+                      const tokenDoc = await getFcmTokenDoc(uid)
+                      if (!tokenDoc?.token) { setTestNotifStatus('err'); return }
+                      const res = await fetch('/api/fcm/notify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          token: tokenDoc.token,
+                          title: '🔔 SBH Test Notification',
+                          body: 'Push notifications are working correctly!',
+                          url: '/dashboard',
+                          tag: 'test',
+                        }),
+                      })
+                      setTestNotifStatus(res.ok ? 'ok' : 'err')
+                    } catch {
+                      setTestNotifStatus('err')
+                    } finally {
+                      setTimeout(() => setTestNotifStatus('idle'), 4000)
+                    }
+                  }}
+                  disabled={testNotifStatus === 'sending'}
+                  className="w-full mt-1 py-2 rounded-xl text-xs font-semibold border border-white/10 transition-all"
+                  style={{
+                    color: testNotifStatus === 'ok' ? '#34d399' : testNotifStatus === 'err' ? '#f87171' : '#a78bfa',
+                    background: 'rgba(255,255,255,0.03)',
+                  }}>
+                  {testNotifStatus === 'sending' ? 'Sending…'
+                    : testNotifStatus === 'ok' ? '✓ Test sent!'
+                    : testNotifStatus === 'err' ? '✗ Failed — check token'
+                    : 'Send test notification'}
+                </button>
               </div>
             ) : (
               <div className="flex items-center gap-2 text-xs text-slate-400">

@@ -1,7 +1,7 @@
 # SBH — Science Based Health
 ## Session Context File — Paste at start of every Claude session
 
-> Last updated: 2026-03-05 | Version: 1.3.0
+> Last updated: 2026-03-05 | Version: 1.5.0
 
 ---
 
@@ -17,7 +17,7 @@
 
 ---
 
-## CURRENT BUILD STATUS — v1.3.0 ✅ DEPLOYED
+## CURRENT BUILD STATUS — v1.5.0 ✅ DEPLOYED
 
 ### Completed Features
 
@@ -115,11 +115,18 @@ users/{uid}/
 - [x] FCM push notifications (`lib/fcm.ts`, SW push handler, `/api/fcm/notify`, profile UI)
 - [x] Typesense food search client (`lib/typesense-client.ts` + `/api/food-search`)
 
-### ⬜ Phase 5 — Scale (Next)
-- [ ] Typesense server provisioning + USDA/IFCT food data import
-- [ ] Android Glance widgets (Jetpack Glance 1.1.0)
-- [ ] Multi-market compliance (India DPDP May 2027, UAE PDPL)
-- [ ] FCM scheduled sends (Cloud Scheduler → /api/fcm/notify)
+### ✅ Phase 5 — Scale
+- [x] FCM batch scheduled sender (`app/api/fcm/send-daily/route.ts` — `CRON_SECRET` auth, collectionGroup query, stale-token purge)
+- [x] Food database expanded 75 → 156 entries (fruits, UK mains, nuts/seeds, more proteins, dairy, veg)
+- [x] Typesense scripts (`scripts/typesense-setup.mjs`, `scripts/typesense-import.mjs`)
+- [x] Multi-market compliance: India DPDP 2023 + UAE PDPL 2021 in privacy policy
+- [x] Test notification button on profile page
+
+### ⬜ Phase 6 — Platform (Next)
+- [ ] Android Glance widgets (Jetpack Glance 1.1.0) — calories ring, macros, streak
+- [ ] Typesense cloud provisioning + USDA/IFCT food data import (50k+ items)
+- [ ] Cloud Scheduler CRON job → `/api/fcm/send-daily` (daily 8 pm UTC)
+- [ ] OpenFeature + Remote Config A/B testing
 
 ---
 
@@ -148,6 +155,8 @@ npm run build       # production build check
 - Meal micronutrients: 13 optional fields directly on `Meal` interface (backward-compatible)
 - Progressive overload: deload every 12th workout, not just on milestones
 - FCM: `isNotificationSupported()` guard before push API; token → `users/{uid}/fcm_tokens/primary`; `getAdminApp()` in firebaseAdmin.ts for Messaging
-- Typesense: `isTypesenseConfigured` gate; `/api/food-search` returns `source: 'typesense'|'local'`; local fallback always works
+- FCM batch: `/api/fcm/send-daily` requires `Authorization: Bearer ${CRON_SECRET}`; uses `collectionGroup('fcm_tokens')` (Admin SDK); rotates notif types by day of week
+- Typesense: `isTypesenseConfigured` gate; `/api/food-search` returns `source: 'typesense'|'local'`; local fallback always works; setup/import via `scripts/typesense-setup.mjs` + `scripts/typesense-import.mjs`
 - Remote Config: `initRemoteConfig()` in `AppInit` (layout); `isEnabled()` reads `_rcCache` first then `FLAGS.default`
 - Firebase offline: uses `initializeFirestore` with persistent cache — do NOT call `getFirestore` elsewhere
+- Food database: 156 entries, categories include `fruit`, `uk_main`, `nut_seed`; `LOWER_GI_SWAPS` map has 29 entries

@@ -5,6 +5,38 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.5.0] — 2026-03-05
+
+### Added
+- **FCM scheduled batch sender** (`app/api/fcm/send-daily/route.ts`) — `CRON_SECRET`-authenticated POST endpoint; queries all users via `collectionGroup('fcm_tokens')`; sends targeted notifications (streak/workout/hydration) rotated by day of week; automatically purges stale/invalid tokens in a batched write
+- **Food database expanded 75 → 156 entries** (`lib/foodDatabase.ts`)
+  - New categories: `fruit`, `uk_main`, `nut_seed`
+  - 10 new vegetables (cucumber, bell pepper, tomato, carrot, mushrooms, kale, courgette, peas, sweetcorn, edamame)
+  - 10 fruits (apple, orange, mango, strawberries, blueberries, grapes, watermelon, pear, kiwi, lemon)
+  - 7 UK mains (porridge, baked beans, jacket potato, fish & chips, full English, cheese sandwich, lentil soup)
+  - 12 new proteins (chicken thigh, turkey, cod, king prawns, tofu, tempeh, sardines, mackerel, lean beef mince, pork loin, chickpeas, black beans)
+  - 7 new dairy (whole milk, semi-skimmed milk, skyr, kefir, cheddar, mozzarella, feta)
+  - 8 new carbs (quinoa, wholegrain bread, pasta, boiled potato, couscous, rice cakes, granola, corn tortilla)
+  - 7 nuts & seeds (walnuts, cashews, chia seeds, pumpkin seeds, flaxseed, brazil nuts, sunflower seeds)
+  - 5 new fats (olive oil, coconut oil, butter, tahini, hummus)
+  - 8 more Indian foods (kadai paneer, mutter paneer, aloo matar, rasam, pongal, pav bhaji, uttapam, methi thepla, missi roti, vada pav, pani puri)
+  - 4 more Indian sweets (besan ladoo, gajar halwa, jalebi, barfi)
+  - 3 supplements (creatine monohydrate, BCAA, mass gainer)
+  - 15 new lower-GI swap suggestions
+- **Typesense setup + import scripts**
+  - `scripts/typesense-setup.mjs` — creates/recreates the `foods` Typesense collection with correct schema (name, tags, calories, macros, GI, fibre, category facet)
+  - `scripts/typesense-import.mjs` — JSONL bulk upsert of all FOOD_DATABASE entries; reports per-document success/failure; inline TS-to-JS transform so no tsx required
+- **Privacy policy — multi-market compliance** (`app/privacy/page.tsx`)
+  - Section 10: India DPDP 2023 — consent basis, rights (correction/erasure), grievance redressal (30-day SLA), children's data (under 18), Data Fiduciary declaration, cross-border transfer disclosure
+  - Section 11: UAE PDPL 2021 — lawful basis, special category data (health), data subject rights, cross-border transfer safeguards, DPO contact
+  - Last updated date → 5 March 2026
+- **Test notification button** in profile page (`app/profile/page.tsx`) — visible when notifications are enabled; POSTs to `/api/fcm/notify` with user's FCM token; shows success/error/sending states; auto-resets after 4 s
+
+### Changed
+- `app/profile/page.tsx` — added `testNotifStatus` state; test notification button in Notifications card
+
+---
+
 ## [1.4.0] — 2026-03-05
 
 ### Added
