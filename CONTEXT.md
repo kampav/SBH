@@ -1,7 +1,7 @@
 # SBH — Science Based Health
 ## Session Context File — Paste at start of every Claude session
 
-> Last updated: 2026-03-06 | Version: 1.7.0
+> Last updated: 2026-03-06 | Version: 1.8.0
 
 ---
 
@@ -17,32 +17,35 @@
 
 ---
 
-## CURRENT BUILD STATUS — v1.7.0 ✅ BUILT
+## CURRENT BUILD STATUS — v1.8.0 ✅ BUILT
 
 ### Completed Features
 
 | Feature | Status | Key Files |
 |---|---|---|
 | Auth (Google + email) | ✅ | `app/login`, `app/register` |
-| Onboarding wizard | ✅ | `app/onboarding/page.tsx` |
-| Dashboard + insight badge | ✅ | `app/dashboard/page.tsx`, `lib/daily-context.ts` |
+| Onboarding wizard + GDPR consent | ✅ | `app/onboarding/page.tsx` |
+| Dashboard + insight badge | ✅ | `app/dashboard/page.tsx`, `lib/health/daily-context.ts` |
 | Nutrition tracker + micronutrients | ✅ | `app/nutrition/page.tsx` |
-| Workout logger + progressive overload | ✅ | `app/workout/page.tsx`, `lib/progressive-overload.ts` |
+| Workout logger + progressive overload | ✅ | `app/workout/page.tsx`, `lib/health/progressive-overload.ts` |
 | Workout history (90-day) | ✅ | `app/workout/history/page.tsx` |
 | Metrics + weight chart | ✅ | `app/metrics/page.tsx` |
-| Glucose management (FR-01–FR-10) | ✅ | `app/glucose/`, `lib/glucoseUtils.ts` |
+| Body composition (BMI, body fat, lean mass) | ✅ | `app/body/page.tsx`, `lib/health/bodyUtils.ts` |
+| Glucose management (FR-01–FR-10) | ✅ | `app/glucose/`, `lib/health/glucoseUtils.ts` |
 | AI food photo + barcode | ✅ | `app/api/analyze-food`, `app/api/lookup-food` |
 | AI glucose predict/nudge/report | ✅ | `app/api/glucose-*` |
 | Stripe billing (Free/Pro/Premium) | ✅ | `app/pricing`, `lib/stripe.ts`, `app/api/stripe/` |
 | Sentry monitoring | ✅ | `sentry.*.config.ts`, `instrumentation.ts` |
-| PWA (Serwist SW + offline cache) | ✅ | `app/sw.ts`, `lib/firebase.ts`, `components/OfflineBanner.tsx` |
-| Streaks + achievements | ✅ | `lib/firestore.ts` (getStreak/updateStreak/getAchievements) |
-| Feature flags | ✅ | `lib/feature-flags.ts` |
-| Analytics (Firebase) | ✅ | `lib/analytics.ts` |
+| PWA (Serwist SW + offline cache) | ✅ | `app/sw.ts`, `lib/firebase/client.ts`, `components/OfflineBanner.tsx` |
+| Streaks + achievements | ✅ | `lib/firebase/firestore.ts` |
+| Feature flags + Remote Config | ✅ | `lib/firebase/feature-flags.ts` |
+| Analytics (Firebase) | ✅ | `lib/firebase/analytics.ts` |
 | Design tokens | ✅ | `lib/design-tokens.ts` |
-| Sleep tracking | ✅ | `app/sleep/page.tsx`, `lib/sleepUtils.ts` |
+| Sleep tracking | ✅ | `app/sleep/page.tsx`, `lib/health/sleepUtils.ts` |
 | A/B experiment dashboard | ✅ | `app/experiments/page.tsx` |
-| Unit tests (74 tests) | ✅ | `__tests__/lib/` |
+| GDPR data export (Art 20) | ✅ | `app/api/export/route.ts` |
+| Terms of Service | ✅ | `app/terms/page.tsx` |
+| Unit tests (131 tests) | ✅ | `__tests__/lib/` |
 | E2E tests (19 tests) | ✅ | `e2e/` |
 | Changelog + README | ✅ | `CHANGELOG.md`, `README.md` |
 
@@ -129,19 +132,30 @@ users/{uid}/
 - [x] Cloud Scheduler cron workflow (`.github/workflows/cron.yml`)
 - [x] Android Glance widget (Jetpack Glance 1.1.0 — calories bar, macros, streak)
 - [x] WidgetDataPlugin (Capacitor bridge → SharedPreferences → widget)
-- [x] A/B testing framework (`lib/ab-testing.ts` — djb2 hash, Remote Config overrides)
+- [x] A/B testing framework (`lib/firebase/ab-testing.ts` — djb2 hash, Remote Config overrides)
 - [x] Weekly digest API (`/api/digest/weekly` — personalised weekly summary notification)
 
 ### ✅ Phase 7 — Data
-- [x] Sleep tracking log (`app/sleep/page.tsx`, `lib/sleepUtils.ts`, Firestore CRUD, dashboard widget)
+- [x] Sleep tracking log (`app/sleep/page.tsx`, `lib/health/sleepUtils.ts`, Firestore CRUD, dashboard widget)
 - [x] OpenFeature A/B experiment reporting dashboard (`app/experiments/page.tsx`)
 - [x] Typesense USDA import script (`scripts/typesense-import-usda.mjs` — Foundation/SR Legacy/Branded JSON)
-- [x] Unit tests expanded: `sleepUtils.test.ts` (22 tests) + `abTesting.test.ts` (12 tests)
+- [x] Unit tests expanded: `sleepUtils.test.ts` (27 tests) + `abTesting.test.ts` (12 tests)
 
-### ⬜ Phase 8 — (Next)
+### ✅ Phase 8 — Scale + Compliance
+- [x] Body composition page (`app/body/page.tsx` — BMI, US Navy body fat, lean/fat mass, WHtR, ideal weight)
+- [x] `lib/health/bodyUtils.ts` — pure body composition helpers + unit tests (33 tests)
+- [x] GDPR Art 20 data export (`app/api/export/route.ts` — CSV download from profile page)
+- [x] Terms of Service page (`app/terms/page.tsx` — England & Wales governing law)
+- [x] Onboarding consent step (GDPR Art 7/9 + DPDP + PDPL — `UserConsents` saved to Firestore)
+- [x] IFCT Indian food import script (`scripts/typesense-import-ifct.mjs`)
+- [x] Typesense provisioning health check (`scripts/typesense-provision.mjs`)
+- [x] **lib/ reorganisation** — flat files moved to `firebase/`, `health/`, `food/`, `platform/` subdirectories
+- [x] Total unit tests: 8 files · **131 tests**
+
+### ⬜ Phase 9 — (Next)
 - [ ] Typesense cloud provisioning + live USDA/IFCT data import (50k+ items)
-- [ ] IFCT import script (Indian food composition tables)
 - [ ] iOS Capacitor widget bridge (mirror of Android Glance widget)
+- [ ] AI-powered weekly insights report (nutrition + workout trends)
 
 ---
 
@@ -169,11 +183,15 @@ npm run build       # production build check
 - ESLint: no-unused-expressions — use `if/else` not ternary for void side-effects
 - Meal micronutrients: 13 optional fields directly on `Meal` interface (backward-compatible)
 - Progressive overload: deload every 12th workout, not just on milestones
-- FCM: `isNotificationSupported()` guard before push API; token → `users/{uid}/fcm_tokens/primary`; `getAdminApp()` in firebaseAdmin.ts for Messaging
+- FCM: `isNotificationSupported()` guard before push API; token → `users/{uid}/fcm_tokens/primary`; `getAdminApp()` in `lib/firebase/admin.ts` for Messaging
 - FCM batch: `/api/fcm/send-daily` requires `Authorization: Bearer ${CRON_SECRET}`; uses `collectionGroup('fcm_tokens')` (Admin SDK); rotates notif types by day of week
 - Weekly digest: `/api/digest/weekly` — same CRON_SECRET auth; supports `{ uid }` for targeted sends; queries last 7 days nutrition + workouts per user; purges stale tokens
-- Widget: `lib/widget.ts` → `WidgetDataPlugin` (Capacitor) → SharedPreferences → Glance widget refresh; called after addMeal; no-op on web/iOS
-- A/B testing: `lib/ab-testing.ts` — `getVariant(name, uid)` uses djb2 hash; Remote Config overrides via `experiment__<name>` keys (JSON); `loadExperimentConfigs()` in AppInit
+- Widget: `lib/platform/widget.ts` → `WidgetDataPlugin` (Capacitor) → SharedPreferences → Glance widget refresh; called after addMeal; no-op on web/iOS
+- A/B testing: `lib/firebase/ab-testing.ts` — `getVariant(name, uid)` uses djb2 hash; Remote Config overrides via `experiment__<name>` keys (JSON); `loadExperimentConfigs()` in AppInit
+- Body composition: `lib/health/bodyUtils.ts` — `calcBMI`, `calcBodyFatPct` (Navy formula), `calcLeanMassKg`, `calcWaistToHeightRatio`, `calcIdealWeightKg` (Devine formula)
+- GDPR export: `POST /api/export` — requires `Authorization: Bearer <idToken>`; returns `Content-Type: text/csv` labelled by data type
+- Consent: `UserConsents` saved inside `users/{uid}/profile/data` via `saveProfile`; `CONSENT_VERSION = '2026-03'`; required: termsAccepted, privacyAccepted, healthDataConsent, ageVerified
+- lib/ structure: `firebase/`, `health/`, `food/`, `platform/` subdirectories each have `index.ts` barrel; non-domain files remain at `lib/` root (types, app-config, design-tokens, gamification, stripe, utils)
 - Cron: `.github/workflows/cron.yml` — runs 20:00 UTC daily; also usable with Cloud Scheduler
 - Typesense: `isTypesenseConfigured` gate; `/api/food-search` returns `source: 'typesense'|'local'`; local fallback always works; setup/import via `scripts/typesense-setup.mjs` + `scripts/typesense-import.mjs`
 - Remote Config: `initRemoteConfig()` in `AppInit` (layout); `isEnabled()` reads `_rcCache` first then `FLAGS.default`

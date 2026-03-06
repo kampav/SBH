@@ -5,8 +5,8 @@ import {
   serverTimestamp,
   writeBatch,
 } from 'firebase/firestore'
-import { db } from './firebase'
-import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement, SleepEntry } from './types'
+import { db } from './client'
+import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement, SleepEntry } from '../types'
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 export async function getProfile(uid: string): Promise<UserProfile | null> {

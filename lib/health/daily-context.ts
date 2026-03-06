@@ -2,7 +2,7 @@
 // Computes a DailyContext object for hyper-personalised dashboard rendering.
 // Called client-side on dashboard load (no SSR — uses Firebase client SDK).
 
-import { DailyContext, DailyNutrition, DailyMetric, DailyWorkout, StreakRecord, TimeSlot, WeightTrend, CalorieStatus } from './types'
+import { DailyContext, DailyNutrition, DailyMetric, DailyWorkout, StreakRecord, TimeSlot, WeightTrend, CalorieStatus } from '../types'
 
 function getTimeSlot(): TimeSlot {
   const h = new Date().getHours()

@@ -3,7 +3,7 @@ import {
   mmolToMgdl, mgdlToMmol, displayGlucose, estimateHbA1c,
   calcGL, calcTimeInRange, hasMealTimingRisk, giCategory, glucoseColor,
   DEFAULT_GLUCOSE_SETTINGS,
-} from '@/lib/glucoseUtils'
+} from '@/lib/health/glucoseUtils'
 import type { GlucoseReading, MealWithGI } from '@/lib/types'
 
 describe('mmolToMgdl', () => {

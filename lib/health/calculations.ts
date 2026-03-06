@@ -1,4 +1,4 @@
-import { ActivityLevel, CalcResult, Goal } from './types'
+import { ActivityLevel, CalcResult, Goal } from '../types'
 
 // ─── Activity Multipliers ─────────────────────────────────────────────────────
 const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
@@ -45,21 +45,6 @@ export function calcMacros(totalCalories: number, weightKg: number) {
   const carbTargetG = Math.round((totalCalories - proteinCals - fatCals) / 4)
 
   return { proteinTargetG, fatTargetG, carbTargetG }
-}
-
-// ─── BMI ──────────────────────────────────────────────────────────────────────
-export function calcBMI(weightKg: number, heightCm: number): number {
-  const heightM = heightCm / 100
-  return Math.round((weightKg / (heightM * heightM)) * 10) / 10
-}
-
-export function getBMICategory(bmi: number): string {
-  if (bmi < 18.5) return 'Underweight'
-  if (bmi < 25.0) return 'Normal'
-  if (bmi < 30.0) return 'Overweight'
-  if (bmi < 35.0) return 'Obese Class I'
-  if (bmi < 40.0) return 'Obese Class II'
-  return 'Obese Class III'
 }
 
 // ─── Full Calculation ─────────────────────────────────────────────────────────

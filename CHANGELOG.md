@@ -5,6 +5,54 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.8.0] — 2026-03-06
+
+### Added
+- **Body composition page** (`app/body/page.tsx`)
+  - BMI card (always visible) with category colour coding
+  - US Navy circumference body fat % (waist + neck + hips inputs)
+  - Lean mass / fat mass breakdown cards
+  - Waist-to-height ratio risk card
+  - Ideal weight range (Devine formula)
+  - Recharts `LineChart` for measurement trends
+  - `lib/health/bodyUtils.ts` — `calcBMI`, `getBMICategory`, `calcBodyFatPct`, `getBodyFatCategory`, `calcLeanMassKg`, `calcFatMassKg`, `calcWaistToHeightRatio`, `getWaistToHeightRisk`, `calcIdealWeightKg`
+- **GDPR data export** (`app/api/export/route.ts`)
+  - GDPR Art 20 data portability — exports nutrition, workouts, metrics, glucose, sleep, profile as labelled CSV
+  - Verifies Firebase ID token; export button added to profile page
+- **Terms of Service page** (`app/terms/page.tsx`)
+  - 12-section ToS (v1.0, 6 March 2026); governing law England & Wales
+  - Covers: health data special category, AI content disclaimer, billing, data portability/deletion
+- **Onboarding consent step** (`app/onboarding/page.tsx` — step 5 of 5)
+  - Explicit GDPR Art 9 consent for special-category health data
+  - Age verification (18+), Terms, Privacy Policy, health data consent (all required)
+  - Optional marketing opt-in
+  - `UserConsents` interface saved to Firestore `users/{uid}/profile/data`
+  - Compliant with UK GDPR, EU GDPR, India DPDP Act 2023, UAE PDPL 2021
+- **Typesense IFCT import script** (`scripts/typesense-import-ifct.mjs`)
+  - Imports IFCT 2017 Indian food composition table JSON; food group → SBH category mapping
+  - IDs prefixed `ifct_` to avoid collisions with USDA data
+- **Typesense provisioning health check** (`scripts/typesense-provision.mjs`)
+  - Checks cluster health + collection existence; `--reset` flag to drop and recreate
+  - Prints next-step commands after provisioning
+- **Unit tests — body utils** (`__tests__/lib/bodyUtils.test.ts` — 33 tests)
+  - Covers: BMI, BMI category, body fat % (male + female + edge cases), body fat category, lean/fat mass, waist-to-height ratio, ideal weight range
+
+### Changed
+- **lib/ directory reorganised into feature subdirectories** (zero breaking changes)
+  - `lib/firebase/` — client.ts, admin.ts, firestore.ts, fcm.ts, analytics.ts, feature-flags.ts, ab-testing.ts
+  - `lib/health/` — calculations.ts, glucoseUtils.ts, sleepUtils.ts, bodyUtils.ts, progressive-overload.ts, daily-context.ts
+  - `lib/food/` — foodDatabase.ts, typesense-client.ts
+  - `lib/platform/` — offline.ts, widget.ts, widget-plugin.ts
+  - Barrel `index.ts` in each subdirectory — all existing `@/lib/firebase`, `@/lib/health/calculations` etc. imports continue to work
+  - All page + API route imports updated to new paths
+- **app/metrics/page.tsx** — BMI/category now sourced from `lib/health/bodyUtils` (richer `BMICategory` objects with colour + recommendation)
+- **app/profile/page.tsx** — version bumped to v1.8.0; Data Export card added
+
+### Tests
+- 8 test files · **131 tests** · 100% pass
+
+---
+
 ## [1.7.0] — 2026-03-06
 
 ### Added

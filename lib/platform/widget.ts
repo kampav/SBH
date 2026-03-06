@@ -5,7 +5,7 @@
 // Safe to call from any platform — silently does nothing on web and iOS.
 // Only executes when running inside the Capacitor Android wrapper.
 
-import { type WidgetDataInput } from './widget-plugin'
+import { type WidgetDataInput } from '../platform/widget-plugin'
 
 /**
  * Push today's calorie/macro totals and current streak to the Android widget.

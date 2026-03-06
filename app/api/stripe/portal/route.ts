@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
-import { getAdminDb } from '@/lib/firebaseAdmin'
+import { getAdminDb } from '@/lib/firebase/admin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

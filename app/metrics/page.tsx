@@ -6,8 +6,9 @@ import { useEffect, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
-import { getProfile, getMetrics, saveMetric, getMeasurements, saveMeasurement, getRecentWorkouts, getNutrition, getNutritionHistory } from '@/lib/firestore'
-import { calcBMI, getBMICategory, movingAverage, getWeightAlert } from '@/lib/calculations'
+import { getProfile, getMetrics, saveMetric, getMeasurements, saveMeasurement, getRecentWorkouts, getNutrition, getNutritionHistory } from '@/lib/firebase/firestore'
+import { movingAverage, getWeightAlert } from '@/lib/health/calculations'
+import { calcBMI, getBMICategory } from '@/lib/health/bodyUtils'
 import { DailyMetric, BodyMeasurement, UserProfile } from '@/lib/types'
 import { serverTimestamp } from 'firebase/firestore'
 import {
@@ -166,7 +167,7 @@ export default function MetricsPage() {
             { label:'Weight',  value: latest ? `${latest.weightKg}kg` : '—',           delta: wDelta, emoji:'⚖️', color: VIOLET },
             { label:'Waist',   value: latestMeas ? `${latestMeas.waistCm}cm` : '—',     delta: wstDelta, emoji:'📏', color: ROSE },
             { label:'BMI',     value: latest ? String(calcBMI(latest.weightKg, heightCm)) : '—',
-              sub: latest ? getBMICategory(calcBMI(latest.weightKg, heightCm)) : undefined, emoji:'🧮', color: CYAN },
+              sub: latest ? getBMICategory(calcBMI(latest.weightKg, heightCm)).label : undefined, emoji:'🧮', color: CYAN },
           ].map(c => (
             <div key={c.label} className="glass rounded-2xl p-3 text-center">
               <div className="text-xl mb-1">{c.emoji}</div>
@@ -201,7 +202,7 @@ export default function MetricsPage() {
           {latest && (
             <div className="flex gap-4 mt-2 text-xs text-2">
               <span>Latest: <strong className="text-1">{latest.weightKg} kg</strong></span>
-              <span>BMI: <strong className="text-1">{calcBMI(latest.weightKg, heightCm)}</strong> ({getBMICategory(calcBMI(latest.weightKg, heightCm))})</span>
+              <span>BMI: <strong className="text-1">{calcBMI(latest.weightKg, heightCm)}</strong> ({getBMICategory(calcBMI(latest.weightKg, heightCm)).label})</span>
             </div>
           )}
           {alert && <p className="mt-1.5 text-xs" style={{color: AMBER}}>{alert}</p>}

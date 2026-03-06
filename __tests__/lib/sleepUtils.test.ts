@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   calcSleepDuration, calcSleepScore, sleepQualityLabel, sleepScoreLabel,
   avgSleepH, sleepDebtH, sleepWeekData, SLEEP_TARGET_H,
-} from '@/lib/sleepUtils'
+} from '@/lib/health/sleepUtils'
 import type { SleepEntry } from '@/lib/types'
 
 // ── helpers ───────────────────────────────────────────────────────────────────

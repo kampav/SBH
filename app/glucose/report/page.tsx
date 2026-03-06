@@ -8,11 +8,11 @@ import { auth } from '@/lib/firebase'
 import {
   getGlucoseHistory, getGlucoseSettings, getHbA1cHistory,
   getNutritionHistory, getProfile,
-} from '@/lib/firestore'
+} from '@/lib/firebase/firestore'
 import {
   DailyGlucose, GlucoseSettings, HbA1cEntry, DailyNutrition, UserProfile,
 } from '@/lib/types'
-import { DEFAULT_GLUCOSE_SETTINGS, calcTimeInRange, estimateHbA1c } from '@/lib/glucoseUtils'
+import { DEFAULT_GLUCOSE_SETTINGS, calcTimeInRange, estimateHbA1c } from '@/lib/health/glucoseUtils'
 import { ArrowLeft, Printer, FileText, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 

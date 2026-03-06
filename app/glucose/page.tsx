@@ -10,14 +10,14 @@ import {
   getDailyGlucose, saveGlucoseReading, deleteGlucoseReading,
   getHbA1cHistory, saveHbA1c, deleteHbA1c,
   getGlucoseHistory,
-} from '@/lib/firestore'
+} from '@/lib/firebase/firestore'
 import {
   GlucoseReading, GlucoseSettings, HbA1cEntry, DailyGlucose,
 } from '@/lib/types'
 import {
   DEFAULT_GLUCOSE_SETTINGS, mgdlToMmol, mmolToMgdl,
   calcTimeInRange, glucoseColor, contextLabel, estimateHbA1c,
-} from '@/lib/glucoseUtils'
+} from '@/lib/health/glucoseUtils'
 import GlucoseConsentModal from '@/components/glucose/GlucoseConsentModal'
 import BottomNav from '@/components/layout/BottomNav'
 import {

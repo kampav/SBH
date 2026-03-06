@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { getProfile, deleteAllUserData } from '@/lib/firestore'
+import { getProfile, deleteAllUserData } from '@/lib/firebase/firestore'
 import { AlertTriangle, Check, Trash2, LogIn, Mail, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 

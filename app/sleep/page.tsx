@@ -6,11 +6,11 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { saveSleep, getSleepHistory, deleteSleep } from '@/lib/firestore'
+import { saveSleep, getSleepHistory, deleteSleep } from '@/lib/firebase/firestore'
 import {
   calcSleepDuration, calcSleepScore, sleepQualityLabel, sleepScoreLabel,
   avgSleepH, sleepDebtH, sleepWeekData, SLEEP_TARGET_H,
-} from '@/lib/sleepUtils'
+} from '@/lib/health/sleepUtils'
 import type { SleepEntry, SleepQuality } from '@/lib/types'
 import Link from 'next/link'
 import { ArrowLeft, Moon, Trash2, Plus } from 'lucide-react'

@@ -2,7 +2,7 @@
 // Pure helper functions for sleep tracking.
 // No Firebase / Next.js dependencies — fully unit-testable.
 
-import type { SleepEntry, SleepQuality } from './types'
+import type { SleepEntry, SleepQuality } from '../types'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

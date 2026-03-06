@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { getAdminApp } = await import('@/lib/firebaseAdmin')
+    const { getAdminApp } = await import('@/lib/firebase/admin')
     const { getFirestore }  = await import('firebase-admin/firestore')
     const { getMessaging }  = await import('firebase-admin/messaging')
 

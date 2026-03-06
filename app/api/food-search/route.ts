@@ -6,8 +6,8 @@
 // Returns: FoodEntry[] (same shape as FOOD_DATABASE)
 
 import { NextRequest, NextResponse } from 'next/server'
-import { searchTypesense, isTypesenseConfigured } from '@/lib/typesense-client'
-import { FOOD_DATABASE } from '@/lib/foodDatabase'
+import { searchTypesense, isTypesenseConfigured } from '@/lib/food/typesense-client'
+import { FOOD_DATABASE } from '@/lib/food/foodDatabase'
 
 export const dynamic = 'force-dynamic'
 

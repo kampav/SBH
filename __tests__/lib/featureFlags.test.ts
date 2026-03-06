@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { isEnabled, useFlag, FLAGS } from '@/lib/feature-flags'
-import type { FlagKey } from '@/lib/feature-flags'
+import { isEnabled, useFlag, FLAGS } from '@/lib/firebase/feature-flags'
+import type { FlagKey } from '@/lib/firebase/feature-flags'
 
 describe('isEnabled', () => {
   it('returns true for core.calorie_tracking (always free)', () => {

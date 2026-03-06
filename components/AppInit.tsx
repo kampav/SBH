@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect } from 'react'
-import { initRemoteConfig } from '@/lib/feature-flags'
-import { loadExperimentConfigs } from '@/lib/ab-testing'
+import { initRemoteConfig } from '@/lib/firebase/feature-flags'
+import { loadExperimentConfigs } from '@/lib/firebase/ab-testing'
 
 /**
  * Invisible component that runs one-time client-side app initialisation:

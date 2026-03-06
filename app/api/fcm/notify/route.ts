@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'token, title and body are required' }, { status: 400 })
     }
 
-    const { getAdminApp } = await import('@/lib/firebaseAdmin')
+    const { getAdminApp } = await import('@/lib/firebase/admin')
     const { getMessaging } = await import('firebase-admin/messaging')
 
     const messaging = getMessaging(getAdminApp())

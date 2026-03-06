@@ -6,11 +6,11 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth, storage } from '@/lib/firebase'
-import { getProfile, saveProfile, deleteAllUserData, saveFcmToken, getFcmTokenDoc, deleteFcmToken } from '@/lib/firestore'
+import { getProfile, saveProfile, deleteAllUserData, saveFcmToken, getFcmTokenDoc, deleteFcmToken } from '@/lib/firebase/firestore'
 import { UserProfile, ProgrammeKey } from '@/lib/types'
 import { LogOut, ChevronRight, Target, Activity, Scale, Zap, Calendar, Edit3, Check, Dumbbell, X, Camera, Trash2, AlertTriangle, Bell, BellOff } from 'lucide-react'
-import { calcMacros } from '@/lib/calculations'
-import { enableNotifications, isNotificationSupported } from '@/lib/fcm'
+import { calcMacros } from '@/lib/health/calculations'
+import { enableNotifications, isNotificationSupported } from '@/lib/firebase/fcm'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 const PHASE_INFO = [
@@ -678,6 +678,33 @@ export default function ProfilePage() {
           Sign Out
         </button>
 
+        {/* Data portability (GDPR Art 20) */}
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-2">Data Export</p>
+          </div>
+          <p className="text-xs text-slate-400 mb-3">
+            Download all your SBH data as a CSV file (GDPR Article 20 — Right to Data Portability).
+            Includes nutrition, workouts, body metrics, sleep, and glucose readings.
+          </p>
+          <button
+            onClick={async () => {
+              const token = await auth.currentUser?.getIdToken()
+              if (!token) return
+              const res = await fetch('/api/export', { headers: { Authorization: `Bearer ${token}` } })
+              if (!res.ok) return
+              const blob = await res.blob()
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url; a.download = `sbh-export-${new Date().toISOString().slice(0,10)}.csv`
+              a.click(); URL.revokeObjectURL(url)
+            }}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold border border-violet-500/30 hover:bg-violet-500/10 transition-all flex items-center justify-center gap-2"
+            style={{ color: '#7c3aed' }}>
+            ↓ Export my data (CSV)
+          </button>
+        </div>
+
         {/* Danger zone */}
         <div className="glass rounded-2xl p-4 border border-rose-500/20">
           <div className="flex items-center gap-2 mb-3">
@@ -695,7 +722,7 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <p className="text-center text-xs text-3 pb-4">SBH · Science Based Health · v1.4.0</p>
+        <p className="text-center text-xs text-3 pb-4">SBH · Science Based Health · v1.8.0</p>
       </div>
     </main>
   )

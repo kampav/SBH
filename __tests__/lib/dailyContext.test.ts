@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { computeDailyContext, getGreeting } from '@/lib/daily-context'
+import { computeDailyContext, getGreeting } from '@/lib/health/daily-context'
 import type { DailyNutrition, DailyMetric, DailyWorkout, StreakRecord } from '@/lib/types'
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────

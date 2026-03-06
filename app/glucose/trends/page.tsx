@@ -7,9 +7,9 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import {
   getGlucoseHistory, getGlucoseSettings, getNutritionHistory,
-} from '@/lib/firestore'
+} from '@/lib/firebase/firestore'
 import { DailyGlucose, GlucoseSettings, DailyNutrition } from '@/lib/types'
-import { DEFAULT_GLUCOSE_SETTINGS, calcTimeInRange } from '@/lib/glucoseUtils'
+import { DEFAULT_GLUCOSE_SETTINGS, calcTimeInRange } from '@/lib/health/glucoseUtils'
 import BottomNav from '@/components/layout/BottomNav'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid,

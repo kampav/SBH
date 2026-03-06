@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getVariant, isInExperiment, EXPERIMENTS } from '@/lib/ab-testing'
+import { getVariant, isInExperiment, EXPERIMENTS } from '@/lib/firebase/ab-testing'
 
 // ── getVariant ────────────────────────────────────────────────────────────────
 

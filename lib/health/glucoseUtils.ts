@@ -1,4 +1,4 @@
-import { GlucoseReading, GlucoseSettings, MealWithGI } from './types'
+import { GlucoseReading, GlucoseSettings, MealWithGI } from '../types'
 
 export const DEFAULT_GLUCOSE_SETTINGS: GlucoseSettings = {
   hypoThresholdMmol: 3.9,

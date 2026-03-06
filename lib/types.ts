@@ -3,6 +3,16 @@ import { Timestamp, FieldValue } from 'firebase/firestore'
 export type FirestoreTimestamp = Timestamp | FieldValue
 
 // ─── User Profile ────────────────────────────────────────────────────────────
+export interface UserConsents {
+  termsAccepted: boolean              // Terms of Service v1.0+
+  privacyAccepted: boolean            // Privacy Policy v2.0+
+  healthDataConsent: boolean          // GDPR Art 9 / DPDP special category
+  ageVerified: boolean                // confirms 18+
+  marketingConsent: boolean           // optional email marketing
+  consentVersion: string              // e.g. '2026-03' — bump when policy changes
+  consentDate: string                 // YYYY-MM-DD ISO date of consent
+}
+
 export interface UserProfile {
   uid: string
   email: string
@@ -26,6 +36,7 @@ export interface UserProfile {
   fatTargetG: number
   onboardingComplete: boolean
   photoUrl?: string
+  consents?: UserConsents             // GDPR / DPDP / PDPL consent record
   createdAt: FirestoreTimestamp
   updatedAt: FirestoreTimestamp
 }

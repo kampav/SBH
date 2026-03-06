@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getSuggestion, formatSuggestion } from '@/lib/progressive-overload'
+import { getSuggestion, formatSuggestion } from '@/lib/health/progressive-overload'
 import type { SetLog } from '@/lib/types'
 
 function makeSet(weightKg: number, reps: number, completed = true): SetLog {

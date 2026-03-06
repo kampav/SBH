@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calcBMR, calcTDEE, calcMacros } from '@/lib/calculations'
+import { calcBMR, calcTDEE, calcMacros } from '@/lib/health/calculations'
 
 describe('calcBMR', () => {
   it('male BMR (Mifflin-St Jeor)', () => {

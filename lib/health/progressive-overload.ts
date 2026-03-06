@@ -4,7 +4,7 @@
 //        if last set underperformed by >2 reps → maintain weight
 //        deload: 90% of last peak every 4 weeks (tracked via workoutCount)
 
-import { SetLog } from './types'
+import { SetLog } from '../types'
 
 export interface ProgressionSuggestion {
   suggestedWeightKg: number | null

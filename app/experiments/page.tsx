@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { EXPERIMENTS, getVariant, ExperimentConfig } from '@/lib/ab-testing'
+import { EXPERIMENTS, getVariant, ExperimentConfig } from '@/lib/firebase/ab-testing'
 import Link from 'next/link'
 import { ArrowLeft, FlaskConical, ChevronDown, ChevronUp } from 'lucide-react'
 

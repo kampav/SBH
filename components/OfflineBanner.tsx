@@ -1,6 +1,6 @@
 'use client'
 
-import { useOnlineStatus } from '@/lib/offline'
+import { useOnlineStatus } from '@/lib/platform/offline'
 
 /**
  * Thin banner pinned at the top of the viewport while the device is offline.
