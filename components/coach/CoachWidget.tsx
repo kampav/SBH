@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { onAuthStateChanged, getIdToken } from 'firebase/auth'
+import { onAuthStateChanged, getIdToken, type User as FirebaseUser } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { Bot, X, Send, Minimize2, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
@@ -22,19 +22,17 @@ const VIOLET = '#7c3aed'
 const CYAN   = '#06b6d4'
 
 export default function CoachWidget() {
-  const [open, setOpen]       = useState(false)
-  const [idToken, setIdToken] = useState<string | null>(null)
+  const [open, setOpen]         = useState(false)
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput]     = useState('')
-  const [sending, setSending] = useState(false)
+  const [input, setInput]       = useState('')
+  const [sending, setSending]   = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async u => {
-      if (!u) return
-      const token = await getIdToken(u)
-      setIdToken(token)
+    const unsub = onAuthStateChanged(auth, u => {
+      setFirebaseUser(u)
     })
     return () => unsub()
   }, [])
@@ -50,8 +48,15 @@ export default function CoachWidget() {
   }, [messages])
 
   const sendMessage = useCallback(async (text: string) => {
-    if (!idToken || !text.trim() || sending) return
+    if (!firebaseUser || !text.trim() || sending) return
     setSending(true)
+
+    // Always get a fresh token — Firebase SDK auto-refreshes if expired
+    const idToken = await getIdToken(firebaseUser).catch(() => null)
+    if (!idToken) {
+      setSending(false)
+      return
+    }
 
     const history = messages.map(m => ({ role: m.role, content: m.content }))
     setMessages(prev => [
@@ -114,7 +119,7 @@ export default function CoachWidget() {
     } finally {
       setSending(false)
     }
-  }, [idToken, messages, sending])
+  }, [firebaseUser, messages, sending])
 
   return (
     <>
@@ -232,7 +237,7 @@ export default function CoachWidget() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) } }}
               placeholder="Ask your coach..."
-              disabled={sending || !idToken}
+              disabled={sending || !firebaseUser}
               className="flex-1 text-xs px-3 py-2 rounded-xl outline-none"
               style={{
                 background: 'rgba(255,255,255,0.06)',
@@ -242,7 +247,7 @@ export default function CoachWidget() {
             />
             <button
               onClick={() => sendMessage(input)}
-              disabled={sending || !input.trim() || !idToken}
+              disabled={sending || !input.trim() || !firebaseUser}
               className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-90 disabled:opacity-40"
               style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})` }}
             >

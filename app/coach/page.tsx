@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { onAuthStateChanged, getIdToken } from 'firebase/auth'
+import { onAuthStateChanged, getIdToken, type User as FirebaseUser } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
 import Link from 'next/link'
@@ -36,7 +36,7 @@ const SUGGESTED_PROMPTS = [
 
 export default function CoachPage() {
   const router = useRouter()
-  const [idToken, setIdToken] = useState<string | null>(null)
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -47,27 +47,27 @@ export default function CoachPage() {
   const inputRef  = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async u => {
+    const unsub = onAuthStateChanged(auth, u => {
       setAuthReady(true)
       if (!u) { router.push('/login'); return }
-      const token = await getIdToken(u)
-      setIdToken(token)
+      setFirebaseUser(u)
     })
     return unsub
   }, [router])
 
   // Load daily check-in
   useEffect(() => {
-    if (!idToken) return
+    if (!firebaseUser) return
     setCheckinLoading(true)
-    fetch('/api/coach/daily-checkin', {
-      headers: { Authorization: `Bearer ${idToken}` },
-    })
+    getIdToken(firebaseUser)
+      .then(token => fetch('/api/coach/daily-checkin', {
+        headers: { Authorization: `Bearer ${token}` },
+      }))
       .then(r => r.json())
       .then(data => setCheckin(data))
       .catch(() => {})
       .finally(() => setCheckinLoading(false))
-  }, [idToken])
+  }, [firebaseUser])
 
   // Auto-scroll
   useEffect(() => {
@@ -75,8 +75,12 @@ export default function CoachPage() {
   }, [messages])
 
   const sendMessage = useCallback(async (text: string) => {
-    if (!idToken || !text.trim() || sending) return
+    if (!firebaseUser || !text.trim() || sending) return
     setSending(true)
+
+    // Always get a fresh token — Firebase SDK refreshes automatically if expired
+    const idToken = await getIdToken(firebaseUser).catch(() => null)
+    if (!idToken) { setSending(false); return }
 
     const userMsg: Message = { role: 'user', content: text.trim() }
     const history = messages.map(m => ({ role: m.role, content: m.content }))
@@ -137,7 +141,7 @@ export default function CoachPage() {
       setSending(false)
       inputRef.current?.focus()
     }
-  }, [idToken, messages, sending])
+  }, [firebaseUser, messages, sending])
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
