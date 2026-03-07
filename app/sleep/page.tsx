@@ -115,30 +115,30 @@ export default function SleepPage() {
   return (
     <main className="min-h-screen mesh-bg page-pad pb-24">
       {/* Header */}
-      <header className="px-4 pt-12 pb-4 flex items-center gap-3">
-        <Link href="/dashboard" className="p-2 rounded-xl glass">
+      <header className="page-header-bar px-4 flex items-center gap-3 h-14">
+        <Link href="/dashboard" className="p-2 rounded-xl glass-elevated">
           <ArrowLeft size={18} style={{ color: 'var(--text-2)' }} />
         </Link>
         <div className="flex items-center gap-2">
-          <Moon size={20} className="text-violet-400" />
-          <h1 className="text-xl font-bold text-1">Sleep</h1>
+          <Moon size={18} className="text-violet-400" />
+          <h1 className="page-title" style={{fontSize:'1.25rem'}}>Sleep</h1>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-3">
+      <div className="max-w-2xl mx-auto px-4 space-y-3 pt-4">
 
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="glass rounded-2xl p-3 text-center">
-            <p className="text-xs text-2 mb-1">7-day avg</p>
+          <div className="glass-elevated rounded-2xl p-3 text-center">
+            <p className="section-label mb-1">7-day avg</p>
             <p className="text-xl font-bold" style={{ color: '#7c3aed' }}>{avg > 0 ? `${avg}h` : '--'}</p>
           </div>
-          <div className="glass rounded-2xl p-3 text-center">
-            <p className="text-xs text-2 mb-1">Target</p>
+          <div className="glass-elevated rounded-2xl p-3 text-center">
+            <p className="section-label mb-1">Target</p>
             <p className="text-xl font-bold text-1">{SLEEP_TARGET_H}h</p>
           </div>
-          <div className="glass rounded-2xl p-3 text-center">
-            <p className="text-xs text-2 mb-1">Sleep debt</p>
+          <div className="glass-elevated rounded-2xl p-3 text-center">
+            <p className="section-label mb-1">Sleep debt</p>
             <p className="text-xl font-bold" style={{ color: debt > 3 ? '#f43f5e' : debt > 0 ? '#f59e0b' : '#10b981' }}>
               {debt > 0 ? `-${debt}h` : '0h'}
             </p>

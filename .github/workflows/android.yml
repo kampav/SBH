@@ -1,8 +1,8 @@
 name: Build Android (AAB + APK)
 
-# Builds on every push to master — both signed release AAB (for Play Store)
-# and unsigned debug APK (for direct sideload testing).
-# The web app content is bundled via `npx cap sync` so must run on all changes.
+# Builds on every push to master.
+# • If ANDROID_KEYSTORE_BASE64 is configured → signed release AAB + debug APK
+# • If signing secrets are absent           → debug APK only (no failure)
 
 on:
   push:
@@ -20,7 +20,7 @@ env:
 
 jobs:
   build:
-    name: Build Signed AAB + Debug APK
+    name: Build Android
     runs-on: ubuntu-latest
     permissions:
       contents: write   # needed for gh release create
@@ -43,18 +43,35 @@ jobs:
           distribution: 'temurin'
 
       - name: Install Node dependencies
-        run: npm ci
+        run: SENTRYCLI_SKIP_DOWNLOAD=1 npm ci
 
       - name: Sync Capacitor (bundles web content into Android project)
         run: npx cap sync android
 
-      - name: Decode keystore from secret
-        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/sbh-release.keystore
-
       - name: Make Gradle wrapper executable
         run: chmod +x android/gradlew
 
+      # ── Check whether signing secrets are available ────────────────────────
+      - name: Check signing configuration
+        id: signing
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+            echo "Signing secrets found — will build signed release AAB"
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "ANDROID_KEYSTORE_BASE64 not set — building debug APK only"
+          fi
+
+      # ── Signed release AAB (only when keystore is available) ──────────────
+      - name: Decode keystore
+        if: steps.signing.outputs.configured == 'true'
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/sbh-release.keystore
+
       - name: Build signed release AAB
+        if: steps.signing.outputs.configured == 'true'
         working-directory: android
         env:
           KEYSTORE_PATH: sbh-release.keystore
@@ -68,18 +85,20 @@ jobs:
             "-PVERSION_CODE=$VERSION_CODE" \
             "-PVERSION_NAME=$VERSION_NAME"
 
-      - name: Build debug APK (sideload testing)
-        working-directory: android
-        env:
-          JAVA_HOME: ${{ steps.setup-java.outputs.path }}
-        run: ./gradlew assembleDebug --no-daemon "-Dorg.gradle.java.home=$JAVA_HOME"
-
       - name: Upload signed AAB artifact
+        if: steps.signing.outputs.configured == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: sbh-release-${{ github.run_number }}.aab
           path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 30
+
+      # ── Debug APK (always built) ───────────────────────────────────────────
+      - name: Build debug APK
+        working-directory: android
+        env:
+          JAVA_HOME: ${{ steps.setup-java.outputs.path }}
+        run: ./gradlew assembleDebug --no-daemon "-Dorg.gradle.java.home=$JAVA_HOME"
 
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
@@ -88,37 +107,23 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
 
+      # ── Rolling "latest" GitHub Release ───────────────────────────────────
       - name: Update rolling "latest" GitHub Release with debug APK
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Rename APK for clarity
           cp android/app/build/outputs/apk/debug/app-debug.apk sbh-latest.apk
 
-          # Delete existing "latest" pre-release tag if it exists
           gh release delete latest --yes 2>/dev/null || true
           git push origin :refs/tags/latest 2>/dev/null || true
 
-          # Create a fresh "latest" pre-release with the new APK
           gh release create latest sbh-latest.apk \
             --title "SBH Latest Debug APK (build ${{ github.run_number }})" \
-            --notes "$(cat <<'EOF'
-          ## Debug APK — Build ${{ github.run_number }}
-
-          Auto-built from master on every push. For **direct sideload testing** only.
-
-          ### How to install
-          1. Download **sbh-latest.apk** below
-          2. On Android: Settings → Apps → Special app access → Install unknown apps → enable for Files / browser
-          3. Open the APK and tap Install
-
-          ### What's in this build
-          See [CHANGELOG.md](https://github.com/kampav/SBH/blob/master/CHANGELOG.md) for details.
-          EOF
-          )" \
+            --notes "Auto-built from master — build ${{ github.run_number }}. Sideload APK for direct Android install. See CHANGELOG.md for details." \
             --prerelease \
             --target master
 
+      # ── Cleanup ───────────────────────────────────────────────────────────
       - name: Clean up keystore
         if: always()
         run: rm -f android/app/sbh-release.keystore

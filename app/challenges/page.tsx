@@ -97,18 +97,20 @@ export default function ChallengesPage() {
 
   return (
     <main className="min-h-screen mesh-bg page-pad">
-      <header className="px-4 pt-12 pb-4">
-        <p className="text-xs text-2 mb-1 uppercase tracking-widest">This Week</p>
-        <h1 className="text-2xl font-bold text-1">Weekly Challenges</h1>
+      <header className="page-header-bar px-4 flex items-center h-14">
+        <div>
+          <p className="section-label">This Week</p>
+          <h1 className="page-title" style={{fontSize:'1.25rem'}}>Weekly Challenges</h1>
+        </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-4">
+      <div className="max-w-2xl mx-auto px-4 space-y-4 pt-4">
 
         {/* My Weekly Challenge */}
-        <div className="glass rounded-2xl p-5">
+        <div className="glass-elevated rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Target size={16} className="text-violet-400" />
-            <p className="text-xs font-semibold uppercase tracking-widest text-2">My Weekly Goals</p>
+            <p className="section-label">My Weekly Goals</p>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col items-center gap-2">

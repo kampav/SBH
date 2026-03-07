@@ -217,28 +217,27 @@ export default function GlucosePage() {
 
   return (
     <div className="min-h-screen mesh-bg page-pad">
-      <div className="max-w-lg mx-auto px-4 pt-6 pb-4 space-y-4">
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-bold text-xl text-1">Glucose</h1>
-            <p className="text-xs text-3 mt-0.5">Blood sugar tracking</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link href="/glucose/trends"
-              className="w-9 h-9 glass rounded-xl flex items-center justify-center card-hover">
-              <TrendingUp size={16} style={{ color: VIOLET }} />
-            </Link>
-            <Link href="/glucose/report"
-              className="w-9 h-9 glass rounded-xl flex items-center justify-center card-hover">
-              <FileText size={16} style={{ color: CYAN }} />
-            </Link>
-          </div>
+      <header className="page-header-bar px-4 flex items-center justify-between h-14">
+        <div>
+          <p className="section-label">Blood sugar tracking</p>
+          <h1 className="page-title" style={{fontSize:'1.25rem'}}>Glucose</h1>
         </div>
+        <div className="flex items-center gap-2">
+          <Link href="/glucose/trends"
+            className="w-9 h-9 glass-elevated rounded-xl flex items-center justify-center card-hover">
+            <TrendingUp size={16} style={{ color: VIOLET }} />
+          </Link>
+          <Link href="/glucose/report"
+            className="w-9 h-9 glass-elevated rounded-xl flex items-center justify-center card-hover">
+            <FileText size={16} style={{ color: CYAN }} />
+          </Link>
+        </div>
+      </header>
+
+      <div className="max-w-lg mx-auto px-4 pt-4 pb-4 space-y-4">
 
         {/* Tab bar */}
-        <div className="glass rounded-2xl p-1 flex gap-1">
+        <div className="glass-elevated rounded-2xl p-1 flex gap-1">
           {(['log', 'hba1c', 'alerts'] as Tab[]).map(t => (
             <button key={t} onClick={() => setTab(t)}
               className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all"

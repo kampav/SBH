@@ -17,7 +17,7 @@ import RestTimerOverlay from '@/components/workout/RestTimerOverlay'
 import WorkoutShareCard from '@/components/workout/WorkoutShareCard'
 import { getWeekStart } from '@/lib/utils'
 import {
-  type ExerciseDef, EXERCISE_INFO, PROGRAMMES, PROGRAMME_LABELS,
+  type ExerciseDef, EXERCISE_INFO, PROGRAMMES,
 } from '@/lib/workout/exerciseData'
 
 // ─── 12-Week Phases ───────────────────────────────────────────────────────────
@@ -368,37 +368,31 @@ export default function WorkoutPage() {
       )}
 
       {/* Header */}
-      <header className="px-4 pt-12 pb-4">
-        <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <span className="text-xs px-2.5 py-1 rounded-full font-semibold"
-            style={{background: currentPhase.color + '20', color: currentPhase.color}}>
-            Phase {phase} · Week {programmeWeek}/12
-          </span>
-          <span className="text-xs text-2">{currentPhase.name}</span>
-          <span className="text-xs px-2 py-0.5 rounded-full ml-auto"
-            style={{background:'rgba(124,58,237,0.12)', color:'#7c3aed'}}>
-            {PROGRAMME_LABELS[programmeKey]}
-          </span>
+      <header className="page-header-bar px-4 flex items-center justify-between h-14">
+        <div>
+          <p className="section-label">
+            <span className="font-semibold" style={{color: currentPhase.color}}>Phase {phase}</span>
+            {' · '}Week {programmeWeek}/12
+          </p>
+          <div className="flex items-center gap-1.5">
+            <Dumbbell size={15} style={{color: prog.color}} />
+            <h1 className="page-title" style={{fontSize:'1.1rem'}}>{prog.label}</h1>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Dumbbell size={18} style={{color: prog.color}} />
-          <h1 className="text-xl font-bold text-1">{prog.label}</h1>
-          <div className="ml-auto flex gap-2">
-            <Link href="/exercises" className="p-2 rounded-xl glass" title="Exercise library">
+        <div className="flex gap-2">
+            <Link href="/exercises" className="p-2 rounded-xl glass-elevated" title="Exercise library">
               <BookOpen size={16} className="text-slate-400" />
             </Link>
-            <Link href="/workout/history" className="p-2 rounded-xl glass" title="Workout history">
+            <Link href="/workout/history" className="p-2 rounded-xl glass-elevated" title="Workout history">
               <History size={16} className="text-slate-400" />
             </Link>
           </div>
-        </div>
-        <p className="text-xs text-2 mt-0.5">{prog.focus}</p>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-4">
+      <div className="max-w-2xl mx-auto px-4 space-y-4 pt-3">
 
         {/* 7-day week view */}
-        <div className="glass rounded-2xl p-3">
+        <div className="glass-elevated rounded-2xl p-3">
           <div className="grid grid-cols-7 gap-1.5">
             {PROGRAMME.map((p, i) => {
               const isSelected = i === selectedDay

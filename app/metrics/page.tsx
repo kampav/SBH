@@ -157,12 +157,14 @@ export default function MetricsPage() {
 
   return (
     <main className="min-h-screen mesh-bg page-pad">
-      <header className="px-4 pt-12 pb-4">
-        <p className="text-xs text-2 mb-0.5">Track your transformation</p>
-        <h1 className="text-xl font-bold text-1">Progress</h1>
+      <header className="page-header-bar px-4 flex items-center h-14">
+        <div>
+          <p className="section-label">Track your transformation</p>
+          <h1 className="page-title" style={{fontSize:'1.25rem'}}>Progress</h1>
+        </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-4">
+      <div className="max-w-2xl mx-auto px-4 space-y-4 pt-4">
 
         {/* Summary cards */}
         <div className="grid grid-cols-3 gap-2.5">
@@ -172,7 +174,7 @@ export default function MetricsPage() {
             { label:'BMI',     value: latest ? String(calcBMI(latest.weightKg, heightCm)) : '—',
               sub: latest ? getBMICategory(calcBMI(latest.weightKg, heightCm)).label : undefined, emoji:'🧮', color: CYAN },
           ].map(c => (
-            <div key={c.label} className="glass rounded-2xl p-3 text-center">
+            <div key={c.label} className="glass-elevated rounded-2xl p-3 text-center">
               <div className="text-xl mb-1">{c.emoji}</div>
               <p className="text-xs text-2">{c.label}</p>
               <p className="font-bold text-sm" style={{color: c.color}}>{c.value}</p>

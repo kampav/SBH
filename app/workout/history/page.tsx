@@ -61,14 +61,14 @@ export default function WorkoutHistoryPage() {
 
   return (
     <main className="min-h-screen mesh-bg page-pad">
-      <header className="px-4 pt-12 pb-4 flex items-center justify-between">
+      <header className="page-header-bar px-4 flex items-center justify-between h-14">
         <div className="flex items-center gap-3">
-          <Link href="/workout" className="p-2 rounded-xl glass">
+          <Link href="/workout" className="p-2 rounded-xl glass-elevated">
             <ArrowLeft size={16} className="text-slate-400" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-1">Workout History</h1>
-            <p className="text-xs text-2">{workouts.length} sessions logged</p>
+            <p className="section-label">{workouts.length} sessions logged</p>
+            <h1 className="page-title" style={{fontSize:'1.25rem'}}>Workout History</h1>
           </div>
         </div>
         {workouts.length > 0 && (
@@ -77,7 +77,7 @@ export default function WorkoutHistoryPage() {
             const used = await shareStats('My SBH Workouts', text)
             Analytics.statsShared('workouts')
             if (!used) { setShareToast(true); setTimeout(() => setShareToast(false), 2500) }
-          }} className="p-2 rounded-xl glass">
+          }} className="p-2 rounded-xl glass-elevated">
             <Share2 size={16} style={{ color: 'var(--text-2)' }} />
           </button>
         )}
@@ -88,7 +88,7 @@ export default function WorkoutHistoryPage() {
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto px-4 space-y-4">
+      <div className="max-w-2xl mx-auto px-4 space-y-4 pt-4">
 
         {/* ── Summary stats ── */}
         <div className="grid grid-cols-3 gap-2">

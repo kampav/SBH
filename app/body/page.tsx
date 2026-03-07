@@ -116,17 +116,17 @@ export default function BodyPage() {
 
   return (
     <main className="min-h-screen mesh-bg page-pad pb-24">
-      <header className="px-4 pt-12 pb-4 flex items-center gap-3">
-        <Link href="/metrics" className="p-2 rounded-xl glass">
+      <header className="page-header-bar px-4 flex items-center gap-3 h-14">
+        <Link href="/metrics" className="p-2 rounded-xl glass-elevated">
           <ArrowLeft size={18} style={{ color: 'var(--text-2)' }} />
         </Link>
         <div className="flex items-center gap-2">
-          <Ruler size={20} className="text-violet-400" />
-          <h1 className="text-xl font-bold text-1">Body Composition</h1>
+          <Ruler size={16} className="text-violet-400" />
+          <h1 className="page-title" style={{fontSize:'1.25rem'}}>Body Composition</h1>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-3">
+      <div className="max-w-2xl mx-auto px-4 space-y-3 pt-4">
 
         {/* BMI card — always visible */}
         <div className="glass rounded-2xl p-4">

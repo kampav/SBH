@@ -300,15 +300,15 @@ export default function ProfilePage() {
         onChange={handlePhotoUpload}
       />
 
-      <header className="px-4 pt-12 pb-4 flex items-start justify-between">
-        <div className="flex items-center gap-4">
+      <header className="page-header-bar px-4 flex items-center justify-between h-auto py-3">
+        <div className="flex items-center gap-3">
           {/* Profile picture */}
           <button
             onClick={() => photoInputRef.current?.click()}
             className="relative shrink-0"
             disabled={uploadingPhoto}
           >
-            <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center text-xl font-black"
+            <div className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center text-lg font-black"
               style={{background: profile?.photoUrl ? 'transparent' : 'linear-gradient(135deg,#7c3aed,#06b6d4)'}}>
               {profile?.photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -317,25 +317,24 @@ export default function ProfilePage() {
                 <span className="text-white">{initials}</span>
               )}
             </div>
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
               {uploadingPhoto
                 ? <div className="w-3 h-3 border border-violet-500 border-t-transparent rounded-full animate-spin" />
-                : <Camera size={11} className="text-slate-400" />}
+                : <Camera size={9} className="text-slate-400" />}
             </div>
           </button>
           <div>
-            <p className="text-xs text-2 mb-0.5">Your Profile</p>
-            <h1 className="text-xl font-bold text-1">{profile?.displayName ?? 'Athlete'}</h1>
-            <p className="text-xs text-2 mt-0.5">{profile?.email}</p>
+            <p className="section-label">Your Profile</p>
+            <h1 className="page-title" style={{fontSize:'1.25rem'}}>{profile?.displayName ?? 'Athlete'}</h1>
           </div>
         </div>
         <button onClick={() => signOut(auth).then(() => router.push('/login'))}
-          className="p-2 rounded-xl glass text-slate-500 hover:text-slate-300 transition-colors mt-1">
+          className="p-2 rounded-xl glass-elevated transition-colors" style={{color:'var(--text-3)'}}>
           <LogOut size={16} />
         </button>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-4">
+      <div className="max-w-2xl mx-auto px-4 space-y-4 pt-3">
 
         {/* My Stats */}
         {myStats && (

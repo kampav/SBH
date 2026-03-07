@@ -173,14 +173,14 @@ export default function InsightsPage() {
   return (
     <main className="min-h-screen mesh-bg page-pad pb-28">
       {/* Header */}
-      <header className="px-4 pt-12 pb-4 flex items-center justify-between">
+      <header className="page-header-bar px-4 flex items-center justify-between h-14">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="p-2 rounded-xl glass">
+          <Link href="/dashboard" className="p-2 rounded-xl glass-elevated">
             <ArrowLeft size={18} style={{ color: 'var(--text-2)' }} />
           </Link>
           <div className="flex items-center gap-2">
-            <Lightbulb size={20} className="text-violet-400" />
-            <h1 className="text-xl font-bold text-1">Weekly Insights</h1>
+            <Lightbulb size={16} className="text-violet-400" />
+            <h1 className="page-title" style={{fontSize:'1.25rem'}}>Weekly Insights</h1>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -199,7 +199,7 @@ export default function InsightsPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-4">
+      <div className="max-w-2xl mx-auto px-4 space-y-4 pt-4">
 
         {/* Error / no data states */}
         {error === 'no_data' && (

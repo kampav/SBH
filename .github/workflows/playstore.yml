@@ -5,12 +5,14 @@ name: Play Store — Build & Upload AAB
 #  • On tag push matching v* (e.g. v1.0.0, v1.1.0)
 #
 # Required GitHub Secrets:
-#   ANDROID_KEYSTORE_BASE64     — base64-encoded .keystore file
-#   ANDROID_KEY_ALIAS           — key alias inside the keystore
-#   ANDROID_STORE_PASSWORD      — keystore password
-#   ANDROID_KEY_PASSWORD        — key password
-#   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON — full JSON of GCP service account
-#                                      (with Play Developer API access)
+#   ANDROID_KEYSTORE_BASE64             — base64-encoded .keystore file
+#   ANDROID_KEY_ALIAS                   — key alias inside the keystore
+#   ANDROID_STORE_PASSWORD              — keystore password
+#   ANDROID_KEY_PASSWORD                — key password
+#   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON    — full JSON of GCP service account
+#                                         (with Play Developer API access)
+#
+# If signing secrets are missing the job exits with a clear error message.
 
 on:
   push:
@@ -34,7 +36,6 @@ on:
           - production
 
 env:
-  # versionCode = GitHub run number (auto-incrementing, always higher than prev)
   VERSION_CODE: ${{ github.run_number }}
   VERSION_NAME: ${{ github.event.inputs.version_name || github.ref_name }}
   TRACK: ${{ github.event.inputs.track || 'internal' }}
@@ -47,11 +48,24 @@ jobs:
       contents: write   # for creating GitHub Release
 
     steps:
-      # ── Checkout ──────────────────────────────────────────────────────────
+      # ── Guard: signing secrets required ────────────────────────────────────
+      - name: Check signing secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "ERROR: ANDROID_KEYSTORE_BASE64 secret is not set."
+            echo "Add it at: Settings -> Secrets and variables -> Actions"
+            echo "See SETUP_GITHUB_SECRETS.md for instructions."
+            exit 1
+          fi
+          echo "Signing secrets found."
+
+      # ── Checkout ───────────────────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── Node / npm ────────────────────────────────────────────────────────
+      # ── Node / npm ─────────────────────────────────────────────────────────
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
@@ -59,12 +73,12 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: SENTRYCLI_SKIP_DOWNLOAD=1 npm ci
 
       - name: Capacitor sync (embeds server URL into Android project)
         run: npx cap sync android
 
-      # ── Java ──────────────────────────────────────────────────────────────
+      # ── Java ───────────────────────────────────────────────────────────────
       - name: Set up Java 21
         id: setup-java
         uses: actions/setup-java@v4
@@ -72,14 +86,14 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      # ── Signing keystore ──────────────────────────────────────────────────
+      # ── Signing keystore ───────────────────────────────────────────────────
       - name: Decode keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d \
             > android/app/sbh-release.keystore
           echo "Keystore size: $(stat -c%s android/app/sbh-release.keystore) bytes"
 
-      # ── Build ─────────────────────────────────────────────────────────────
+      # ── Build ──────────────────────────────────────────────────────────────
       - name: Make Gradle wrapper executable
         run: chmod +x android/gradlew
 
@@ -99,7 +113,7 @@ jobs:
           echo "AAB built:"
           ls -lh app/build/outputs/bundle/release/
 
-      # ── Rename artifact ───────────────────────────────────────────────────
+      # ── Rename artifact ────────────────────────────────────────────────────
       - name: Rename AAB
         run: |
           AAB_SRC=android/app/build/outputs/bundle/release/app-release.aab
@@ -107,7 +121,7 @@ jobs:
           cp "$AAB_SRC" "$AAB_DST"
           echo "AAB_FILE=$AAB_DST" >> $GITHUB_ENV
 
-      # ── Upload AAB as artifact (always) ───────────────────────────────────
+      # ── Upload AAB as artifact ─────────────────────────────────────────────
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
@@ -115,7 +129,7 @@ jobs:
           path: ${{ env.AAB_FILE }}
           retention-days: 90
 
-      # ── GitHub Release (on tag push) ──────────────────────────────────────
+      # ── GitHub Release (on tag push) ───────────────────────────────────────
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -129,9 +143,9 @@ jobs:
 
       # ── Upload to Play Store ───────────────────────────────────────────────
       - name: Upload to Google Play
-        if: env.PLAY_JSON != ''
         env:
           PLAY_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        if: env.PLAY_JSON != ''
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
@@ -142,7 +156,7 @@ jobs:
           releaseName: ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
           changesNotSentForReview: false
 
-      # ── Cleanup ───────────────────────────────────────────────────────────
+      # ── Cleanup ────────────────────────────────────────────────────────────
       - name: Clean up keystore
         if: always()
         run: rm -f android/app/sbh-release.keystore

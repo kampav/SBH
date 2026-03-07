@@ -432,17 +432,19 @@ export default function NutritionPage() {
       <input ref={photoInputRef} type="file" accept="image/*" capture="environment"
         className="hidden" onChange={handlePhoto} />
 
-      <header className="px-4 pt-12 pb-4">
-        <p className="text-xs text-2 mb-0.5">
-          {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </p>
-        <h1 className="text-xl font-bold text-1">Nutrition</h1>
+      <header className="page-header-bar px-4 flex items-center h-14">
+        <div>
+          <p className="section-label">
+            {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
+          <h1 className="page-title" style={{fontSize:'1.25rem'}}>Nutrition</h1>
+        </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-4">
+      <div className="max-w-2xl mx-auto px-4 space-y-4 pt-4">
 
         {/* Food Search — always visible */}
-        <div ref={searchRef} className="glass rounded-2xl p-3 relative">
+        <div ref={searchRef} className="glass-elevated rounded-2xl p-3 relative">
           <div className="flex items-center gap-2">
             <Search size={16} className="text-2 shrink-0 ml-1" />
             <input

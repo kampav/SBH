@@ -26,7 +26,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check secrets are configured
+        id: check
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          CLOUD_RUN_URL: ${{ secrets.CLOUD_RUN_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$CLOUD_RUN_URL" ]; then
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "CRON_SECRET or CLOUD_RUN_URL not set as GitHub secrets — skipping"
+            echo "Add these secrets at: Settings → Secrets and variables → Actions"
+          else
+            echo "configured=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Trigger /api/fcm/send-daily
+        if: steps.check.outputs.configured == 'true'
         run: |
           HTTP_STATUS=$(curl -sf -o /tmp/response.json -w "%{http_code}" \
             -X POST \

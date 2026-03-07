@@ -53,17 +53,17 @@ export default function ExercisesPage() {
 
   return (
     <main className="min-h-screen mesh-bg page-pad pb-28">
-      <header className="px-4 pt-12 pb-4 flex items-center gap-3">
-        <Link href="/workout" className="p-2 rounded-xl glass">
+      <header className="page-header-bar px-4 flex items-center gap-3 h-14">
+        <Link href="/workout" className="p-2 rounded-xl glass-elevated">
           <ArrowLeft size={16} className="text-slate-400" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-1">Exercise Library</h1>
-          <p className="text-xs text-2">{ALL_EXERCISES.length} exercises across 3 programmes</p>
+          <p className="section-label">{ALL_EXERCISES.length} exercises · 3 programmes</p>
+          <h1 className="page-title" style={{fontSize:'1.25rem'}}>Exercise Library</h1>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-3">
+      <div className="max-w-2xl mx-auto px-4 space-y-3 pt-4">
 
         {/* Search */}
         <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3">

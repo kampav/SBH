@@ -154,8 +154,8 @@ export default function DashboardPage() {
   if (!authReady) return (
     <main className="min-h-screen mesh-bg flex items-center justify-center">
       <div className="text-center space-y-3">
-        <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-2 text-sm">Loading your stats...</p>
+        <div className="w-10 h-10 border-2 border-violet-500/60 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-2 text-sm tracking-wide">Loading your stats…</p>
       </div>
     </main>
   )
@@ -175,14 +175,14 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen mesh-bg page-pad">
-      <header className="px-4 pt-12 pb-3 flex items-center justify-between">
+      {/* ── Frosted sticky header ── */}
+      <header className="page-header-bar px-4 pt-safe-top flex items-center justify-between h-14">
         <div>
-          <p className="text-2 text-xs mb-0.5">{dayStr}</p>
-          <h1 className="text-xl font-bold text-1">{greeting}</h1>
+          <p className="section-label">{dayStr}</p>
         </div>
         <div className="flex items-center gap-1.5">
           <ThemeToggle />
-          <Link href="/profile" className="p-2 rounded-xl glass transition-colors" style={{color:'var(--text-2)'}}>
+          <Link href="/profile" className="p-2 rounded-xl glass-elevated transition-colors" style={{color:'var(--text-2)'}}>
             <User size={16} />
           </Link>
           <button onClick={() => signOut(auth).then(() => router.push('/login'))}
@@ -192,13 +192,18 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-3 relative">
+      <div className="max-w-2xl mx-auto px-4 space-y-3 relative pt-3">
+
+        {/* ── Hero greeting ── */}
+        <div className="fade-in-up px-1 pb-1">
+          <h1 className="hero-title gradient-text">{greeting}</h1>
+        </div>
 
         {/* ── TODAY'S PROGRESS (most important — first) ── */}
-        <div className="glass rounded-2xl p-4">
+        <div className="glass-elevated rounded-2xl p-4 fade-in-up anim-d1">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-semibold text-2 uppercase tracking-widest">Today&apos;s Progress</h2>
-            {calPct >= 100 && <span className="text-xs font-semibold text-emerald-400">🎯 Goal hit!</span>}
+            <p className="section-label">Today&apos;s Progress</p>
+            {calPct >= 100 && <span className="text-xs font-bold text-emerald-400">🎯 Goal hit!</span>}
           </div>
           <div className="flex items-center justify-around">
             <Link href="/nutrition">
@@ -206,13 +211,17 @@ export default function DashboardPage() {
                 label={`${todayCalories}`} sublabel="kcal eaten" />
             </Link>
             <div className="text-center">
-              <p className="text-xs text-2 mb-0.5">Target</p>
-              <p className="text-xl font-bold gradient-text">{profile?.calorieTarget ?? '--'}</p>
-              <p className="text-xs text-2">kcal / day</p>
+              <p className="text-xs text-2 mb-1">Daily target</p>
+              <p className="hero-number gradient-text leading-none">{profile?.calorieTarget ?? '--'}</p>
+              <p className="text-xs text-3 mt-1">kcal / day</p>
               {calPct > 0 && (
-                <p className="text-xs mt-1 font-medium" style={{color: calPct > 105 ? '#f43f5e' : calPct >= 90 ? '#10b981' : '#f59e0b'}}>
+                <p className="text-xs mt-2 font-semibold px-2 py-0.5 rounded-full"
+                  style={{
+                    color: calPct > 105 ? '#f43f5e' : calPct >= 90 ? '#10b981' : '#f59e0b',
+                    background: calPct > 105 ? 'rgba(244,63,94,0.1)' : calPct >= 90 ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                  }}>
                   {calPct > 105 ? `+${Math.round(todayCalories - (profile?.calorieTarget ?? 0))} over` :
-                   calPct >= 90 ? 'On track' :
+                   calPct >= 90 ? 'On track ✓' :
                    `${Math.round((profile?.calorieTarget ?? 0) - todayCalories)} left`}
                 </p>
               )}
@@ -226,7 +235,7 @@ export default function DashboardPage() {
 
         {/* ── DAILY INSIGHT BADGE ── */}
         {insightBadge && (
-          <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3">
+          <div className="glass-cyan rounded-2xl px-4 py-3 flex items-center gap-3 fade-in-up anim-d2">
             <span className="text-lg">✨</span>
             <p className="text-sm font-semibold text-1">{insightBadge}</p>
           </div>
@@ -234,7 +243,7 @@ export default function DashboardPage() {
 
         {/* ── GLUCOSE WIDGET (shown only if consent given) ── */}
         {glucoseSettings?.consentGiven && (
-          <Link href="/glucose" className="block glass rounded-2xl p-4 card-hover">
+          <Link href="/glucose" className="block glass-elevated rounded-2xl p-4 card-hover fade-in-up anim-d2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -264,7 +273,7 @@ export default function DashboardPage() {
         )}
 
         {/* ── SLEEP WIDGET ── */}
-        <Link href="/sleep" className="block glass rounded-2xl p-4 card-hover">
+        <Link href="/sleep" className="block glass-elevated rounded-2xl p-4 card-hover fade-in-up anim-d3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -292,6 +301,7 @@ export default function DashboardPage() {
         </Link>
 
         {/* ── QUICK LOG (primary CTAs) ── */}
+        <p className="section-label px-1">Quick Actions</p>
         <div className="grid grid-cols-2 gap-3">
           <QuickCard href="/nutrition" Icon={Utensils} label="Log Meal" sub="Calories & macros" color="#10b981" done={todayCalories > 0} />
           <QuickCard href="/workout"   Icon={Dumbbell}  label="Workout"  sub={todayLabel}        color="#6366f1" done={workoutDoneToday} />
@@ -302,7 +312,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── TODAY'S WORKOUT (phase + programme) ── */}
-        <Link href="/workout" className="block glass rounded-2xl p-4 card-hover"
+        <Link href="/workout" className="block glass-elevated rounded-2xl p-4 card-hover"
           style={{borderColor: currentPhase.color + '30', border: `1px solid ${currentPhase.color}30`}}>
           <div className="flex items-center justify-between">
             <div>
@@ -322,8 +332,8 @@ export default function DashboardPage() {
 
         {/* ── AI COACH INSIGHTS ── */}
         {(insightsLoading || aiInsights) && (
-          <div className="glass rounded-2xl p-4">
-            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{color:'#7c3aed'}}>✨ AI Coach Insights</p>
+          <div className="glass-elevated rounded-2xl p-4">
+            <p className="section-label mb-3">✨ AI Coach Insights</p>
             {insightsLoading ? (
               <div className="flex items-center gap-2 text-sm text-2 py-1">
                 <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
@@ -353,7 +363,7 @@ export default function DashboardPage() {
         )}
 
         {/* ── STREAKS + WEEK CALENDAR ── */}
-        <div className="glass rounded-2xl p-4 space-y-3">
+        <div className="glass-elevated rounded-2xl p-4 space-y-3">
           {showMilestoneBanner && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold"
               style={{background:'rgba(245,158,11,0.12)', color:'#f59e0b'}}>
@@ -361,17 +371,17 @@ export default function DashboardPage() {
             </div>
           )}
           <div className="flex items-center gap-5">
-            <div className="flex items-center gap-2">
-              <span className="text-3xl leading-none flame">🔥</span>
+            <div className="flex items-center gap-2.5">
+              <span className="text-4xl leading-none flame">🔥</span>
               <div>
-                <p className="text-2xl font-bold text-1 leading-tight">{workoutStreak}</p>
-                <p className="text-xs text-2">workout streak</p>
+                <p className="hero-number leading-none" style={{fontSize:'2.5rem'}}>{workoutStreak}</p>
+                <p className="section-label mt-0.5">workout streak</p>
               </div>
             </div>
-            <div className="h-8 w-px shrink-0" style={{background:'var(--glass-border)'}} />
+            <div className="h-10 w-px shrink-0" style={{background:'var(--glass-border)'}} />
             <div>
               <p className="text-2xl font-bold text-1 leading-tight">{allStreak}</p>
-              <p className="text-xs text-2">all-activity streak</p>
+              <p className="text-xs text-2">all-activity</p>
             </div>
             <div className="ml-auto">
               <Link href="/metrics" className="flex items-center gap-1 text-xs text-amber-400 font-semibold">
@@ -415,13 +425,13 @@ export default function DashboardPage() {
         </div>
 
         {/* ── XP / LEVEL ── */}
-        <div className="glass rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2">
+        <div className="glass-elevated rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-2.5">
             <div className="flex items-center gap-2">
-              <Zap size={14} className="text-amber-400" />
-              <span className="text-xs font-semibold text-amber-400">Level {level} · {levelTitle}</span>
+              <Zap size={15} style={{color:'#f59e0b'}} />
+              <span className="text-sm font-bold gradient-text-gold">Level {level} · {levelTitle}</span>
             </div>
-            <span className="text-xs text-2">{xp.toLocaleString()} XP</span>
+            <span className="text-xs font-semibold text-2">{xp.toLocaleString()} XP</span>
           </div>
           <div className="w-full rounded-full h-2" style={{background:'rgba(255,255,255,0.06)'}}>
             <div className="xp-bar h-2 rounded-full"
@@ -431,8 +441,8 @@ export default function DashboardPage() {
 
         {/* ── MACRO TARGETS ── */}
         {profile && (
-          <div className="glass rounded-2xl p-4">
-            <h2 className="text-xs font-semibold text-2 uppercase tracking-widest mb-3">Daily Targets</h2>
+          <div className="glass-elevated rounded-2xl p-4">
+            <p className="section-label mb-3">Daily Targets</p>
             <div className="grid grid-cols-4 gap-2">
               {[
                 { label: 'Calories', val: `${profile.calorieTarget}`, unit: 'kcal', color: '#10b981' },
@@ -451,8 +461,8 @@ export default function DashboardPage() {
         )}
 
         {/* ── DAILY TIP ── */}
-        <div className="glass rounded-2xl p-4">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{color:'#6366f1'}}>Daily Science Tip</p>
+        <div className="glass-elevated rounded-2xl p-4">
+          <p className="section-label mb-2">Daily Science Tip</p>
           <p className="text-sm text-1 leading-relaxed">{tip}</p>
         </div>
 
@@ -472,16 +482,20 @@ function QuickCard({ href, Icon, label, sub, color, done }: {
   label: string; sub: string; color: string; done: boolean
 }) {
   return (
-    <Link href={href} className="glass rounded-2xl p-3.5 card-hover flex items-center gap-3 active:scale-95 transition-transform"
-      style={{border: done ? `1px solid ${color}30` : undefined}}>
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-        style={{background: color + '18'}}>
-        <Icon size={17} strokeWidth={2} />
+    <Link href={href}
+      className="glass-elevated rounded-2xl p-3.5 card-hover flex items-center gap-3"
+      style={done ? { borderColor: color + '35' } : undefined}>
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+        style={{ background: color + '1a', border: `1px solid ${color}22` }}>
+        <Icon size={18} strokeWidth={2} style={{ color }} />
       </div>
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
           <p className="font-semibold text-sm text-1 truncate">{label}</p>
-          {done && <span className="text-xs" style={{color}}>✓</span>}
+          {done && (
+            <span className="text-[10px] font-bold px-1 py-px rounded-full"
+              style={{ color, background: color + '15' }}>✓</span>
+          )}
         </div>
         <p className="text-xs text-2 truncate">{sub}</p>
       </div>
