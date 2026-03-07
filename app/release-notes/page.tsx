@@ -20,6 +20,26 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v2.7.0',
+    date: '2026-03-07',
+    highlights: [
+      'Condition-tiered pricing — 4 specialised plans: Fitness Pro (£9.99/mo), Diabetes Pro (£14.99/mo), Mental Wellness (£9.99/mo), Health OS (£24.99/mo)',
+      'Coaching Marketplace — browse and book certified diabetes educators, sports dietitians, and mental health coaches',
+      'Coach profiles — credentials, ratings, session count, response time, and live availability status',
+      'Free intro session booking flow with in-app request confirmation',
+      'Coach specialty filter — filter by Diabetes, Fitness, Nutrition, Mental Health, Weight Loss',
+      'Coaching Add-On upsell card on pricing page — from £49/month',
+    ],
+    fixes: [
+      'Legacy pro/premium plan keys remapped to Fitness Pro / Health OS for existing subscribers',
+      'Pricing page cards now show condition-specific accent colours and tailored feature lists',
+    ],
+    privacy: [
+      'No health data is shared with coaches until the user explicitly authorises data sharing (coming in v2.8.0)',
+      'Coach enquiries handled via email — no third-party booking platform data collection',
+    ],
+  },
+  {
     version: 'v2.6.0',
     date: '2026-03-07',
     highlights: [
@@ -213,7 +233,7 @@ export default function ReleaseNotesPage() {
           style={{ border: '1px solid rgba(124,58,237,0.25)' }}>
           <Sparkles size={18} style={{ color: '#a78bfa' }} />
           <div>
-            <p className="text-xs font-semibold text-1">Current version: v2.6.0</p>
+            <p className="text-xs font-semibold text-1">Current version: v2.7.0</p>
             <p className="text-xs text-3">Released {RELEASES[0].date}</p>
           </div>
         </div>
