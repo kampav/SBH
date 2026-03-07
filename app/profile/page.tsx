@@ -6,12 +6,14 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth, storage } from '@/lib/firebase'
-import { getProfile, saveProfile, deleteAllUserData, saveFcmToken, getFcmTokenDoc, deleteFcmToken } from '@/lib/firebase/firestore'
+import { getProfile, saveProfile, deleteAllUserData, saveFcmToken, getFcmTokenDoc, deleteFcmToken, getRecentWorkouts, getStreak, getSleepHistory, savePublicProfileFields } from '@/lib/firebase/firestore'
 import { UserProfile, ProgrammeKey } from '@/lib/types'
-import { LogOut, ChevronRight, Target, Activity, Scale, Zap, Calendar, Edit3, Check, Dumbbell, X, Camera, Trash2, AlertTriangle, Bell, BellOff } from 'lucide-react'
+import { LogOut, ChevronRight, Target, Activity, Scale, Zap, Calendar, Edit3, Check, Dumbbell, X, Camera, Trash2, AlertTriangle, Bell, BellOff, BarChart2, Share2, Link2, Users } from 'lucide-react'
+import { shareStats } from '@/lib/utils'
 import { calcMacros } from '@/lib/health/calculations'
 import { enableNotifications, isNotificationSupported } from '@/lib/firebase/fcm'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import Link from 'next/link'
 
 const PHASE_INFO = [
   { num: 1, name: 'Fat Loss Foundation',  weeks: '1–4',  color: '#10b981', desc: 'High frequency cardio, fat oxidation, mobility work' },
@@ -53,6 +55,15 @@ export default function ProfilePage() {
   const [notifSupported, setNotifSupported] = useState(false)
   const [testNotifStatus, setTestNotifStatus] = useState<'idle'|'sending'|'ok'|'err'>('idle')
 
+  // My Stats
+  const [myStats, setMyStats] = useState<{ totalWorkouts: number; totalVolumeKg: number; currentStreak: number; avgSleepH: number | null } | null>(null)
+
+  // Social
+  const [referralCode, setReferralCode] = useState<string | null>(null)
+  const [username, setUsername] = useState<string | null>(null)
+  const [togglingPublic, setTogglingPublic] = useState(false)
+  const [copied, setCopied] = useState(false)
+
   // Account deletion
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState('')
@@ -70,10 +81,35 @@ export default function ProfilePage() {
       if (!p) { router.push('/onboarding'); return }
       setProfile(p)
       if (p.programme) setSelectedProgramme(p.programme)
+      // Lazily generate username + referral code if not yet set
+      savePublicProfileFields(user.uid, p.displayName ?? '').then(({ username: u, referralCode: rc }) => {
+        setUsername(u)
+        setReferralCode(rc)
+        setProfile(prev => prev ? { ...prev, username: u, referralCode: rc } : prev)
+      })
       // Load notification state
       setNotifSupported(isNotificationSupported())
       const tokenDoc = await getFcmTokenDoc(user.uid)
       if (tokenDoc) { setNotifEnabled(true); setNotifPrefs(tokenDoc.prefs) }
+      // Load My Stats
+      const [workouts, streak, sleepHistory] = await Promise.all([
+        getRecentWorkouts(user.uid, 90),
+        getStreak(user.uid),
+        getSleepHistory(user.uid, 30),
+      ])
+      const totalVolumeKg = workouts.reduce((sum, w) =>
+        sum + w.exercises.reduce((es, ex) =>
+          es + ex.sets.reduce((ss, s) => ss + (s.completed ? (s.weightKg || 0) * (s.reps || 0) : 0), 0), 0), 0)
+      const sleepEntries = sleepHistory.filter(s => s.durationH != null && s.durationH > 0)
+      const avgSleepH = sleepEntries.length > 0
+        ? sleepEntries.reduce((s, e) => s + (e.durationH ?? 0), 0) / sleepEntries.length
+        : null
+      setMyStats({
+        totalWorkouts: workouts.filter(w => w.exercises.some(e => e.sets.some(s => s.completed))).length,
+        totalVolumeKg: Math.round(totalVolumeKg),
+        currentStreak: streak?.currentStreak ?? 0,
+        avgSleepH: avgSleepH != null ? Math.round(avgSleepH * 10) / 10 : null,
+      })
     })
     return unsub
   }, [router])
@@ -300,6 +336,114 @@ export default function ProfilePage() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 space-y-4">
+
+        {/* My Stats */}
+        {myStats && (
+          <div className="glass rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart2 size={16} className="text-violet-400" />
+              <p className="text-xs font-semibold uppercase tracking-widest text-2">My Stats</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Link href="/workout/history" className="glass rounded-xl p-3 hover:bg-violet-500/10 transition-colors">
+                <p className="text-xs text-2">Workouts (90d)</p>
+                <p className="font-bold text-lg" style={{ color: '#7c3aed' }}>{myStats.totalWorkouts}</p>
+              </Link>
+              <Link href="/workout/history" className="glass rounded-xl p-3 hover:bg-violet-500/10 transition-colors">
+                <p className="text-xs text-2">Volume lifted</p>
+                <p className="font-bold text-lg" style={{ color: '#06b6d4' }}>
+                  {myStats.totalVolumeKg >= 1000
+                    ? `${(myStats.totalVolumeKg / 1000).toFixed(1)}t`
+                    : `${myStats.totalVolumeKg}kg`}
+                </p>
+              </Link>
+              <Link href="/metrics" className="glass rounded-xl p-3 hover:bg-violet-500/10 transition-colors">
+                <p className="text-xs text-2">Current streak</p>
+                <p className="font-bold text-lg" style={{ color: '#f59e0b' }}>
+                  {myStats.currentStreak} {myStats.currentStreak === 1 ? 'day' : 'days'}
+                </p>
+              </Link>
+              <Link href="/sleep" className="glass rounded-xl p-3 hover:bg-violet-500/10 transition-colors">
+                <p className="text-xs text-2">Avg sleep (30d)</p>
+                <p className="font-bold text-lg" style={{ color: '#10b981' }}>
+                  {myStats.avgSleepH != null ? `${myStats.avgSleepH}h` : '--'}
+                </p>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Invite Friends + Public Profile */}
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Users size={16} className="text-violet-400" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-2">Invite Friends</p>
+          </div>
+
+          {/* Public profile toggle */}
+          <div className="flex items-center justify-between glass rounded-xl px-3 py-2.5 mb-3">
+            <div>
+              <p className="text-xs font-semibold text-1">Public Profile</p>
+              <p className="text-xs text-3">Appear on the weekly leaderboard</p>
+            </div>
+            <button
+              onClick={async () => {
+                if (!uid || togglingPublic) return
+                setTogglingPublic(true)
+                const next = !profile?.publicProfile
+                await saveProfile(uid, { publicProfile: next })
+                setProfile(p => p ? { ...p, publicProfile: next } : p)
+                setTogglingPublic(false)
+              }}
+              disabled={togglingPublic}
+              className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0"
+              style={{ background: profile?.publicProfile ? '#7c3aed' : 'rgba(255,255,255,0.1)' }}>
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${profile?.publicProfile ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          {/* Referral link */}
+          {referralCode && (
+            <>
+              <div className="glass rounded-xl p-3 mb-2">
+                <p className="text-xs text-2 mb-1">Your invite link</p>
+                <p className="text-xs font-mono text-violet-300 break-all">
+                  {typeof window !== 'undefined' ? window.location.origin : 'https://sbhealth.app'}/register?ref={referralCode}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    const url = `${window.location.origin}/register?ref=${referralCode}`
+                    await navigator.clipboard.writeText(url)
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2500)
+                  }}
+                  className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 glass"
+                  style={{ color: copied ? '#34d399' : '#7c3aed', borderColor: 'rgba(124,58,237,0.3)', border: '1px solid' }}>
+                  <Link2 size={12} />
+                  {copied ? 'Copied!' : 'Copy Link'}
+                </button>
+                <button
+                  onClick={() => shareStats(
+                    'Join me on SBH',
+                    `I'm tracking my health & fitness on Science Based Health. Join me! 💪\n${window.location.origin}/register?ref=${referralCode}`,
+                  )}
+                  className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 glass"
+                  style={{ color: '#06b6d4', borderColor: 'rgba(6,182,212,0.3)', border: '1px solid' }}>
+                  <Share2 size={12} />
+                  Share
+                </button>
+              </div>
+              {username && profile?.publicProfile && (
+                <p className="text-xs text-2 mt-2 text-center">
+                  Public profile:{' '}
+                  <a href={`/u/${username}`} className="text-violet-400 hover:underline font-mono">/u/{username}</a>
+                </p>
+              )}
+            </>
+          )}
+        </div>
 
         {/* Programme Phase */}
         <div className="glass rounded-2xl p-5 border" style={{borderColor: currentPhase.color + '30'}}>
@@ -673,6 +817,7 @@ export default function ProfilePage() {
           {[
             { label: 'Edit Onboarding / Recalculate Targets', href: '/onboarding' },
             { label: 'View Progress & Metrics', href: '/metrics' },
+            { label: 'Weekly Challenges & Leaderboard', href: '/challenges' },
             { label: 'Request Data Deletion', href: '/delete-account' },
           ].map(item => (
             <a key={item.href} href={item.href}

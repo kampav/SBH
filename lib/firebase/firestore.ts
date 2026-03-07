@@ -6,7 +6,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from './client'
-import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement, SleepEntry, HabitDefinition, DailyHabitLog, WeeklyInsight } from '../types'
+import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement, SleepEntry, HabitDefinition, DailyHabitLog, WeeklyInsight, LeaderboardEntry } from '../types'
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 export async function getProfile(uid: string): Promise<UserProfile | null> {
@@ -275,6 +275,40 @@ export async function getCachedWeeklyInsight(uid: string, weekStartDate: string)
 
 export async function saveWeeklyInsight(uid: string, insight: WeeklyInsight): Promise<void> {
   await setDoc(doc(db, 'users', uid, 'insights', insight.weekStartDate), insight)
+}
+
+// ─── Leaderboard ──────────────────────────────────────────────────────────────
+export async function updateLeaderboardEntry(weekKey: string, entry: LeaderboardEntry): Promise<void> {
+  await setDoc(doc(db, 'leaderboards', weekKey, 'entries', entry.uid), {
+    ...entry,
+    updatedAt: serverTimestamp(),
+  }, { merge: true })
+}
+
+export async function getLeaderboard(weekKey: string, limitCount = 50): Promise<LeaderboardEntry[]> {
+  const q = query(
+    collection(db, 'leaderboards', weekKey, 'entries'),
+    orderBy('workoutCount', 'desc'),
+    limit(limitCount),
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map(d => d.data() as LeaderboardEntry)
+}
+
+// ─── Public Profile Helpers ───────────────────────────────────────────────────
+export function generateUsername(displayName: string, uid: string): string {
+  const base = displayName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 6) || 'user'
+  return `${base}_${uid.substring(0, 4)}`
+}
+
+export async function savePublicProfileFields(uid: string, displayName: string): Promise<{ username: string; referralCode: string }> {
+  const existing = await getProfile(uid)
+  const username = existing?.username ?? generateUsername(displayName, uid)
+  const referralCode = existing?.referralCode ?? uid.substring(0, 8).toUpperCase()
+  if (!existing?.username || !existing?.referralCode) {
+    await setDoc(doc(db, 'users', uid, 'profile', 'data'), { username, referralCode }, { merge: true })
+  }
+  return { username, referralCode }
 }
 
 // ─── Account Deletion ─────────────────────────────────────────────────────────

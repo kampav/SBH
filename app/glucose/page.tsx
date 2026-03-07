@@ -127,7 +127,7 @@ export default function GlucosePage() {
       time: new Date().toTimeString().slice(0, 5),
       valueMmol: mmol,
       context: readingContext,
-      notes: readingNotes || undefined,
+      ...(readingNotes ? { notes: readingNotes } : {}),
     }
 
     setSaving(true)

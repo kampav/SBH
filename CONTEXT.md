@@ -1,7 +1,7 @@
 # SBH — Science Based Health
 ## Session Context File — Paste at start of every Claude session
 
-> Last updated: 2026-03-06 | Version: 1.9.0
+> Last updated: 2026-03-07 | Version: 2.1.0
 
 ---
 
@@ -17,7 +17,7 @@
 
 ---
 
-## CURRENT BUILD STATUS — v1.9.0 ✅ BUILT
+## CURRENT BUILD STATUS — v2.1.0 ✅ BUILT
 
 ### Completed Features
 
@@ -156,10 +156,44 @@ users/{uid}/
 - [x] **lib/ reorganisation** — flat files moved to `firebase/`, `health/`, `food/`, `platform/` subdirectories
 - [x] Total unit tests: 8 files · **131 tests**
 
-### ⬜ Phase 9 — (Next)
-- [ ] Typesense cloud provisioning + live USDA/IFCT data import (50k+ items)
-- [ ] iOS Capacitor widget bridge (mirror of Android Glance widget)
-- [ ] AI-powered weekly insights report (nutrition + workout trends)
+### ✅ Phase 9 — Engagement + PWA
+- [x] AI Weekly Insights (`/insights` + `/api/insights/weekly` — deterministic scores + Claude Haiku, 24h cache)
+- [x] Habit Tracker (`/habits` — 5 defaults, stepper, 7-day streaks, Firestore habits + habit_logs)
+- [x] PWA Install Banner (`components/PWAInstallBanner.tsx` — beforeinstallprompt)
+- [x] Stats sharing — `shareStats()`, `getWeekStart()` in `lib/utils.ts`; share buttons on metrics + workout history
+- [x] Bug fixes: FCM test notification token refresh; workout Saturday crash guard
+
+### ✅ Phase 10 — UX Polish + Exercise Library
+**PRD items:** P3.5 (programme builder), P3.7 (exercise library), P2.4 rest timer
+- [x] Exercise library page (`/exercises`) — browseable, muscle group filter, accordion cards, form cues
+- [x] `lib/workout/exerciseData.ts` — extract exercise constants from workout page into shared module
+- [x] Enhanced rest timer overlay (`components/workout/RestTimerOverlay.tsx`) — SVG ring, Web Audio beep
+- [x] Nutrition meal-type breakdown pie chart (Recharts, meals grouped by breakfast/lunch/dinner/snack)
+- [x] Profile "My Stats" card (total workouts, volume, streak, avg sleep with links)
+- [x] Bug fixes: glucose save undefined notes, Sunday/Saturday day mapping, RestTimerOverlay useCallback
+- [x] Unit tests: `workout.test.ts` (28 tests), `glucoseSave.test.ts` (8 tests) — total 167 tests
+
+### ✅ Phase 11 — Social + Sharing
+**PRD items:** P4.4 social features
+- [x] Workout completion card generator (html2canvas + `components/workout/WorkoutShareCard.tsx`)
+- [x] Weekly challenge system (`/challenges` — workout/calorie/streak rings + leaderboard)
+- [x] Opt-in leaderboard (`leaderboards/{weekKey}/entries/{uid}` — public read, own-entry write)
+- [x] Referral/invite link (`/api/referral/[code]` + `?ref=` param on register + invited-by banner)
+- [x] Public profile page (`/u/[username]`) — server component, 404 for private/unknown users
+- [x] Profile page: public profile toggle + invite link UI with copy + share buttons
+- [x] Leaderboard update after workout save (if publicProfile=true)
+- [x] `lib/firebase/admin.ts`: `getPublicProfileByUsername`, `getPublicStats` server helpers
+- [x] `lib/types.ts`: `publicProfile?`, `username?`, `referralCode?`, `referredBy?` on UserProfile; `LeaderboardEntry` interface
+- [x] Firestore rules: leaderboard public read
+
+### ⬜ Phase 12 — i18n + Wearable Sync
+**PRD items:** P3.8 wearable sync, P3.10 i18n, P4.3 iOS PWA
+- [ ] RTL layout support (`dir="rtl"`, logical CSS properties)
+- [ ] Google Health Connect settings page (sync toggle, scope explanations) and samsung health connect as well
+- [ ] iOS PWA meta tags polish + App Store connect setup guide
+- [ ] Android widget 3-size upgrade (large 4×2 with full macro breakdown)
+
+
 
 ---
 

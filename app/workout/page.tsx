@@ -2,329 +2,23 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
-import { saveWorkout, getWorkout, getProfile, getRecentWorkouts } from '@/lib/firebase/firestore'
+import { saveWorkout, getWorkout, getProfile, getRecentWorkouts, updateLeaderboardEntry, savePublicProfileFields } from '@/lib/firebase/firestore'
 import { estimateCaloriesBurned } from '@/lib/health/calculations'
-import { DailyWorkout, ExerciseLog, SetLog, ProgrammeKey } from '@/lib/types'
+import { DailyWorkout, ExerciseLog, SetLog, ProgrammeKey, UserProfile } from '@/lib/types'
 import { getSuggestion, formatSuggestion } from '@/lib/health/progressive-overload'
 import { serverTimestamp } from 'firebase/firestore'
-import { ExternalLink, Check, Trophy, Timer, Dumbbell, Heart, ChevronRight, Play, History } from 'lucide-react'
+import { ExternalLink, Check, Trophy, Dumbbell, Heart, ChevronRight, Play, History, BookOpen, Share2 } from 'lucide-react'
 import Link from 'next/link'
-
-// ─── Exercise / Programme Types ───────────────────────────────────────────────
-interface ExerciseDef {
-  name: string
-  muscleGroup: string
-  sets: number
-  repRange: string   // e.g. "12-15" or "45s" for timed
-  videoUrl: string
-  restSeconds: number
-  emoji: string
-  isTime?: boolean
-}
-
-// Per-exercise tutorial video + brief how-to description.
-// Overrides the generic programme videoUrl for a dedicated tutorial.
-const EXERCISE_INFO: Record<string, { videoUrl: string; description: string }> = {
-  // ── Bodyweight Push ──────────────────────────────────────────────────────
-  'Push-ups':               { videoUrl: 'https://youtu.be/IODxDxX7oi4', description: 'Hands shoulder-width, elbows at 45°. Lower chest to floor, press back up keeping body in a straight line.' },
-  'Incline Push-ups':       { videoUrl: 'https://youtu.be/cfns5KzHorc', description: 'Hands elevated on a chair or step. Same push-up form — easier angle targets upper chest.' },
-  'Chair Dips':             { videoUrl: 'https://youtu.be/0326dy_-CzM', description: 'Hands on chair edge, slide off. Lower until elbows hit 90°, press back up. Keep back close to the chair.' },
-  'Pike Push-ups':          { videoUrl: 'https://youtu.be/sposDXWEB0A', description: 'Form an inverted V with hips raised high. Bend elbows to lower head toward floor — mimics an overhead press.' },
-  'Circuit: Push-ups ×4':   { videoUrl: 'https://youtu.be/IODxDxX7oi4', description: '4-round circuit. Minimal rest between moves, 90 s rest between rounds. Maintain form even when tired.' },
-  // ── Core ────────────────────────────────────────────────────────────────
-  'Plank Hold':             { videoUrl: 'https://youtu.be/pSHjTRCQxIw', description: 'Forearms down, body in a straight line. Brace abs, squeeze glutes, breathe steadily. Don\'t let hips sag or rise.' },
-  'Bicycle Crunches':       { videoUrl: 'https://youtu.be/9FGilxCbdz8', description: 'Bring opposite elbow to knee while fully extending the other leg. Focus on torso rotation, not just elbow movement.' },
-  'Leg Raises':             { videoUrl: 'https://youtu.be/JB2oyawG9KI', description: 'Lie flat, hands under hips. Raise straight legs to 90°, lower slowly. Don\'t let feet touch the floor. No back arch.' },
-  'Russian Twists':         { videoUrl: 'https://youtu.be/wkD8rjkodUI', description: 'Sit at 45°, feet off floor. Rotate torso fully side to side. Add a weight to increase difficulty.' },
-  'Flutter Kicks':          { videoUrl: 'https://youtu.be/ANVdMDaYRts', description: 'Lie on back, hands under hips. Alternate small upward kicks keeping legs low and straight. Press lower back down.' },
-  'Hollow Body Hold':       { videoUrl: 'https://youtu.be/LlDNef_Ztsc', description: 'Lie on back, press lower back to floor. Extend arms overhead and lift legs. Hold the tension — don\'t arch.' },
-  'Side Plank':             { videoUrl: 'https://youtu.be/wqzrb67Dwf8', description: 'Prop on forearm, lift hips to form a straight line. Don\'t let hips drop toward the floor. Build up both sides.' },
-  'Ladder: Sit-ups':        { videoUrl: 'https://youtu.be/9FGilxCbdz8', description: 'Hands behind head or crossed on chest. Rise until elbows touch knees. Control the descent slowly.' },
-  'Circuit: Plank ×4':      { videoUrl: 'https://youtu.be/pSHjTRCQxIw', description: '45 seconds of full tension each round. Exhale slowly to manage fatigue and hold position.' },
-  'Circuit: Shoulder Taps ×4': { videoUrl: 'https://youtu.be/IODxDxX7oi4', description: 'From push-up position, alternate tapping opposite shoulder. Minimise hip rotation by bracing your core.' },
-  // ── HIIT / Cardio ────────────────────────────────────────────────────────
-  'Jump Squats (HIIT ×4)':  { videoUrl: 'https://youtu.be/CVaEhXotL7M', description: 'Squat down, explode upward reaching full extension. Land softly with knees bent. 20 s rest between rounds.' },
-  'Mountain Climbers (HIIT)':{ videoUrl: 'https://youtu.be/nmwgirgXLYM', description: 'From plank, drive knees to chest alternately at high pace. Keep hips level — avoid letting them rise.' },
-  'Mountain Climbers':      { videoUrl: 'https://youtu.be/nmwgirgXLYM', description: 'From plank, drive knees to chest alternately. Keep hips level. Build speed as you get comfortable.' },
-  'High Knees (HIIT)':      { videoUrl: 'https://youtu.be/ZZZoCNMU48U', description: 'Run in place driving knees above hip height. Pump arms for rhythm. Stay on balls of feet.' },
-  'Burpees':                { videoUrl: 'https://youtu.be/dZgVxmf6jkA', description: 'Squat, jump feet back to plank, do a push-up, jump feet forward, leap up with arms overhead.' },
-  'Circuit: Burpees ×4':    { videoUrl: 'https://youtu.be/dZgVxmf6jkA', description: 'Squat, kick feet back, push-up, jump feet in, leap up. Maintain full range even when fatigued.' },
-  'Ladder: Jumping Jacks (10→20→30)': { videoUrl: 'https://youtu.be/CVaEhXotL7M', description: 'Do 10, rest, 20, rest, 30. Full extension each rep — arms fully overhead, feet wide.' },
-  'Ladder: Mountain Climbers': { videoUrl: 'https://youtu.be/nmwgirgXLYM', description: 'Same ladder format. Drive knees to chest, keep hips level. Increase speed with each round.' },
-  'Brisk Walk Finisher':    { videoUrl: 'https://youtu.be/nmwgirgXLYM', description: 'Zone 2 cool-down walk after the ladder. Keeps fat-burning active. Aim for 100+ steps/min.' },
-  'Brisk Walk (Zone 2)':    { videoUrl: 'https://youtu.be/nmwgirgXLYM', description: 'Comfortable pace where you can hold a conversation — roughly 100–130 bpm. Builds aerobic base.' },
-  // ── Legs ────────────────────────────────────────────────────────────────
-  'Bodyweight Squats':      { videoUrl: 'https://youtu.be/aclHkVaku9U', description: 'Feet shoulder-width, toes out slightly. Lower until thighs parallel, drive knees out. Weight in heels.' },
-  'Reverse Lunges':         { videoUrl: 'https://youtu.be/xrjTHKjFaAI', description: 'Step backward, lower back knee toward floor. Front shin stays vertical. Push through front heel to stand.' },
-  'Wall Sit':               { videoUrl: 'https://youtu.be/y-wV4Venusw', description: 'Back flat against wall, thighs parallel to floor. Weight in heels, not toes. Keep breathing steadily.' },
-  'Calf Raises':            { videoUrl: 'https://youtu.be/gwLzBJYoWlI', description: 'Rise on tiptoes, hold 1 s at top, lower slowly over 3 s. Full range of motion is key for growth.' },
-  'Glute Bridges':          { videoUrl: 'https://youtu.be/OUgsJ8-Vi0E', description: 'Feet flat near hips. Drive hips up squeezing glutes. Hold 2 s at top. Lower slowly. No momentum.' },
-  'Step-ups':               { videoUrl: 'https://youtu.be/CVaEhXotL7M', description: 'Step up onto a sturdy platform, drive knee up tall at the top. Step down with control. Alternate legs each rep.' },
-  'Circuit: Squats ×4':     { videoUrl: 'https://youtu.be/aclHkVaku9U', description: 'Keep depth and chest up across all 4 rounds. Breathe out on the way up.' },
-  'Circuit: Lunges ×4':     { videoUrl: 'https://youtu.be/xrjTHKjFaAI', description: '12 reps alternating legs. Keep front knee above ankle and torso upright throughout.' },
-  'Ladder: Squats':         { videoUrl: 'https://youtu.be/aclHkVaku9U', description: 'Go deeper with good form even in higher rep sets. Pause briefly at the bottom of each rep.' },
-  // ── Pull / Back ──────────────────────────────────────────────────────────
-  'Resistance Band Rows':   { videoUrl: 'https://youtu.be/xQNrFHEMhI4', description: 'Anchor band at waist height. Pull elbows back squeezing shoulder blades together. Control the return.' },
-  'Superman Hold':          { videoUrl: 'https://youtu.be/z6PJMT2y8GQ', description: 'Lie face down, arms extended. Lift arms, chest and legs simultaneously. Squeeze glutes hard at top.' },
-  'Towel Rows':             { videoUrl: 'https://youtu.be/LR4-_4exBTE', description: 'Loop a towel around a door handle at hip height. Lean back and row your chest to the door. Keep body straight.' },
-  'Table Rows':             { videoUrl: 'https://youtu.be/LR4-_4exBTE', description: 'Lie under a sturdy table, grip edge. Pull chest up to table keeping body in a straight line.' },
-  'Inverted Rows':          { videoUrl: 'https://youtu.be/LR4-_4exBTE', description: 'Hang under a bar with body straight — like a reverse push-up. Row chest up to bar. Full extension at bottom.' },
-  'Reverse Snow Angels':    { videoUrl: 'https://youtu.be/z6PJMT2y8GQ', description: 'Face down, arms at sides. Sweep arms up overhead in a snow-angel arc while staying lifted off the floor.' },
-  // ── Mobility ────────────────────────────────────────────────────────────
-  'Hip Mobility Flow':      { videoUrl: 'https://youtu.be/FSSDLDhbacc', description: 'Leg swings, 90/90 hip stretch, pigeon pose. Move slowly through full range, pause at end range.' },
-  'Shoulder Mobility':      { videoUrl: 'https://youtu.be/FSSDLDhbacc', description: 'Arm circles, cross-body stretch, doorway chest opener. No pain — gentle range of motion work only.' },
-  'Full Body Stretch Flow':  { videoUrl: 'https://youtu.be/FSSDLDhbacc', description: 'Cat-cow, quad stretch, hamstring stretch, thoracic rotation. Hold each position 30–45 s. Breathe deeply.' },
-  // ── Gym — Compound ───────────────────────────────────────────────────────
-  'Barbell Bench Press':    { videoUrl: 'https://youtu.be/vcBig73ojpE', description: 'Feet flat, arch maintained, grip slightly wider than shoulder-width. Lower to mid-chest, drive up explosively.' },
-  'Overhead Press':         { videoUrl: 'https://youtu.be/2yjwXTZQDDI', description: 'Bar at collar bone, elbows slightly forward. Brace core, press straight up, lock out overhead. Keep ribs down.' },
-  'Barbell Rows':           { videoUrl: 'https://youtu.be/G8l_8chR5BE', description: 'Hip hinge at 45°, bar close to shins. Drive elbows back to hip pockets. Controlled descent — no jerking.' },
-  'Pull-ups':               { videoUrl: 'https://youtu.be/eGo4IYlbE5g', description: 'Hang with full arm extension. Drive elbows down to ribs, chin above bar. No kipping — strict control only.' },
-  'Face Pulls':             { videoUrl: 'https://youtu.be/rep-qVOkqgk', description: 'Cable at face height, palms in. Pull to forehead with elbows high. Externally rotate shoulders at end position.' },
-  'Lateral Raises':         { videoUrl: 'https://youtu.be/3VcKaXpzqRo', description: 'Slight elbow bend, raise to shoulder height only. Lead with pinkies. Slow 3-sec lowering phase — no swinging.' },
-  'Barbell Squats':         { videoUrl: 'https://youtu.be/ultWZbUMPL8', description: 'Bar on upper traps, brace core. Drive knees out, squat to parallel. Keep heels flat throughout.' },
-  'Romanian Deadlifts':     { videoUrl: 'https://youtu.be/JCXUYuzwNrM', description: 'Slight knee bend, hinge at hips, bar close to legs. Feel hamstring stretch at bottom. Drive hips forward to stand.' },
-  'Leg Press':              { videoUrl: 'https://youtu.be/IZxyjW7MPJQ', description: 'Feet shoulder-width at mid-sled. Lower until knees at 90°. Don\'t fully lock out — keep tension on quads.' },
-  'Leg Curls':              { videoUrl: 'https://youtu.be/ELOCsoDSmrg', description: 'Full range of motion — don\'t cheat by shifting hips. Control the lowering phase for 3 seconds.' },
-  'Standing Calf Raises':   { videoUrl: 'https://youtu.be/gwLzBJYoWlI', description: 'Deep stretch at bottom, pause and squeeze at top. Slow 3-second descent for maximum muscle growth.' },
-  'Incline Bench Press':    { videoUrl: 'https://youtu.be/DbFgADa2PL8', description: '30–45° incline. Same technique as flat bench — lower bar to upper chest. Targets clavicular pec head.' },
-  'Cable Rows':             { videoUrl: 'https://youtu.be/GZbfZ033f74', description: 'Sit tall, pull handle to lower sternum. Squeeze shoulder blades together. Slow 2-sec return to full extension.' },
-  'Tricep Pushdowns':       { videoUrl: 'https://youtu.be/2-LAMcpzODU', description: 'Elbows pinned to sides. Push to full extension, squeeze triceps. Control return — don\'t let elbows flare out.' },
-  'Barbell Curls':          { videoUrl: 'https://youtu.be/kwG2ipFRgfo', description: 'Elbows pinned at sides. Full curl, squeeze at top, slow 2-sec descent. No swinging — strict form only.' },
-  'Conventional Deadlift':  { videoUrl: 'https://youtu.be/op9kVnSso6Q', description: 'Feet hip-width, bar over mid-foot. Brace hard, drive the floor away. Bar stays close to body throughout.' },
-  'Front Squats':           { videoUrl: 'https://youtu.be/m4ytaCJZpl0', description: 'Bar across front delts, elbows high. More upright torso than back squat. Greater quad and core demand.' },
-  'Bulgarian Split Squats': { videoUrl: 'https://youtu.be/2C-uNgKwPLE', description: 'Rear foot elevated on bench. Lower front knee to 90°. Keep torso upright. Push through front heel to stand.' },
-  'Hip Thrusts':            { videoUrl: 'https://youtu.be/SEdqd1n0cvg', description: 'Upper back on bench, bar across hips. Drive through heels, squeeze glutes hard at top. Full hip extension.' },
-  'Seated Calf Raises':     { videoUrl: 'https://youtu.be/gwLzBJYoWlI', description: 'Targets the soleus (lower calf). Same full-range principle — deep stretch then slow squeeze. Use the knee pad.' },
-}
-
-interface ProgrammeDay {
-  dayOfWeek: number  // 0=Mon … 6=Sun
-  dayName: string
-  label: string
-  focus: string
-  color: string
-  gradient: string
-  isRest?: boolean
-  exercises: ExerciseDef[]
-}
-
-// ─── Home 6-Day Transformation ────────────────────────────────────────────────
-const HOME_6DAY: ProgrammeDay[] = [
-  {
-    dayOfWeek: 0, dayName: 'Mon', label: 'Push + Core', focus: 'Chest · Shoulders · Triceps · Core',
-    color: '#10b981', gradient: 'linear-gradient(135deg,#059669,#047857)',
-    exercises: [
-      { name: 'Push-ups',          muscleGroup: 'Chest',      sets: 4, repRange: '12-15', emoji: '💪', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 60 },
-      { name: 'Incline Push-ups',  muscleGroup: 'Upper Chest',sets: 3, repRange: '15',    emoji: '📐', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 60 },
-      { name: 'Chair Dips',        muscleGroup: 'Triceps',    sets: 4, repRange: '10-12', emoji: '🪑', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 60 },
-      { name: 'Pike Push-ups',     muscleGroup: 'Shoulders',  sets: 3, repRange: '8-10',  emoji: '🔺', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 60 },
-      { name: 'Plank Hold',        muscleGroup: 'Core',       sets: 3, repRange: '45s',   emoji: '⏱️', videoUrl: 'https://youtu.be/W7seSnZ1k1A', restSeconds: 30, isTime: true },
-      { name: 'Bicycle Crunches',  muscleGroup: 'Core',       sets: 3, repRange: '20',    emoji: '🚴', videoUrl: 'https://youtu.be/W7seSnZ1k1A', restSeconds: 30 },
-      { name: 'Leg Raises',        muscleGroup: 'Core',       sets: 3, repRange: '15',    emoji: '🦵', videoUrl: 'https://youtu.be/W7seSnZ1k1A', restSeconds: 30 },
-    ],
-  },
-  {
-    dayOfWeek: 1, dayName: 'Tue', label: 'HIIT + Legs', focus: 'Cardio · Quads · Hamstrings · Calves',
-    color: '#f59e0b', gradient: 'linear-gradient(135deg,#d97706,#b45309)',
-    exercises: [
-      { name: 'Jump Squats (HIIT ×4)',    muscleGroup: 'Quads',     sets: 4, repRange: '40s',     emoji: '⚡', videoUrl: 'https://youtu.be/QyCFeB8mBz8', restSeconds: 20, isTime: true },
-      { name: 'Mountain Climbers (HIIT)', muscleGroup: 'Full Body',  sets: 4, repRange: '40s',     emoji: '🏔️', videoUrl: 'https://youtu.be/QyCFeB8mBz8', restSeconds: 20, isTime: true },
-      { name: 'High Knees (HIIT)',        muscleGroup: 'Cardio',    sets: 4, repRange: '40s',     emoji: '🏃', videoUrl: 'https://youtu.be/QyCFeB8mBz8', restSeconds: 20, isTime: true },
-      { name: 'Bodyweight Squats',        muscleGroup: 'Quads',     sets: 4, repRange: '20',      emoji: '🦵', videoUrl: 'https://youtu.be/QyCFeB8mBz8', restSeconds: 45 },
-      { name: 'Reverse Lunges',           muscleGroup: 'Glutes',    sets: 3, repRange: '12/leg',  emoji: '🚶', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 45 },
-      { name: 'Wall Sit',                 muscleGroup: 'Quads',     sets: 3, repRange: '60s',     emoji: '🧱', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 30, isTime: true },
-      { name: 'Calf Raises',              muscleGroup: 'Calves',    sets: 4, repRange: '25',      emoji: '🦶', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 30 },
-    ],
-  },
-  {
-    dayOfWeek: 2, dayName: 'Wed', label: 'Pull + Abs', focus: 'Back · Biceps · Rear Delts · Abs',
-    color: '#6366f1', gradient: 'linear-gradient(135deg,#4f46e5,#4338ca)',
-    exercises: [
-      { name: 'Resistance Band Rows', muscleGroup: 'Back',       sets: 4, repRange: '15',  emoji: '🚣', videoUrl: 'https://youtu.be/B12MXF0bSFo', restSeconds: 60 },
-      { name: 'Superman Hold',        muscleGroup: 'Lower Back',  sets: 3, repRange: '40s', emoji: '🦸', videoUrl: 'https://youtu.be/B12MXF0bSFo', restSeconds: 30, isTime: true },
-      { name: 'Towel Rows',           muscleGroup: 'Biceps',     sets: 3, repRange: '12',  emoji: '🧺', videoUrl: 'https://youtu.be/B12MXF0bSFo', restSeconds: 60 },
-      { name: 'Reverse Snow Angels',  muscleGroup: 'Rear Delts', sets: 3, repRange: '15',  emoji: '😇', videoUrl: 'https://youtu.be/B12MXF0bSFo', restSeconds: 45 },
-      { name: 'Russian Twists',       muscleGroup: 'Obliques',   sets: 3, repRange: '25',  emoji: '🌀', videoUrl: 'https://youtu.be/W7seSnZ1k1A', restSeconds: 30 },
-      { name: 'Flutter Kicks',        muscleGroup: 'Lower Abs',  sets: 3, repRange: '30',  emoji: '🦋', videoUrl: 'https://youtu.be/W7seSnZ1k1A', restSeconds: 30 },
-      { name: 'Hollow Body Hold',     muscleGroup: 'Core',       sets: 3, repRange: '30s', emoji: '⭕', videoUrl: 'https://youtu.be/W7seSnZ1k1A', restSeconds: 30, isTime: true },
-    ],
-  },
-  {
-    dayOfWeek: 3, dayName: 'Thu', label: 'Active Recovery', focus: 'Mobility · Flexibility · Zone 2 Cardio',
-    color: '#06b6d4', gradient: 'linear-gradient(135deg,#0891b2,#0e7490)',
-    exercises: [
-      { name: 'Hip Mobility Flow',      muscleGroup: 'Hips',      sets: 1, repRange: '10 min',     emoji: '🧘', videoUrl: 'https://youtu.be/B12MXF0bSFo', restSeconds: 0, isTime: true },
-      { name: 'Shoulder Mobility',      muscleGroup: 'Shoulders', sets: 1, repRange: '10 min',     emoji: '🔄', videoUrl: 'https://youtu.be/B12MXF0bSFo', restSeconds: 0, isTime: true },
-      { name: 'Full Body Stretch Flow', muscleGroup: 'Full Body', sets: 1, repRange: '15 min',     emoji: '🌿', videoUrl: 'https://youtu.be/B12MXF0bSFo', restSeconds: 0, isTime: true },
-      { name: 'Brisk Walk (Zone 2)',    muscleGroup: 'Cardio',    sets: 1, repRange: '8-10k steps', emoji: '🚶', videoUrl: 'https://youtu.be/B12MXF0bSFo', restSeconds: 0 },
-    ],
-  },
-  {
-    dayOfWeek: 4, dayName: 'Fri', label: 'Full Body Strength', focus: 'Circuit · Compound · Power',
-    color: '#ec4899', gradient: 'linear-gradient(135deg,#db2777,#be185d)',
-    exercises: [
-      { name: 'Circuit: Push-ups ×4',     muscleGroup: 'Chest',     sets: 4, repRange: '15',  emoji: '💪', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 0 },
-      { name: 'Circuit: Squats ×4',       muscleGroup: 'Quads',     sets: 4, repRange: '20',  emoji: '🦵', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 0 },
-      { name: 'Circuit: Lunges ×4',       muscleGroup: 'Glutes',    sets: 4, repRange: '12',  emoji: '🚶', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 0 },
-      { name: 'Circuit: Plank ×4',        muscleGroup: 'Core',      sets: 4, repRange: '45s', emoji: '⏱️', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 0, isTime: true },
-      { name: 'Circuit: Burpees ×4',      muscleGroup: 'Full Body', sets: 4, repRange: '10',  emoji: '⚡', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 0 },
-      { name: 'Circuit: Shoulder Taps ×4',muscleGroup: 'Core',      sets: 4, repRange: '20',  emoji: '👐', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 60 },
-    ],
-  },
-  {
-    dayOfWeek: 5, dayName: 'Sat', label: 'Fat Burn Accelerator', focus: 'HIIT Ladder · Cardio Finisher',
-    color: '#ef4444', gradient: 'linear-gradient(135deg,#dc2626,#b91c1c)',
-    exercises: [
-      { name: 'Ladder: Jumping Jacks (10→20→30)', muscleGroup: 'Cardio',    sets: 2, repRange: 'ladder', emoji: '⭐', videoUrl: 'https://youtu.be/QyCFeB8mBz8', restSeconds: 30 },
-      { name: 'Ladder: Mountain Climbers',         muscleGroup: 'Full Body', sets: 2, repRange: 'ladder', emoji: '🏔️', videoUrl: 'https://youtu.be/QyCFeB8mBz8', restSeconds: 30 },
-      { name: 'Ladder: Squats',                    muscleGroup: 'Quads',     sets: 2, repRange: 'ladder', emoji: '🦵', videoUrl: 'https://youtu.be/QyCFeB8mBz8', restSeconds: 30 },
-      { name: 'Ladder: Sit-ups',                   muscleGroup: 'Core',      sets: 2, repRange: 'ladder', emoji: '💥', videoUrl: 'https://youtu.be/W7seSnZ1k1A', restSeconds: 30 },
-      { name: 'Brisk Walk Finisher',               muscleGroup: 'Cardio',    sets: 1, repRange: '20 min', emoji: '🚶', videoUrl: 'https://youtu.be/QyCFeB8mBz8', restSeconds: 0, isTime: true },
-    ],
-  },
-  {
-    dayOfWeek: 6, dayName: 'Sun', label: 'Rest Day', focus: 'Recovery · Sleep · Nutrition',
-    color: '#64748b', gradient: 'linear-gradient(135deg,#475569,#334155)',
-    isRest: true, exercises: [],
-  },
-]
-
-// ─── Gym Upper / Lower Split (4-day) ──────────────────────────────────────────
-const GYM_UPPER_LOWER: ProgrammeDay[] = [
-  {
-    dayOfWeek: 0, dayName: 'Mon', label: 'Upper A', focus: 'Chest · Shoulders · Back · Arms',
-    color: '#7c3aed', gradient: 'linear-gradient(135deg,#6d28d9,#5b21b6)',
-    exercises: [
-      { name: 'Barbell Bench Press', muscleGroup: 'Chest',      sets: 4, repRange: '6-8',   emoji: '🏋️', videoUrl: 'https://youtu.be/rT7DgCr-3pg', restSeconds: 120 },
-      { name: 'Overhead Press',      muscleGroup: 'Shoulders',  sets: 3, repRange: '8-10',  emoji: '🔺', videoUrl: 'https://youtu.be/2yjwXTZQDDI', restSeconds: 90 },
-      { name: 'Barbell Rows',        muscleGroup: 'Back',       sets: 4, repRange: '8-10',  emoji: '🚣', videoUrl: 'https://youtu.be/G8l_8chR5BE', restSeconds: 90 },
-      { name: 'Pull-ups',            muscleGroup: 'Lats',       sets: 3, repRange: '6-10',  emoji: '💪', videoUrl: 'https://youtu.be/eGo4IYlbE5g', restSeconds: 90 },
-      { name: 'Face Pulls',          muscleGroup: 'Rear Delts', sets: 3, repRange: '15-20', emoji: '😤', videoUrl: 'https://youtu.be/rep-qVOkqgk', restSeconds: 60 },
-      { name: 'Lateral Raises',      muscleGroup: 'Shoulders',  sets: 3, repRange: '12-15', emoji: '✈️', videoUrl: 'https://youtu.be/3VcKaXpzqRo', restSeconds: 60 },
-    ],
-  },
-  {
-    dayOfWeek: 1, dayName: 'Tue', label: 'Lower A', focus: 'Quads · Hamstrings · Glutes · Calves',
-    color: '#06b6d4', gradient: 'linear-gradient(135deg,#0891b2,#0e7490)',
-    exercises: [
-      { name: 'Barbell Squats',       muscleGroup: 'Quads',      sets: 4, repRange: '6-8',   emoji: '🦵', videoUrl: 'https://youtu.be/ultWZbUMPL8', restSeconds: 180 },
-      { name: 'Romanian Deadlifts',   muscleGroup: 'Hamstrings', sets: 3, repRange: '8-10',  emoji: '🏗️', videoUrl: 'https://youtu.be/JCXUYuzwNrM', restSeconds: 120 },
-      { name: 'Leg Press',            muscleGroup: 'Quads',      sets: 3, repRange: '10-12', emoji: '🖐️', videoUrl: 'https://youtu.be/IZxyjW7MPJQ', restSeconds: 90 },
-      { name: 'Leg Curls',            muscleGroup: 'Hamstrings', sets: 3, repRange: '12-15', emoji: '🦿', videoUrl: 'https://youtu.be/n3unkKfBHQ4', restSeconds: 60 },
-      { name: 'Standing Calf Raises', muscleGroup: 'Calves',     sets: 4, repRange: '15-20', emoji: '🦶', videoUrl: 'https://youtu.be/JbyjNymZOt0', restSeconds: 45 },
-    ],
-  },
-  {
-    dayOfWeek: 2, dayName: 'Wed', label: 'Rest Day', focus: 'Recovery · Sleep · Nutrition',
-    color: '#64748b', gradient: 'linear-gradient(135deg,#475569,#334155)',
-    isRest: true, exercises: [],
-  },
-  {
-    dayOfWeek: 3, dayName: 'Thu', label: 'Upper B', focus: 'Chest · Back · Arms · Shoulders',
-    color: '#7c3aed', gradient: 'linear-gradient(135deg,#6d28d9,#5b21b6)',
-    exercises: [
-      { name: 'Incline Bench Press', muscleGroup: 'Upper Chest', sets: 4, repRange: '8-10',  emoji: '📐', videoUrl: 'https://youtu.be/jPLdzuHckI8', restSeconds: 120 },
-      { name: 'Cable Rows',          muscleGroup: 'Back',        sets: 4, repRange: '10-12', emoji: '🔗', videoUrl: 'https://youtu.be/GZbfZ033f74', restSeconds: 90 },
-      { name: 'Lateral Raises',      muscleGroup: 'Shoulders',   sets: 3, repRange: '12-15', emoji: '✈️', videoUrl: 'https://youtu.be/3VcKaXpzqRo', restSeconds: 60 },
-      { name: 'Tricep Pushdowns',    muscleGroup: 'Triceps',     sets: 3, repRange: '12-15', emoji: '⬇️', videoUrl: 'https://youtu.be/2-LAMcpzODU', restSeconds: 60 },
-      { name: 'Barbell Curls',       muscleGroup: 'Biceps',      sets: 3, repRange: '10-12', emoji: '💪', videoUrl: 'https://youtu.be/ykJmrZ5v0Oo', restSeconds: 60 },
-    ],
-  },
-  {
-    dayOfWeek: 4, dayName: 'Fri', label: 'Lower B', focus: 'Posterior Chain · Glutes · Legs',
-    color: '#06b6d4', gradient: 'linear-gradient(135deg,#0891b2,#0e7490)',
-    exercises: [
-      { name: 'Conventional Deadlift',  muscleGroup: 'Back/Glutes', sets: 4, repRange: '4-6',      emoji: '⚡', videoUrl: 'https://youtu.be/op9kVnSso6Q', restSeconds: 180 },
-      { name: 'Front Squats',           muscleGroup: 'Quads',       sets: 3, repRange: '8-10',     emoji: '🦵', videoUrl: 'https://youtu.be/uYumuL_G_V0', restSeconds: 120 },
-      { name: 'Bulgarian Split Squats', muscleGroup: 'Glutes',      sets: 3, repRange: '8-10/leg', emoji: '🚶', videoUrl: 'https://youtu.be/2C-uNgKwPLE', restSeconds: 90 },
-      { name: 'Hip Thrusts',            muscleGroup: 'Glutes',      sets: 3, repRange: '12-15',    emoji: '🍑', videoUrl: 'https://youtu.be/SEdqd1n0cvg', restSeconds: 90 },
-      { name: 'Seated Calf Raises',     muscleGroup: 'Calves',      sets: 4, repRange: '15-20',    emoji: '🦶', videoUrl: 'https://youtu.be/JbyjNymZOt0', restSeconds: 45 },
-    ],
-  },
-  {
-    dayOfWeek: 5, dayName: 'Sat', label: 'Rest Day', focus: 'Recovery · Sleep · Nutrition',
-    color: '#64748b', gradient: 'linear-gradient(135deg,#475569,#334155)',
-    isRest: true, exercises: [],
-  },
-  {
-    dayOfWeek: 6, dayName: 'Sun', label: 'Rest Day', focus: 'Recovery · Sleep · Nutrition',
-    color: '#64748b', gradient: 'linear-gradient(135deg,#475569,#334155)',
-    isRest: true, exercises: [],
-  },
-]
-
-// ─── Beginner Bodyweight (3-day) ──────────────────────────────────────────────
-const BEGINNER_3DAY: ProgrammeDay[] = [
-  {
-    dayOfWeek: 0, dayName: 'Mon', label: 'Full Body A', focus: 'Push · Hinge · Core',
-    color: '#10b981', gradient: 'linear-gradient(135deg,#059669,#047857)',
-    exercises: [
-      { name: 'Push-ups',          muscleGroup: 'Chest',  sets: 3, repRange: '8-12', emoji: '💪', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 60 },
-      { name: 'Bodyweight Squats', muscleGroup: 'Quads',  sets: 3, repRange: '15',   emoji: '🦵', videoUrl: 'https://youtu.be/QyCFeB8mBz8', restSeconds: 60 },
-      { name: 'Table Rows',        muscleGroup: 'Back',   sets: 3, repRange: '10-12',emoji: '🚣', videoUrl: 'https://youtu.be/B12MXF0bSFo', restSeconds: 60 },
-      { name: 'Plank Hold',        muscleGroup: 'Core',   sets: 3, repRange: '30s',  emoji: '⏱️', videoUrl: 'https://youtu.be/W7seSnZ1k1A', restSeconds: 30, isTime: true },
-      { name: 'Glute Bridges',     muscleGroup: 'Glutes', sets: 3, repRange: '15',   emoji: '🍑', videoUrl: 'https://youtu.be/SEdqd1n0cvg', restSeconds: 30 },
-    ],
-  },
-  {
-    dayOfWeek: 1, dayName: 'Tue', label: 'Rest Day', focus: 'Recovery · Sleep · Nutrition',
-    color: '#64748b', gradient: 'linear-gradient(135deg,#475569,#334155)',
-    isRest: true, exercises: [],
-  },
-  {
-    dayOfWeek: 2, dayName: 'Wed', label: 'Full Body B', focus: 'Push variation · Squat variation · Anti-rotation',
-    color: '#f59e0b', gradient: 'linear-gradient(135deg,#d97706,#b45309)',
-    exercises: [
-      { name: 'Incline Push-ups', muscleGroup: 'Upper Chest', sets: 3, repRange: '10-15',   emoji: '📐', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 60 },
-      { name: 'Reverse Lunges',   muscleGroup: 'Glutes',      sets: 3, repRange: '10/leg',  emoji: '🚶', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 60 },
-      { name: 'Superman Hold',    muscleGroup: 'Lower Back',  sets: 3, repRange: '30s',     emoji: '🦸', videoUrl: 'https://youtu.be/B12MXF0bSFo', restSeconds: 30, isTime: true },
-      { name: 'Side Plank',       muscleGroup: 'Obliques',    sets: 3, repRange: '25s/side', emoji: '↔️', videoUrl: 'https://youtu.be/W7seSnZ1k1A', restSeconds: 30, isTime: true },
-      { name: 'Hip Thrusts',      muscleGroup: 'Glutes',      sets: 3, repRange: '12-15',   emoji: '⬆️', videoUrl: 'https://youtu.be/SEdqd1n0cvg', restSeconds: 45 },
-    ],
-  },
-  {
-    dayOfWeek: 3, dayName: 'Thu', label: 'Rest Day', focus: 'Recovery · Sleep · Nutrition',
-    color: '#64748b', gradient: 'linear-gradient(135deg,#475569,#334155)',
-    isRest: true, exercises: [],
-  },
-  {
-    dayOfWeek: 4, dayName: 'Fri', label: 'Full Body C', focus: 'Dip · Hinge · Pull · Core endurance',
-    color: '#ec4899', gradient: 'linear-gradient(135deg,#db2777,#be185d)',
-    exercises: [
-      { name: 'Chair Dips',        muscleGroup: 'Triceps',   sets: 3, repRange: '8-12',  emoji: '🪑', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 60 },
-      { name: 'Step-ups',          muscleGroup: 'Quads',     sets: 3, repRange: '10/leg', emoji: '🪜', videoUrl: 'https://youtu.be/hJh4ze7s3GQ', restSeconds: 45 },
-      { name: 'Inverted Rows',     muscleGroup: 'Back',      sets: 3, repRange: '8-12',  emoji: '↩️', videoUrl: 'https://youtu.be/B12MXF0bSFo', restSeconds: 60 },
-      { name: 'Hollow Body Hold',  muscleGroup: 'Core',      sets: 3, repRange: '20s',   emoji: '⭕', videoUrl: 'https://youtu.be/W7seSnZ1k1A', restSeconds: 30, isTime: true },
-      { name: 'Mountain Climbers', muscleGroup: 'Full Body', sets: 3, repRange: '30s',   emoji: '🏔️', videoUrl: 'https://youtu.be/QyCFeB8mBz8', restSeconds: 30, isTime: true },
-    ],
-  },
-  {
-    dayOfWeek: 5, dayName: 'Sat', label: 'Rest Day', focus: 'Recovery · Sleep · Nutrition',
-    color: '#64748b', gradient: 'linear-gradient(135deg,#475569,#334155)',
-    isRest: true, exercises: [],
-  },
-  {
-    dayOfWeek: 6, dayName: 'Sun', label: 'Rest Day', focus: 'Recovery · Sleep · Nutrition',
-    color: '#64748b', gradient: 'linear-gradient(135deg,#475569,#334155)',
-    isRest: true, exercises: [],
-  },
-]
-
-const PROGRAMMES: Record<ProgrammeKey, ProgrammeDay[]> = {
-  home_6day: HOME_6DAY,
-  gym_upper_lower: GYM_UPPER_LOWER,
-  beginner_3day: BEGINNER_3DAY,
-}
-
-const PROGRAMME_LABELS: Record<ProgrammeKey, string> = {
-  home_6day: '🏠 Home 6-Day',
-  gym_upper_lower: '🏋️ Gym Upper/Lower',
-  beginner_3day: '🌱 Beginner 3-Day',
-}
+import RestTimerOverlay from '@/components/workout/RestTimerOverlay'
+import WorkoutShareCard from '@/components/workout/WorkoutShareCard'
+import { getWeekStart } from '@/lib/utils'
+import {
+  type ExerciseDef, EXERCISE_INFO, PROGRAMMES, PROGRAMME_LABELS,
+} from '@/lib/workout/exerciseData'
 
 // ─── 12-Week Phases ───────────────────────────────────────────────────────────
 const PHASES = [
@@ -386,8 +80,7 @@ export default function WorkoutPage() {
   const [programmeKey, setProgrammeKey] = useState<ProgrammeKey>('home_6day')
   const [selectedDay, setSelectedDay] = useState(() => {
     const dow = new Date().getDay()  // 0=Sun
-    const mapped = dow === 0 ? 6 : dow - 1  // 0=Mon
-    return Math.min(mapped, 5)
+    return dow === 0 ? 6 : dow - 1  // Mon=0 … Sat=5, Sun=6 (all programmes have 7 days)
   })
   const [exercises, setExercises] = useState<ExerciseLog[]>([])
   const [userWeightKg, setUserWeightKg] = useState(83)
@@ -400,7 +93,10 @@ export default function WorkoutPage() {
   const [cardioLogged, setCardioLogged] = useState(false)
   const [completedWorkoutDates, setCompletedWorkoutDates] = useState<Set<string>>(new Set())
   const [workoutCount, setWorkoutCount] = useState(0)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [lastCompletedExIdx, setLastCompletedExIdx] = useState(0)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [sharing, setSharing] = useState(false)
+  const shareCardRef = useRef<HTMLDivElement>(null)
 
   // ISO date strings for Mon–Sun of the current week (index 0=Mon, 6=Sun)
   const weekDates = useMemo(() => {
@@ -425,6 +121,7 @@ export default function WorkoutPage() {
       const saved = localStorage.getItem(`sbh_week_${user.uid}`)
       setProgrammeWeek(saved ? Math.min(Math.max(parseInt(saved), 1), 12) : 1)
       const profile = await getProfile(user.uid)
+      setProfile(profile)
       if (profile?.programme) setProgrammeKey(profile.programme)
       if (profile?.weightKg) setUserWeightKg(profile.weightKg)
       // Load completed workout dates to grey out finished days in the week view
@@ -484,13 +181,6 @@ export default function WorkoutPage() {
     localStorage.setItem(draftKey, JSON.stringify(exercises))
   }, [exercises, uid, selectedDay, completed])
 
-  useEffect(() => {
-    if (restTimer === null) return
-    if (restTimer <= 0) { setRestTimer(null); return }
-    timerRef.current = setInterval(() => setRestTimer(t => (t ?? 0) - 1), 1000)
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [restTimer])
-
   function updateSet(exIdx: number, setIdx: number, field: keyof SetLog, value: number | boolean) {
     setExercises(prev => prev.map((ex, i) => i !== exIdx ? ex : {
       ...ex,
@@ -500,6 +190,7 @@ export default function WorkoutPage() {
 
   function completeSet(exIdx: number, setIdx: number) {
     updateSet(exIdx, setIdx, 'completed', true)
+    setLastCompletedExIdx(exIdx)
     const rest = exercises[exIdx].sets[setIdx].restSeconds
     if (rest > 0) setRestTimer(rest)
   }
@@ -524,9 +215,62 @@ export default function WorkoutPage() {
     await saveWorkout(uid, workout)
     // Clear draft after successful save
     localStorage.removeItem(`sbh_workout_draft_${uid}_${todayStr}_${selectedDay}`)
-    setCompletedWorkoutDates(prev => new Set(Array.from(prev).concat(todayStr)))
+    setCompletedWorkoutDates(prev => {
+      const next = new Set(Array.from(prev).concat(todayStr))
+      // Update leaderboard if user opted in
+      if (profile?.publicProfile) {
+        const weekKey = getWeekStart(new Date())
+        const weekCount = Array.from(next).filter(d => d >= weekKey && d <= todayStr).length
+        savePublicProfileFields(uid, profile.displayName ?? '').then(({ username, referralCode }) => {
+          updateLeaderboardEntry(weekKey, {
+            uid,
+            displayName: profile.displayName ?? 'Anonymous',
+            goal: profile.goal ?? '',
+            workoutCount: weekCount,
+            updatedAt: serverTimestamp(),
+          })
+          // Persist username + referralCode back to profile state
+          setProfile(p => p ? { ...p, username, referralCode } : p)
+        })
+      }
+      return next
+    })
     setSaving(false)
     setCompleted(true)
+  }
+
+  // Stable callback — prevents RestTimerOverlay interval from restarting on every parent render
+  const dismissRestTimer = useCallback(() => setRestTimer(null), [])
+
+  async function handleShareWorkout(duration: number, volume: number, calories: number) {
+    if (!shareCardRef.current || sharing) return
+    setSharing(true)
+    try {
+      const { default: html2canvas } = await import('html2canvas')
+      const canvas = await html2canvas(shareCardRef.current, { backgroundColor: null, scale: 2 })
+      canvas.toBlob(async blob => {
+        if (!blob) { setSharing(false); return }
+        const file = new File([blob], 'sbh-workout.png', { type: 'image/png' })
+        const shareData = {
+          title: 'Workout Complete — SBH',
+          text: `Just crushed a workout! ${duration}min · ${volume.toFixed(0)}kg · ${calories}kcal`,
+          files: [file],
+        }
+        if (navigator.canShare && navigator.canShare(shareData)) {
+          await navigator.share(shareData)
+        } else {
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = 'sbh-workout.png'
+          a.click()
+          URL.revokeObjectURL(url)
+        }
+        setSharing(false)
+      }, 'image/png')
+    } catch {
+      setSharing(false)
+    }
   }
 
   if (!authReady) return (
@@ -540,8 +284,21 @@ export default function WorkoutPage() {
     const duration = Math.round((Date.now() - startTime) / 60000)
     const volume = exercises.reduce((t, ex) =>
       t + ex.sets.filter(s => s.completed).reduce((tt, s) => tt + s.weightKg * s.reps, 0), 0)
+    const calories = estimateCaloriesBurned(duration, userWeightKg)
+    const todayStr = new Date().toISOString().slice(0, 10)
+    const prog = PROGRAMME[selectedDay]
     return (
       <main className="min-h-screen mesh-bg flex items-center justify-center p-5">
+        {/* Hidden card for html2canvas screenshot */}
+        <WorkoutShareCard
+          ref={shareCardRef}
+          programmeName={prog.label}
+          date={todayStr}
+          duration={duration}
+          volume={volume}
+          calories={calories}
+          xp={150}
+        />
         <div className="max-w-sm w-full glass-strong rounded-3xl p-8 text-center space-y-5">
           <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto glow-violet"
             style={{background:'linear-gradient(135deg,#7c3aed,#6d28d9)'}}>
@@ -555,7 +312,7 @@ export default function WorkoutPage() {
             {[
               ['Duration', `${duration} min`],
               ['Total Volume', `${volume.toFixed(1)} kg`],
-              ['Est. Burned', `${estimateCaloriesBurned(duration, userWeightKg)} kcal`],
+              ['Est. Burned', `${calories} kcal`],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between">
                 <span className="text-2">{k}</span>
@@ -574,6 +331,14 @@ export default function WorkoutPage() {
             </div>
           )}
           {cardioLogged && <p className="text-xs font-semibold" style={{color:'#7c3aed'}}>✓ Cardio logged! +25 XP</p>}
+          <button
+            onClick={() => handleShareWorkout(duration, volume, calories)}
+            disabled={sharing}
+            className="w-full py-3 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 glass border"
+            style={{borderColor:'rgba(124,58,237,0.3)', color:'#7c3aed'}}>
+            <Share2 size={15} />
+            {sharing ? 'Generating…' : 'Share Workout'}
+          </button>
           <button onClick={() => router.push('/dashboard')}
             className="w-full py-3.5 rounded-2xl font-bold text-white"
             style={{background:'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow:'0 0 32px -8px #7c3aed60'}}>
@@ -593,12 +358,13 @@ export default function WorkoutPage() {
 
   return (
     <main className="min-h-screen mesh-bg page-pad">
-      {/* Rest timer banner */}
+      {/* Rest timer overlay */}
       {restTimer !== null && (
-        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-3 py-3 font-bold text-sm"
-          style={{background:'#f59e0b', color:'#0f172a'}}>
-          <Timer size={16} /> Rest: {restTimer}s — breathe deeply
-        </div>
+        <RestTimerOverlay
+          seconds={restTimer}
+          exerciseName={exercises[lastCompletedExIdx]?.exerciseName ?? ''}
+          onDismiss={dismissRestTimer}
+        />
       )}
 
       {/* Header */}
@@ -617,9 +383,14 @@ export default function WorkoutPage() {
         <div className="flex items-center gap-2">
           <Dumbbell size={18} style={{color: prog.color}} />
           <h1 className="text-xl font-bold text-1">{prog.label}</h1>
-          <Link href="/workout/history" className="ml-auto p-2 rounded-xl glass" title="Workout history">
-            <History size={16} className="text-slate-400" />
-          </Link>
+          <div className="ml-auto flex gap-2">
+            <Link href="/exercises" className="p-2 rounded-xl glass" title="Exercise library">
+              <BookOpen size={16} className="text-slate-400" />
+            </Link>
+            <Link href="/workout/history" className="p-2 rounded-xl glass" title="Workout history">
+              <History size={16} className="text-slate-400" />
+            </Link>
+          </div>
         </div>
         <p className="text-xs text-2 mt-0.5">{prog.focus}</p>
       </header>

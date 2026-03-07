@@ -5,6 +5,73 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.0] — 2026-03-07
+
+### Added
+- **Workout Share Card** (`components/workout/WorkoutShareCard.tsx`)
+  - html2canvas screenshot of a styled card showing programme, date, duration, volume, calories, XP
+  - "Share Workout" button on completion screen; uses Web Share API with PNG download fallback
+- **Weekly Challenges + Leaderboard** (`app/challenges/page.tsx`)
+  - Personal weekly goals: workout ring, nutrition days ring, streak ring (SVG progress)
+  - Opt-in leaderboard at `leaderboards/{weekKey}/entries/{uid}` (public read, own-entry write)
+  - Leaderboard ranks by workout count; current user row highlighted in violet
+- **Referral / Invite System**
+  - `/api/referral/[code]` — Admin SDK collectionGroup query, returns inviter's display name
+  - Register page reads `?ref=` param; shows "Invited by {name} 🎉" banner; saves `referredBy`
+  - Profile page: Public Profile toggle, copy invite link, Web Share button, public profile URL
+- **Public Profile** (`app/u/[username]`)
+  - Server component; 404 for private/unknown users
+  - Shows avatar, goal chip, experience chip, streak, 30-day workout count, member since year
+  - "Join SBH →" CTA for unauthenticated visitors
+- **UserProfile extensions** — `publicProfile?`, `username?`, `referralCode?`, `referredBy?`
+- **Admin SDK helpers** — `getPublicProfileByUsername`, `getPublicStats` (server-side only)
+- **Firestore helpers** — `updateLeaderboardEntry`, `getLeaderboard`, `savePublicProfileFields`, `generateUsername`
+- **Challenges link** added to Profile page navigation
+
+### Fixed
+- **Glucose save undefined crash** — `notes: readingNotes || undefined` replaced with conditional spread; Firebase SDK v12 throws on explicit `undefined` values
+- **Sunday workout crash** — `Math.min(mapped, 5)` replaced with `dow === 0 ? 6 : dow - 1`; Sunday was incorrectly showing Saturday's exercises
+- **Rest timer restart bug** — `onDismiss` callback wrapped in `useCallback`; inline arrow caused RestTimerOverlay interval to cancel/restart on every parent render
+
+### Tests
+- `__tests__/lib/workout.test.ts` — 28 tests: day mapping, all programmes 7-day completeness, Sunday rest, Saturday exercises, ladder repRange, ALL_EXERCISES deduplication
+- `__tests__/lib/glucoseSave.test.ts` — 8 tests: notes field omission, no undefined values, Firestore safety
+- Total: **167 tests** (was 131)
+
+---
+
+## [2.0.0] — 2026-03-07
+
+### Added
+- **Exercise Library** (`app/exercises/page.tsx`)
+  - Browse all exercises across all 3 training programmes (Home, Gym, Beginner)
+  - Real-time search + muscle group filter chips (colour-coded badges)
+  - Accordion cards — tap to expand: description, programme labels, YouTube tutorial link
+  - Derived from `lib/workout/exerciseData.ts`: `ALL_EXERCISES` (deduplicated) + `MUSCLE_GROUPS`
+- **Exercise data module** (`lib/workout/exerciseData.ts`)
+  - Extracted `ExerciseDef`, `ProgrammeDay`, `EXERCISE_INFO`, `HOME_6DAY`, `GYM_UPPER_LOWER`, `BEGINNER_3DAY`, `PROGRAMMES`, `PROGRAMME_LABELS` from workout page into a shared module
+  - Exports `ALL_EXERCISES` (unique, deduplicated) and `MUSCLE_GROUPS` (sorted) as derived helpers
+- **Enhanced Rest Timer** (`components/workout/RestTimerOverlay.tsx`)
+  - Full-screen backdrop-blur overlay replaces the old inline banner
+  - SVG countdown ring with smooth `stroke-dasharray` animation
+  - Web Audio API beep (880Hz, 0.4s decay) on timer completion
+  - +15s extend button and Skip → dismiss button
+  - Shows next exercise name during rest
+- **Workout page** — BookOpen icon link to `/exercises` in page header alongside History link
+- **Meal-type breakdown pie chart** in Nutrition page
+  - Recharts `PieChart` with `innerRadius` donut style
+  - Groups today's meals by type (Breakfast/Lunch/Dinner/Snack/Pre-WO/Post-WO)
+  - Colour-coded segments with matching legend; shown only when ≥ 2 meal types logged
+- **My Stats card** in Profile page
+  - Shows: Workouts (90d), Total Volume lifted, Current Streak, Avg Sleep (30d)
+  - Each stat is a tappable link to the relevant page (/workout/history, /metrics, /sleep)
+  - Loaded in parallel with profile data on mount
+
+### Changed
+- Workout page no longer defines exercise data inline — all constants imported from `lib/workout/exerciseData`
+
+---
+
 ## [1.9.0] — 2026-03-06
 
 ### Added

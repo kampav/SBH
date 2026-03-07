@@ -37,7 +37,21 @@ export interface UserProfile {
   onboardingComplete: boolean
   photoUrl?: string
   consents?: UserConsents             // GDPR / DPDP / PDPL consent record
+  // Social / Phase 11
+  publicProfile?: boolean             // opt-in: appears on leaderboard + /u/[username]
+  username?: string                   // auto-generated e.g. "pavku_a1b2"
+  referralCode?: string               // uid.substring(0,8).toUpperCase()
+  referredBy?: string                 // referralCode of the person who invited them
   createdAt: FirestoreTimestamp
+  updatedAt: FirestoreTimestamp
+}
+
+// ─── Leaderboard ──────────────────────────────────────────────────────────────
+export interface LeaderboardEntry {
+  uid: string
+  displayName: string
+  goal: string
+  workoutCount: number
   updatedAt: FirestoreTimestamp
 }
 

@@ -2,14 +2,16 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { saveProfile } from '@/lib/firebase/firestore'
 import Link from 'next/link'
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [name, setName]         = useState('')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -17,6 +19,18 @@ export default function RegisterPage() {
   const [error, setError]       = useState('')
   const [hint, setHint]         = useState('')
   const [loading, setLoading]   = useState(false)
+  const [inviterName, setInviterName] = useState<string | null>(null)
+  const [refCode, setRefCode]   = useState<string | null>(null)
+
+  useEffect(() => {
+    const ref = searchParams.get('ref')
+    if (!ref) return
+    setRefCode(ref)
+    fetch(`/api/referral/${ref}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.displayName) setInviterName(data.displayName) })
+      .catch(() => {})
+  }, [searchParams])
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
@@ -24,6 +38,9 @@ export default function RegisterPage() {
     try {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), password)
       await updateProfile(cred.user, { displayName: name.trim() })
+      if (refCode) {
+        await saveProfile(cred.user.uid, { referredBy: refCode })
+      }
       router.push('/onboarding')
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''
@@ -57,6 +74,14 @@ export default function RegisterPage() {
           <h1 className="text-xl font-bold text-white">Create your account</h1>
           <p className="text-slate-400 text-sm mt-0.5">Start your health journey today</p>
         </div>
+
+        {/* Invited-by banner */}
+        {inviterName && (
+          <div className="rounded-xl p-3 text-center text-sm font-medium"
+            style={{ background: 'rgba(124,58,237,0.15)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.3)' }}>
+            🎉 Invited by {inviterName} — welcome to SBH!
+          </div>
+        )}
 
         <div className="bg-slate-800 rounded-2xl p-6 space-y-4">
           <form onSubmit={handleRegister} className="space-y-3">
@@ -124,5 +149,13 @@ export default function RegisterPage() {
         </p>
       </div>
     </main>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   )
 }

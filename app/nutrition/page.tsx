@@ -14,6 +14,7 @@ import { FOOD_DATABASE, FoodEntry, LOWER_GI_SWAPS } from '@/lib/food/foodDatabas
 import { calcGL, hasMealTimingRisk, giCategory } from '@/lib/health/glucoseUtils'
 import { updateWidgetData, buildWidgetData } from '@/lib/platform/widget'
 import nextDynamic from 'next/dynamic'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 
 const BarcodeScanner = nextDynamic(() => import('@/components/nutrition/BarcodeScanner'), { ssr: false })
 
@@ -806,6 +807,51 @@ export default function NutritionPage() {
             </>
           )}
         </div>
+
+        {/* Meal-type breakdown pie chart */}
+        {data.meals.length > 0 && (() => {
+          const ORDER: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack', 'pre_workout', 'post_workout']
+          const LABEL: Record<MealType, string> = {
+            breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner',
+            snack: 'Snack', pre_workout: 'Pre-WO', post_workout: 'Post-WO',
+          }
+          const COLORS: Record<MealType, string> = {
+            breakfast: '#f59e0b', lunch: '#06b6d4', dinner: '#7c3aed',
+            snack: '#10b981', pre_workout: '#f43f5e', post_workout: '#a78bfa',
+          }
+          const grouped = ORDER.map(mt => ({
+            name: LABEL[mt],
+            value: data.meals.filter(m => m.mealType === mt).reduce((s, m) => s + m.calories, 0),
+            color: COLORS[mt],
+          })).filter(d => d.value > 0)
+          if (grouped.length < 2) return null
+          return (
+            <div className="glass rounded-2xl p-4">
+              <h2 className="text-xs font-semibold text-2 uppercase tracking-widest mb-3">Meal Breakdown</h2>
+              <div className="flex items-center gap-4">
+                <ResponsiveContainer width={100} height={100}>
+                  <PieChart>
+                    <Pie data={grouped} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={46} strokeWidth={0}>
+                      {grouped.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    </Pie>
+                    <Tooltip formatter={(v: number | undefined) => [(v ?? 0) + ' kcal', ''] as [string, string]} contentStyle={{ background: '#111B2E', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, fontSize: 11 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex-1 space-y-1.5">
+                  {grouped.map(d => (
+                    <div key={d.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
+                        <span className="text-xs text-2">{d.name}</span>
+                      </div>
+                      <span className="text-xs font-semibold text-1">{d.value} kcal</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Today's meals */}
         {data.meals.length > 0 && (

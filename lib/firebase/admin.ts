@@ -24,3 +24,46 @@ export function getAdminApp(): App {
 export function getAdminDb() {
   return getFirestore(getOrInitAdminApp())
 }
+
+// ─── Public Profile (server-side only) ───────────────────────────────────────
+export interface PublicProfileData {
+  uid: string
+  displayName: string
+  goal?: string
+  experienceLevel?: string
+  programme?: string
+  photoUrl?: string
+  createdYear?: number
+}
+
+export async function getPublicProfileByUsername(username: string): Promise<PublicProfileData | null> {
+  const db = getAdminDb()
+  const snap = await db.collectionGroup('profile')
+    .where('username', '==', username)
+    .where('publicProfile', '==', true)
+    .limit(1)
+    .get()
+  if (snap.empty) return null
+  const data = snap.docs[0].data()
+  return {
+    uid: snap.docs[0].ref.parent.parent?.id ?? '',
+    displayName: data.displayName ?? '',
+    goal: data.goal,
+    experienceLevel: data.experienceLevel,
+    programme: data.programme,
+    photoUrl: data.photoUrl,
+    createdYear: data.createdAt?.toDate?.()?.getFullYear(),
+  }
+}
+
+export async function getPublicStats(uid: string): Promise<{ streak: number; workoutCount: number }> {
+  const db = getAdminDb()
+  const [streakSnap, workoutsSnap] = await Promise.all([
+    db.doc(`users/${uid}/streaks/current`).get(),
+    db.collection(`users/${uid}/workouts`).orderBy('date', 'desc').limit(30).get(),
+  ])
+  return {
+    streak: streakSnap.exists ? (streakSnap.data()?.currentStreak ?? 0) : 0,
+    workoutCount: workoutsSnap.size,
+  }
+}
