@@ -33,6 +33,7 @@
     --input-bg:      rgba(255,255,255,0.06);
     --input-border:  rgba(255,255,255,0.12);
     --nav-bg:        rgba(5,4,14,0.88);
+    --ring-track:    rgba(255,255,255,0.08);
     --card-shadow:   0 8px 32px -8px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.05) inset;
     --card-shadow-lg: 0 16px 48px -12px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.06) inset;
 
@@ -86,6 +87,7 @@
     --input-bg:      rgba(255,255,255,0.85);
     --input-border:  rgba(0,0,0,0.10);
     --nav-bg:        rgba(244,244,255,0.94);
+    --ring-track:    rgba(0,0,0,0.09);
     --card-shadow:   0 4px 20px -4px rgba(100,80,200,0.12), 0 0 0 0.5px rgba(0,0,0,0.05) inset;
     --card-shadow-lg: 0 8px 32px -8px rgba(100,80,200,0.16), 0 0 0 0.5px rgba(0,0,0,0.06) inset;
   }

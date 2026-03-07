@@ -14,6 +14,7 @@ import { calcMacros } from '@/lib/health/calculations'
 import { enableNotifications, isNotificationSupported } from '@/lib/firebase/fcm'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import Link from 'next/link'
+import ThemeToggle from '@/components/ui/ThemeToggle'
 
 const PHASE_INFO = [
   { num: 1, name: 'Fat Loss Foundation',  weeks: '1–4',  color: '#10b981', desc: 'High frequency cardio, fat oxidation, mobility work' },
@@ -328,10 +329,13 @@ export default function ProfilePage() {
             <h1 className="page-title" style={{fontSize:'1.25rem'}}>{profile?.displayName ?? 'Athlete'}</h1>
           </div>
         </div>
-        <button onClick={() => signOut(auth).then(() => router.push('/login'))}
-          className="p-2 rounded-xl glass-elevated transition-colors" style={{color:'var(--text-3)'}}>
-          <LogOut size={16} />
-        </button>
+        <div className="flex items-center gap-1.5">
+          <ThemeToggle />
+          <button onClick={() => signOut(auth).then(() => router.push('/login'))}
+            className="p-2 rounded-xl glass-elevated transition-colors" style={{color:'var(--text-3)'}}>
+            <LogOut size={16} />
+          </button>
+        </div>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 space-y-4 pt-3">
@@ -817,6 +821,7 @@ export default function ProfilePage() {
             { label: 'Edit Onboarding / Recalculate Targets', href: '/onboarding' },
             { label: 'View Progress & Metrics', href: '/metrics' },
             { label: 'Weekly Challenges & Leaderboard', href: '/challenges' },
+            { label: 'Release Notes & What\'s New', href: '/release-notes' },
             { label: 'Request Data Deletion', href: '/delete-account' },
           ].map(item => (
             <a key={item.href} href={item.href}
@@ -876,7 +881,7 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <p className="text-center text-xs text-3 pb-4">SBH · Science Based Health · v1.8.0</p>
+        <p className="text-center text-xs text-3 pb-4">SBH · Science Based Health · v2.3.0</p>
       </div>
     </main>
   )

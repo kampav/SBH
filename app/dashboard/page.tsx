@@ -12,7 +12,7 @@ import { displayGlucose, glucoseColor, DEFAULT_GLUCOSE_SETTINGS } from '@/lib/he
 import { calcSleepScore, sleepScoreLabel } from '@/lib/health/sleepUtils'
 import { computeDailyContext } from '@/lib/health/daily-context'
 import Link from 'next/link'
-import { LogOut, Zap, Trophy, ChevronRight, User, Utensils, Dumbbell, Scale, TrendingUp, Activity, Moon, CheckSquare, Lightbulb, type LucideIcon } from 'lucide-react'
+import { LogOut, Zap, Trophy, ChevronRight, User, Utensils, Dumbbell, Scale, TrendingUp, Activity, Moon, CheckSquare, Lightbulb, Brain, Sparkles, type LucideIcon } from 'lucide-react'
 import ProgressRing from '@/components/ui/ProgressRing'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import {
@@ -207,7 +207,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center justify-around">
             <Link href="/nutrition">
-              <ProgressRing value={calPct} size={110} stroke={9} color="#10b981" bg="rgba(255,255,255,0.06)"
+              <ProgressRing value={calPct} size={110} stroke={9} color="#10b981"
                 label={`${todayCalories}`} sublabel="kcal eaten" />
             </Link>
             <div className="text-center">
@@ -227,7 +227,7 @@ export default function DashboardPage() {
               )}
             </div>
             <Link href="/nutrition">
-              <ProgressRing value={protPct} size={110} stroke={9} color="#6366f1" bg="rgba(255,255,255,0.06)"
+              <ProgressRing value={protPct} size={110} stroke={9} color="#6366f1"
                 label={`${todayProtein}g`} sublabel="protein" />
             </Link>
           </div>
@@ -307,8 +307,11 @@ export default function DashboardPage() {
           <QuickCard href="/workout"   Icon={Dumbbell}  label="Workout"  sub={todayLabel}        color="#6366f1" done={workoutDoneToday} />
           <QuickCard href="/metrics"   Icon={Scale}     label="Log Weight" sub="Daily check-in"  color="#f59e0b" done={false} />
           <QuickCard href="/metrics"   Icon={TrendingUp} label="Progress" sub="Charts & trends"  color="#ec4899" done={false} />
-          <QuickCard href="/habits"    Icon={CheckSquare} label="Habits"  sub="Daily streaks"    color="#10b981" done={false} />
-          <QuickCard href="/insights"  Icon={Lightbulb}   label="Weekly Report" sub="AI insights" color="#f59e0b" done={false} />
+          <QuickCard href="/habits"          Icon={CheckSquare} label="Habits"         sub="Daily streaks"    color="#10b981" done={false} />
+          <QuickCard href="/mood"            Icon={Brain}       label="Mood"           sub="Mental wellness"  color="#a78bfa" done={false} />
+          <QuickCard href="/blood-pressure"  Icon={Activity}    label="Blood Pressure" sub="Heart health"     color="#ef4444" done={false} />
+          <QuickCard href="/insights"        Icon={Lightbulb}   label="Weekly Report"  sub="AI insights"      color="#f59e0b" done={false} />
+          <QuickCard href="/health-feed"     Icon={Sparkles}    label="Health Feed"    sub="Ranked insights"  color="#a78bfa" done={false} />
         </div>
 
         {/* ── TODAY'S WORKOUT (phase + programme) ── */}
@@ -433,7 +436,7 @@ export default function DashboardPage() {
             </div>
             <span className="text-xs font-semibold text-2">{xp.toLocaleString()} XP</span>
           </div>
-          <div className="w-full rounded-full h-2" style={{background:'rgba(255,255,255,0.06)'}}>
+          <div className="w-full rounded-full h-2" style={{background:'var(--ring-track)'}}>
             <div className="xp-bar h-2 rounded-full"
               style={{width:`${lvlPct}%`, background:'linear-gradient(90deg,#f59e0b,#fbbf24)'}} />
           </div>

@@ -6,7 +6,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from './client'
-import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement, SleepEntry, HabitDefinition, DailyHabitLog, WeeklyInsight, LeaderboardEntry } from '../types'
+import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement, SleepEntry, HabitDefinition, DailyHabitLog, WeeklyInsight, LeaderboardEntry, MoodEntry, PHQ9Assessment, BloodPressureReading } from '../types'
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 export async function getProfile(uid: string): Promise<UserProfile | null> {
@@ -86,6 +86,31 @@ export async function getRecentWorkouts(uid: string, days = 30): Promise<DailyWo
   const q = query(collection(db, 'users', uid, 'workouts'), orderBy('date', 'desc'), limit(days))
   const snap = await getDocs(q)
   return snap.docs.map(d => d.data() as DailyWorkout)
+}
+
+export interface PersonalBest {
+  weightKg: number
+  reps: number
+  date: string
+  volume: number  // weightKg × reps
+}
+
+/** Scans last 90 workout days and returns the heaviest single set for an exercise. */
+export async function getPersonalBest(uid: string, exerciseName: string): Promise<PersonalBest | null> {
+  const workouts = await getRecentWorkouts(uid, 90)
+  let best: PersonalBest | null = null
+  for (const w of workouts) {
+    const exLog = w.exercises.find(e => e.exerciseName === exerciseName)
+    if (!exLog) continue
+    for (const s of exLog.sets) {
+      if (!s.completed || s.weightKg === 0) continue
+      const vol = s.weightKg * s.reps
+      if (!best || vol > best.volume) {
+        best = { weightKg: s.weightKg, reps: s.reps, date: w.date, volume: vol }
+      }
+    }
+  }
+  return best
 }
 
 // ─── Glucose Settings ─────────────────────────────────────────────────────────
@@ -311,9 +336,50 @@ export async function savePublicProfileFields(uid: string, displayName: string):
   return { username, referralCode }
 }
 
+// ─── Mood Log (Phase 13) ──────────────────────────────────────────────────────
+export async function saveMoodEntry(uid: string, entry: MoodEntry): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'mood', entry.id), entry)
+}
+
+export async function getMoodHistory(uid: string, days = 30): Promise<MoodEntry[]> {
+  const q = query(collection(db, 'users', uid, 'mood'), orderBy('date', 'desc'), limit(days))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => d.data() as MoodEntry).reverse()
+}
+
+export async function deleteMoodEntry(uid: string, id: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', uid, 'mood', id))
+}
+
+// ─── PHQ-9 Assessments (Phase 13) ────────────────────────────────────────────
+export async function savePHQ9(uid: string, assessment: PHQ9Assessment): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'phq9', assessment.id), assessment)
+}
+
+export async function getPHQ9History(uid: string, limitCount = 12): Promise<PHQ9Assessment[]> {
+  const q = query(collection(db, 'users', uid, 'phq9'), orderBy('date', 'desc'), limit(limitCount))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => d.data() as PHQ9Assessment)
+}
+
+// ─── Blood Pressure (Phase 13) ────────────────────────────────────────────────
+export async function saveBloodPressure(uid: string, reading: BloodPressureReading): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'blood_pressure', reading.id), reading)
+}
+
+export async function getBloodPressureHistory(uid: string, days = 30): Promise<BloodPressureReading[]> {
+  const q = query(collection(db, 'users', uid, 'blood_pressure'), orderBy('date', 'desc'), limit(days))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => d.data() as BloodPressureReading).reverse()
+}
+
+export async function deleteBloodPressure(uid: string, id: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', uid, 'blood_pressure', id))
+}
+
 // ─── Account Deletion ─────────────────────────────────────────────────────────
 export async function deleteAllUserData(uid: string): Promise<void> {
-  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings', 'subscription', 'streaks', 'achievements', 'fcm_tokens', 'sleep', 'habits', 'habit_logs', 'insights']
+  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings', 'subscription', 'streaks', 'achievements', 'fcm_tokens', 'sleep', 'habits', 'habit_logs', 'insights', 'mood', 'phq9', 'blood_pressure']
   for (const sub of subcollections) {
     const snap = await getDocs(collection(db, 'users', uid, sub))
     const batch = writeBatch(db)

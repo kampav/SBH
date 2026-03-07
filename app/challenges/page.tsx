@@ -21,7 +21,7 @@ function RingProgress({ value, max, color, size = 72 }: { value: number; max: nu
   const pct = max > 0 ? Math.min(value / max, 1) : 0
   return (
     <svg width={size} height={size}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={8} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--ring-track)" strokeWidth={8} />
       <circle
         cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={8}
         strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)}

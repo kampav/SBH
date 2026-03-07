@@ -459,7 +459,7 @@ export default function WorkoutPage() {
               <span className="text-2">Sets completed</span>
               <span className="font-semibold" style={{color: prog.color}}>{doneSets} / {totalSets}</span>
             </div>
-            <div className="w-full rounded-full h-2" style={{background:'rgba(255,255,255,0.06)'}}>
+            <div className="w-full rounded-full h-2" style={{background:'var(--ring-track)'}}>
               <div className="h-2 rounded-full transition-all duration-500"
                 style={{width:`${pct}%`, background: prog.gradient}} />
             </div>

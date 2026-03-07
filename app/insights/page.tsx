@@ -27,7 +27,7 @@ function ScoreRing({ label, score, color }: { label: string; score: number; colo
     <div className="flex flex-col items-center gap-1">
       <div className="relative w-16 h-16">
         <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
-          <circle cx="32" cy="32" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+          <circle cx="32" cy="32" r={r} fill="none" stroke="var(--ring-track)" strokeWidth="6" />
           <circle cx="32" cy="32" r={r} fill="none" stroke={color} strokeWidth="6"
             strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
             style={{ transition: 'stroke-dasharray 0.8s ease' }} />

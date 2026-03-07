@@ -42,6 +42,8 @@ export interface UserProfile {
   username?: string                   // auto-generated e.g. "pavku_a1b2"
   referralCode?: string               // uid.substring(0,8).toUpperCase()
   referredBy?: string                 // referralCode of the person who invited them
+  // Condition Intelligence / Phase 13
+  conditionProfile?: ConditionProfile
   createdAt: FirestoreTimestamp
   updatedAt: FirestoreTimestamp
 }
@@ -360,6 +362,66 @@ export interface WeeklyInsight {
     avgSleepH: number
     weightDeltaKg: number | null
   }
+}
+
+// ─── Condition Intelligence (Phase 13) ───────────────────────────────────────
+export type ConditionKey =
+  | 'type2_diabetes'
+  | 'prediabetes'
+  | 'hypertension'
+  | 'pcos'
+  | 'hypothyroidism'
+  | 'anxiety'
+  | 'depression'
+  | 'ibs'
+  | 'heart_disease'
+  | 'obesity'
+
+export interface ConditionProfile {
+  conditions: ConditionKey[]
+  diagnosedByDoctor: boolean
+  onMedication: boolean
+  medicationNotes?: string
+  lastUpdated: string           // YYYY-MM-DD
+}
+
+// ─── Mood & Mental Health ─────────────────────────────────────────────────────
+export type MoodLevel = 1 | 2 | 3 | 4 | 5   // 1=very low … 5=very good
+
+export interface MoodEntry {
+  id: string
+  date: string          // YYYY-MM-DD
+  time: string          // HH:MM
+  mood: MoodLevel
+  energy: MoodLevel
+  anxiety: MoodLevel    // 1=very calm … 5=very anxious (inverted scale)
+  notes?: string
+  triggers?: string[]   // e.g. ['work_stress', 'poor_sleep', 'exercise']
+  loggedAt: FirestoreTimestamp
+}
+
+// ─── PHQ-9 Depression Screening ──────────────────────────────────────────────
+export interface PHQ9Assessment {
+  id: string
+  date: string          // YYYY-MM-DD
+  answers: number[]     // 9 items, each 0-3 (Not at all / Several days / More than half / Nearly every day)
+  totalScore: number    // 0-27
+  severity: 'minimal' | 'mild' | 'moderate' | 'moderately_severe' | 'severe'
+  completedAt: FirestoreTimestamp
+}
+
+// ─── Blood Pressure ───────────────────────────────────────────────────────────
+export interface BloodPressureReading {
+  id: string
+  date: string          // YYYY-MM-DD
+  time: string          // HH:MM
+  systolic: number      // mmHg
+  diastolic: number     // mmHg
+  pulse?: number        // bpm
+  armSide?: 'left' | 'right'
+  context?: 'resting' | 'post_exercise' | 'stressed' | 'other'
+  notes?: string
+  loggedAt: FirestoreTimestamp
 }
 
 // ─── Subscription ─────────────────────────────────────────────────────────────

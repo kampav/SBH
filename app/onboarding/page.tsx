@@ -8,13 +8,26 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { saveProfile } from '@/lib/firebase/firestore'
 import { calcAll } from '@/lib/health/calculations'
-import { ActivityLevel, Goal, UserConsents } from '@/lib/types'
+import { ActivityLevel, Goal, UserConsents, ConditionKey, ConditionProfile } from '@/lib/types'
 import { serverTimestamp } from 'firebase/firestore'
 import Link from 'next/link'
 
 const CONSENT_VERSION = '2026-03'
 
-type Step = 'goal' | 'metrics' | 'activity' | 'confirm' | 'consent'
+type Step = 'goal' | 'metrics' | 'activity' | 'confirm' | 'conditions' | 'consent'
+
+const CONDITION_OPTIONS: Array<{ key: ConditionKey; label: string; emoji: string }> = [
+  { key: 'type2_diabetes',  label: 'Type 2 Diabetes',     emoji: '🩸' },
+  { key: 'prediabetes',     label: 'Prediabetes',          emoji: '⚠️' },
+  { key: 'hypertension',    label: 'High Blood Pressure',  emoji: '❤️' },
+  { key: 'pcos',            label: 'PCOS',                 emoji: '🔄' },
+  { key: 'hypothyroidism',  label: 'Hypothyroidism',       emoji: '🦋' },
+  { key: 'anxiety',         label: 'Anxiety',              emoji: '🧠' },
+  { key: 'depression',      label: 'Depression',           emoji: '💙' },
+  { key: 'ibs',             label: 'IBS / Gut Issues',     emoji: '🌿' },
+  { key: 'heart_disease',   label: 'Heart Disease',        emoji: '💗' },
+  { key: 'obesity',         label: 'Obesity (BMI ≥ 30)',   emoji: '⚖️' },
+]
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -33,6 +46,17 @@ export default function OnboardingPage() {
     targetWeightKg: 70,
   })
 
+  // Condition state (Phase 13)
+  const [selectedConditions, setSelectedConditions] = useState<ConditionKey[]>([])
+  const [diagnosedByDoctor, setDiagnosedByDoctor]   = useState(false)
+  const [onMedication, setOnMedication]               = useState(false)
+
+  function toggleCondition(key: ConditionKey) {
+    setSelectedConditions(prev =>
+      prev.includes(key) ? prev.filter(c => c !== key) : [...prev, key]
+    )
+  }
+
   // Consent state
   const [termsAccepted,     setTermsAccepted]     = useState(false)
   const [privacyAccepted,   setPrivacyAccepted]   = useState(false)
@@ -50,7 +74,7 @@ export default function OnboardingPage() {
   }, [router])
 
   const calc = calcAll(form.weightKg, form.heightCm, form.age, form.sex, form.activityLevel, form.goal)
-  const STEPS: Step[] = ['goal', 'metrics', 'activity', 'confirm', 'consent']
+  const STEPS: Step[] = ['goal', 'metrics', 'activity', 'confirm', 'conditions', 'consent']
   const stepIdx = STEPS.indexOf(step)
   const canProceedConsent = termsAccepted && privacyAccepted && healthDataConsent && ageVerified
 
@@ -62,6 +86,13 @@ export default function OnboardingPage() {
       consentVersion: CONSENT_VERSION,
       consentDate: new Date().toISOString().slice(0, 10),
     }
+    const conditionProfile: ConditionProfile | undefined = selectedConditions.length > 0 ? {
+      conditions: selectedConditions,
+      diagnosedByDoctor,
+      onMedication,
+      lastUpdated: new Date().toISOString().slice(0, 10),
+    } : undefined
+
     await saveProfile(uid, {
       uid,
       email: auth.currentUser?.email ?? '',
@@ -70,6 +101,7 @@ export default function OnboardingPage() {
       ...calc,
       onboardingComplete: true,
       consents,
+      ...(conditionProfile ? { conditionProfile } : {}),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
@@ -94,7 +126,7 @@ export default function OnboardingPage() {
             <h1 className="text-xl font-bold text-1">Set Up Your Profile</h1>
             <span className="text-xs text-2">{stepIdx + 1} / {STEPS.length}</span>
           </div>
-          <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
+          <div className="h-1.5 rounded-full" style={{ background: 'var(--ring-track)' }}>
             <div className="h-1.5 rounded-full transition-all"
               style={{ width: `${((stepIdx + 1) / STEPS.length) * 100}%`, background: 'linear-gradient(90deg,#7c3aed,#06b6d4)' }} />
           </div>
@@ -203,13 +235,81 @@ export default function OnboardingPage() {
             <p className="text-xs text-3">Based on Mifflin-St Jeor formula. Recalculated when weight changes 2+ kg.</p>
             <div className="flex gap-2">
               <button onClick={() => setStep('activity')} className="flex-1 py-2.5 glass rounded-xl text-sm text-2">Back</button>
-              <button onClick={() => setStep('consent')} className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm"
+              <button onClick={() => setStep('conditions')} className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm"
                 style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>Next</button>
             </div>
           </div>
         )}
 
-        {/* STEP 5: CONSENT (GDPR / DPDP / PDPL) */}
+        {/* STEP 5: CONDITIONS (optional, Phase 13) */}
+        {step === 'conditions' && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="font-semibold text-1 mb-1">Any health conditions? <span className="text-xs font-normal text-3">(optional)</span></h2>
+              <p className="text-xs text-2">
+                Selecting conditions helps SBH personalise recommendations. This data is stored only for you
+                and never shared. You can skip this step.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {CONDITION_OPTIONS.map(({ key, label, emoji }) => {
+                const selected = selectedConditions.includes(key)
+                return (
+                  <button key={key} onClick={() => toggleCondition(key)}
+                    className="text-left p-3 rounded-xl border transition-all"
+                    style={{
+                      borderColor: selected ? '#7c3aed' : 'var(--input-border)',
+                      background: selected ? 'rgba(124,58,237,0.12)' : 'transparent',
+                    }}>
+                    <span className="text-xl">{emoji}</span>
+                    <p className="text-xs font-semibold text-1 mt-1 leading-snug">{label}</p>
+                  </button>
+                )
+              })}
+            </div>
+
+            {selectedConditions.length > 0 && (
+              <div className="space-y-2">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div onClick={() => setDiagnosedByDoctor(d => !d)}
+                    className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+                    style={{ borderColor: diagnosedByDoctor ? '#7c3aed' : 'var(--input-border)', background: diagnosedByDoctor ? '#7c3aed' : 'transparent' }}>
+                    {diagnosedByDoctor && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>}
+                  </div>
+                  <span className="text-xs text-2">Diagnosed by a doctor</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div onClick={() => setOnMedication(m => !m)}
+                    className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+                    style={{ borderColor: onMedication ? '#7c3aed' : 'var(--input-border)', background: onMedication ? '#7c3aed' : 'transparent' }}>
+                    {onMedication && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>}
+                  </div>
+                  <span className="text-xs text-2">Currently on medication for this condition</span>
+                </label>
+              </div>
+            )}
+
+            <div className="rounded-xl px-3 py-2.5 text-xs"
+              style={{ background: 'rgba(124,58,237,0.08)', color: 'var(--text-2)', border: '1px solid rgba(124,58,237,0.15)' }}>
+              SBH is a wellness app, not a medical device. Always follow your doctor&apos;s advice.
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={() => setStep('confirm')} className="flex-1 py-2.5 glass rounded-xl text-sm text-2">Back</button>
+              <button onClick={() => setStep('consent')} className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm"
+                style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>
+                {selectedConditions.length > 0 ? 'Next' : 'Skip'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 6: CONSENT (GDPR / DPDP / PDPL) */}
         {step === 'consent' && (
           <div className="space-y-4">
             <div>
@@ -247,7 +347,7 @@ export default function OnboardingPage() {
             </div>
 
             <div className="flex gap-2">
-              <button onClick={() => setStep('confirm')} className="flex-1 py-2.5 glass rounded-xl text-sm text-2">Back</button>
+              <button onClick={() => setStep('conditions')} className="flex-1 py-2.5 glass rounded-xl text-sm text-2">Back</button>
               <button onClick={handleComplete} disabled={saving || !canProceedConsent}
                 className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm disabled:opacity-40 transition-opacity"
                 style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>
@@ -284,7 +384,7 @@ function ConsentBox({
         <input id={id} type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="sr-only" />
         <div onClick={() => onChange(!checked)}
           className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors cursor-pointer"
-          style={{ borderColor: checked ? '#7c3aed' : 'rgba(255,255,255,0.2)', background: checked ? '#7c3aed' : 'transparent' }}>
+          style={{ borderColor: checked ? '#7c3aed' : 'var(--input-border)', background: checked ? '#7c3aed' : 'transparent' }}>
           {checked && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>}

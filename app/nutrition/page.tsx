@@ -623,7 +623,8 @@ export default function NutritionPage() {
             <span className="text-xs">Barcode</span>
           </button>
           <button onClick={() => setMode('form')}
-            className="py-3 rounded-2xl font-semibold text-sm text-white flex flex-col items-center gap-1.5 transition-all glass-strong hover:bg-violet-500/20">
+            className="py-3 rounded-2xl font-semibold text-sm flex flex-col items-center gap-1.5 transition-all glass-strong hover:bg-violet-500/20"
+            style={{ color: 'var(--text-1)' }}>
             <Plus size={20} />
             <span className="text-xs">Manual</span>
           </button>

@@ -10,7 +10,7 @@ interface Props {
 
 export default function ProgressRing({
   value, size = 120, stroke = 10,
-  color = '#10b981', bg = '#1a2744',
+  color = '#10b981', bg = 'var(--ring-track)',
   label, sublabel,
 }: Props) {
   const r = (size - stroke) / 2
@@ -32,8 +32,8 @@ export default function ProgressRing({
       </svg>
       {(label || sublabel) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          {label && <span className="font-bold text-white leading-none" style={{ fontSize: size * 0.18 }}>{label}</span>}
-          {sublabel && <span className="text-slate-400 mt-0.5" style={{ fontSize: size * 0.11 }}>{sublabel}</span>}
+          {label && <span className="font-bold text-1 leading-none" style={{ fontSize: size * 0.18 }}>{label}</span>}
+          {sublabel && <span className="text-3 mt-0.5" style={{ fontSize: size * 0.11 }}>{sublabel}</span>}
         </div>
       )}
     </div>

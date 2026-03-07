@@ -3,7 +3,7 @@ export const dynamic = 'force-static'
 
 import Link from 'next/link'
 
-const LAST_UPDATED = '5 March 2026'
+const LAST_UPDATED = '7 March 2026'
 const CONTACT_EMAIL = 'privacy@sciencebasedhealth.app'
 const APP_NAME = 'Science Based Health (SBH)'
 
@@ -61,14 +61,40 @@ export default function PrivacyPage() {
 
         {/* 2 */}
         <Section title="2. How We Use Your Data">
-          <p>We use your data solely to provide and improve the app:</p>
-          <ul className="list-disc pl-5 space-y-1 mt-2">
-            <li>Calculate personalised calorie and macro targets using the Mifflin-St Jeor formula</li>
-            <li>Generate AI-powered food identification results and nutrition estimates via the Claude API (Anthropic)</li>
-            <li>Display your progress trends in charts and dashboards</li>
-            <li>Provide progressive-overload hints based on your previous workout logs</li>
-            <li>Maintain streaks, XP, and milestone tracking</li>
-          </ul>
+          <p>We use your data solely to provide and improve the app. The table below summarises each data category, the purpose, the legal basis under UK/EU GDPR, and how long we retain it.</p>
+          <div className="overflow-x-auto mt-3">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="text-slate-400 border-b border-slate-800">
+                  <th className="text-left py-2 pr-3 font-semibold">Data</th>
+                  <th className="text-left py-2 pr-3 font-semibold">Purpose</th>
+                  <th className="text-left py-2 pr-3 font-semibold">Legal basis</th>
+                  <th className="text-left py-2 font-semibold">Retention</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {[
+                  ['Name & email', 'Account identity, confirmation emails', 'Contract (Art. 6(1)(b))', 'Until account deleted'],
+                  ['Height, weight, age, sex', 'Calorie/macro calculation', 'Explicit consent (Art. 9(2)(a))', 'Until account deleted'],
+                  ['Workout logs', 'Progress tracking, progressive overload', 'Explicit consent', 'Until account deleted'],
+                  ['Nutrition logs', 'Calorie/macro tracking, AI insights', 'Explicit consent', 'Until account deleted'],
+                  ['Glucose readings', 'Glucose trend analysis, HbA1c estimates', 'Explicit consent', 'Until account deleted'],
+                  ['Sleep logs', 'Sleep score, recovery insights', 'Explicit consent', 'Until account deleted'],
+                  ['Food photos', 'AI calorie/macro estimation', 'Explicit consent', 'Not stored — ephemeral API call only'],
+                  ['FCM push token', 'Workout/streak/hydration reminders', 'Consent (opt-in only)', 'Until notifications disabled'],
+                  ['Profile photo', 'Avatar display', 'Contract', 'Until replaced or account deleted'],
+                  ['Firebase Analytics', 'Crash reports, performance monitoring', 'Legitimate interest (Art. 6(1)(f))', '90 days'],
+                ].map(([data, purpose, basis, retention]) => (
+                  <tr key={data} className="text-slate-400">
+                    <td className="py-2 pr-3 text-white font-medium align-top">{data}</td>
+                    <td className="py-2 pr-3 align-top">{purpose}</td>
+                    <td className="py-2 pr-3 align-top">{basis}</td>
+                    <td className="py-2 align-top">{retention}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="mt-3 text-slate-400">
             We do <strong className="text-white">not</strong> use your data for advertising, do not
             sell it to third parties, and do not share it with any party outside those listed in
@@ -130,13 +156,37 @@ export default function PrivacyPage() {
 
         {/* 6 */}
         <Section title="6. Your Rights">
-          <p>You have the right to:</p>
-          <ul className="list-disc pl-5 space-y-1 mt-2">
-            <li><strong className="text-white">Access</strong> — view all data stored in the app at any time</li>
-            <li><strong className="text-white">Correct</strong> — update your profile via the onboarding flow</li>
-            <li><strong className="text-white">Delete</strong> — permanently erase all your data (see below)</li>
-            <li><strong className="text-white">Export</strong> — contact us to request a copy of your data</li>
-          </ul>
+          <p>Under UK GDPR, EU GDPR, India DPDP Act 2023, and UAE PDPL 2021 you have the following rights. Each right can be exercised directly in the app:</p>
+          <div className="mt-3 space-y-2">
+            {[
+              { right: 'Access (Art. 15)', desc: 'View all your health and fitness data in the app dashboard at any time.', action: 'Open app', href: '/dashboard' },
+              { right: 'Correct (Art. 16)', desc: 'Update your profile, targets, and health data via the onboarding flow.', action: 'Edit profile', href: '/onboarding' },
+              { right: 'Erase (Art. 17)', desc: 'Permanently delete your account and all associated data.', action: 'Delete account', href: '/delete-account' },
+              { right: 'Portability (Art. 20)', desc: 'Export all your data as a CSV file from your profile page.', action: 'Export data', href: '/profile' },
+              { right: 'Restrict / Object (Art. 18, 21)', desc: 'Disable notifications or withdraw consent by deleting your account.', action: 'Profile settings', href: '/profile' },
+              { right: 'Withdraw Consent (Art. 7)', desc: 'Consent to health data processing may be withdrawn at any time by deleting your account. This does not affect processing already carried out.', action: 'Delete account', href: '/delete-account' },
+            ].map(({ right, desc, action, href }) => (
+              <div key={right} className="border border-slate-700 rounded-lg p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-white font-semibold text-xs">{right}</p>
+                    <p className="text-slate-400 mt-0.5">{desc}</p>
+                  </div>
+                  <Link href={href}
+                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap"
+                    style={{ background: 'rgba(124,58,237,0.15)', color: '#a78bfa' }}>
+                    {action}
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-slate-500">
+            To exercise any right not listed above, or to raise a complaint, contact us at{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`} className="text-violet-400">{CONTACT_EMAIL}</a>.
+            UK residents may also lodge a complaint with the{' '}
+            <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer" className="text-violet-400">ICO (ico.org.uk)</a>.
+          </p>
         </Section>
 
         {/* 7 */}

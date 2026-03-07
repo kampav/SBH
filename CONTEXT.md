@@ -1,7 +1,7 @@
 # SBH — Science Based Health
 ## Session Context File — Paste at start of every Claude session
 
-> Last updated: 2026-03-07 | Version: 2.1.0
+> Last updated: 2026-03-07 | Version: 2.2.0
 
 ---
 
@@ -17,7 +17,7 @@
 
 ---
 
-## CURRENT BUILD STATUS — v2.1.0 ✅ BUILT
+## CURRENT BUILD STATUS — v2.2.0 ✅ BUILT
 
 ### Completed Features
 
@@ -49,7 +49,9 @@
 | Habit Tracker | ✅ | `app/habits/page.tsx` |
 | PWA Install Banner | ✅ | `components/PWAInstallBanner.tsx` |
 | Stats sharing (metrics + workout history) | ✅ | `app/metrics/page.tsx`, `app/workout/history/page.tsx` |
-| Unit tests (131 tests) | ✅ | `__tests__/lib/` |
+| Social: challenges, leaderboard, referral, public profile | ✅ | `app/challenges`, `app/u/[username]`, `app/api/referral/[code]` |
+| Exercise Detail Sheet (form cues, mistakes, personal best) | ✅ | `components/workout/ExerciseDetailSheet.tsx` |
+| Unit tests (167 tests) | ✅ | `__tests__/lib/` |
 | E2E tests (19 tests) | ✅ | `e2e/` |
 | Changelog + README | ✅ | `CHANGELOG.md`, `README.md` |
 
@@ -69,7 +71,7 @@
 ## FIRESTORE SCHEMA
 ```
 users/{uid}/
-  profile/data          → UserProfile
+  profile/data          → UserProfile (incl. conditionProfile — v4)
   metrics/{date}        → DailyMetric
   nutrition/{date}      → DailyNutrition (meals[], macros, water)
   workouts/{date}       → DailyWorkout (exercises[], volume, duration)
@@ -80,6 +82,17 @@ users/{uid}/
   streaks/current       → StreakRecord
   achievements/{id}     → Achievement
   subscription/data     → { tier, status, stripeCustomerId, ... }
+  habits/{id}           → HabitDefinition
+  habit_logs/{date}     → DailyHabitLog
+  insights/{weekStart}  → WeeklyInsight (24h cached)
+  leaderboards/{weekKey}/entries/{uid} → LeaderboardEntry
+  — v4 additions —
+  mood/{date}           → MoodLog
+  thought_records/{id}  → ThoughtRecord (CBT journal)
+  phq9/{YYYY-MM}        → PHQ9Result
+  gad7/{YYYY-MM}        → GAD7Result
+  blood_pressure/{date} → BloodPressureLog
+  coach/{date}          → DailyCoachMessage (AI check-in cache)
 ```
 
 ---
@@ -186,12 +199,70 @@ users/{uid}/
 - [x] `lib/types.ts`: `publicProfile?`, `username?`, `referralCode?`, `referredBy?` on UserProfile; `LeaderboardEntry` interface
 - [x] Firestore rules: leaderboard public read
 
-### ⬜ Phase 12 — i18n + Wearable Sync
-**PRD items:** P3.8 wearable sync, P3.10 i18n, P4.3 iOS PWA
-- [ ] RTL layout support (`dir="rtl"`, logical CSS properties)
-- [ ] Google Health Connect settings page (sync toggle, scope explanations) and samsung health connect as well
-- [ ] iOS PWA meta tags polish + App Store connect setup guide
-- [ ] Android widget 3-size upgrade (large 4×2 with full macro breakdown)
+### ✅ Phase 12 — Exercise Detail Sheet (P3.6)
+- [x] `ExerciseInfo` interface with `cues[]` + `mistakes[]` in `lib/workout/exerciseData.ts`
+- [x] `getPersonalBest(uid, exerciseName)` Firestore helper — scans 90 days, best set by volume
+- [x] `components/workout/ExerciseDetailSheet.tsx` — bottom sheet: personal best (lime), form cues (cyan), mistakes (orange), YouTube button
+- [x] `/exercises` page — cards now tappable, opens detail sheet
+
+---
+
+## PRD v4 PHASE TRACKER
+
+> PRD v4 = "Health OS" — condition-aware, Netflix-style feed, B2B revenue.
+> Full spec: `SBH_PRD_v4.md`
+
+### ⬜ Phase 13 — Condition Intelligence (START HERE)
+- [ ] `ConditionKey` type + `ConditionProfile` in `lib/types.ts`
+- [ ] Onboarding Screen 1: condition multi-select (diabetes, mental health, heart health, etc.)
+- [ ] Condition-specific Screen 4 (CGM question / PHQ-2 / BP input by condition)
+- [ ] Store `conditionProfile` in `UserProfile` on onboarding complete
+- [ ] Dashboard rearranges by active conditions (glucose top if DIABETES, mood card if MENTAL_HEALTH)
+- [ ] Mood check-in page (`/mood`) + `MoodLog` Firestore + `moodUtils.ts`
+- [ ] CBT Thought Journal (`/journal`) + `ThoughtRecord` Firestore
+- [ ] PHQ-9 screening (`/mood/screening`) + monthly trigger
+- [ ] Blood pressure log (`/heart`) + `BloodPressureLog` Firestore
+- [ ] Crisis safety protocol (PHQ-9 >= 15 or mood=1 × 3 days → crisis card)
+- [ ] Unit tests: `moodUtils.test.ts` + `heartUtils.test.ts`
+
+### ⬜ Phase 14 — Netflix Health Feed
+- [ ] `HealthCard` interface + card generators (`lib/health/feedEngine.ts`)
+- [ ] Feed ranking algorithm (score by condition relevance, time-of-day, missing data)
+- [ ] Replace static dashboard with ranked feed
+- [ ] Feature discovery cards (day 3/7/14/21/30 reveal schedule)
+- [ ] "Today's Mission" activation card (7-day sequence)
+- [ ] Customisable home screen (pin/unpin, focus mode)
+- [ ] A/B experiments: `feed_layout`, `upsell_trigger`, `onboarding_length`
+
+### ⬜ Phase 15 — CGM + Wearables
+- [ ] Dexcom OAuth flow (`/api/integrations/dexcom/auth` + callback)
+- [ ] Dexcom readings sync + merge with `glucose/{date}`
+- [ ] FreeStyle Libre API integration
+- [ ] Google Health Connect (steps, HR, sleep, weight — read + write)
+- [ ] Samsung Health Connect
+- [ ] `/settings/integrations` page (toggle per provider, sync status)
+
+### ⬜ Phase 16 — Revenue v2
+- [ ] Condition-tiered Stripe products (Fitness Pro, Diabetes Pro, Mental Wellness, Health OS)
+- [ ] Feature gating by tier AND condition
+- [ ] Coaching marketplace (`/coaching`) — Stripe Connect payouts
+- [ ] B2B admin dashboard (`/admin/corporate`)
+- [ ] Family plan (up to 3 UIDs, single billing)
+
+### ⬜ Phase 17 — AI Coach
+- [ ] `/api/coach/daily-checkin` — FCM scheduled, Claude generated, Firestore cached
+- [ ] `/coach` page — conversational chat with streaming responses
+- [ ] Condition-specific weekly narrative
+- [ ] Care team PDF report (Diabetes Pro)
+- [ ] PCOS module (`/pcos`) — cycle + hormone-friendly workout phasing
+- [ ] Thyroid module (`/thyroid`) — TSH log, medication reminder
+
+### ⬜ Phase 18-20 — Analytics, Global Expansion, Native iOS
+- [ ] `/admin/analytics` — funnel, retention, experiment results
+- [ ] i18n: Hindi, Arabic (RTL), Bengali
+- [ ] Ramadan mode
+- [ ] NHS GP report generator
+- [ ] Native iOS app (SwiftUI + HealthKit)
 
 
 
