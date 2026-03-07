@@ -424,6 +424,37 @@ export interface BloodPressureReading {
   loggedAt: FirestoreTimestamp
 }
 
+// ─── CGM / Wearable Integrations ─────────────────────────────────────────────
+export type IntegrationProvider = 'dexcom' | 'libre' | 'health_connect' | 'apple_health'
+
+export interface DexcomCredentials {
+  accessToken: string
+  refreshToken: string
+  expiresAt: number       // unix ms
+  scope: string
+  connectedAt: string     // ISO datetime
+  lastSyncAt?: string     // ISO datetime
+}
+
+export interface CGMReading {
+  time: string            // HH:MM
+  valueMmol: number
+  trend?: string          // Dexcom trend enum: RISING, FALLING, STEADY, etc.
+  trendRate?: number      // mmol/L/min (converted from mg/dL/min)
+  source: 'dexcom' | 'libre' | 'manual'
+}
+
+export interface CGMDay {
+  date: string            // YYYY-MM-DD
+  provider: 'dexcom' | 'libre'
+  readings: CGMReading[]
+  latestValueMmol: number
+  latestTrend?: string
+  timeInRangePct: number  // % readings within 3.9-10.0 mmol/L target range
+  avgMmol: number
+  syncedAt: FirestoreTimestamp
+}
+
 // ─── Subscription ─────────────────────────────────────────────────────────────
 export interface UserSubscription {
   tier: 'free' | 'pro' | 'premium'

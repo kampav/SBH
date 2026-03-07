@@ -821,6 +821,7 @@ export default function ProfilePage() {
             { label: 'Edit Onboarding / Recalculate Targets', href: '/onboarding' },
             { label: 'View Progress & Metrics', href: '/metrics' },
             { label: 'Weekly Challenges & Leaderboard', href: '/challenges' },
+            { label: 'Integrations (CGM & Wearables)', href: '/settings/integrations' },
             { label: 'Release Notes & What\'s New', href: '/release-notes' },
             { label: 'Request Data Deletion', href: '/delete-account' },
           ].map(item => (

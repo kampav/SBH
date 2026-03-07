@@ -20,6 +20,25 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v2.6.0',
+    date: '2026-03-07',
+    highlights: [
+      'CGM Integrations — connect Dexcom G6/G7 via OAuth to sync real-time glucose readings',
+      '/settings/integrations — manage all device connections with live status and sync controls',
+      'CGM Day summary — time-in-range %, average mmol/L, and trend arrow per day',
+      'FreeStyle Libre, Google Health Connect, Apple Health (coming soon)',
+    ],
+    fixes: [
+      'Dexcom tokens auto-refreshed 60 seconds before expiry during sync',
+      'CGM data stored in cgm/{date} subcollection — does not overwrite manual glucose readings',
+    ],
+    privacy: [
+      'OAuth tokens stored in users/{uid}/integrations — never shared with third parties',
+      'Disconnecting Dexcom immediately deletes all stored tokens',
+      'GDPR Art. 20 data export now includes CGM readings',
+    ],
+  },
+  {
     version: 'v2.5.0',
     date: '2026-03-07',
     highlights: [
@@ -194,7 +213,7 @@ export default function ReleaseNotesPage() {
           style={{ border: '1px solid rgba(124,58,237,0.25)' }}>
           <Sparkles size={18} style={{ color: '#a78bfa' }} />
           <div>
-            <p className="text-xs font-semibold text-1">Current version: v2.5.0</p>
+            <p className="text-xs font-semibold text-1">Current version: v2.6.0</p>
             <p className="text-xs text-3">Released {RELEASES[0].date}</p>
           </div>
         </div>
