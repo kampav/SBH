@@ -1,33 +1,29 @@
-name: Build Android AAB
+name: Build Android (AAB + APK)
 
-# Builds a signed release AAB whenever Android-related files change on master,
-# or when manually triggered. Use the 'playstore.yml' workflow to upload to
-# Google Play Store.
-# v1.1.0 — glucose/diabetes management feature set
+# Builds on every push to master — both signed release AAB (for Play Store)
+# and unsigned debug APK (for direct sideload testing).
+# The web app content is bundled via `npx cap sync` so must run on all changes.
 
 on:
   push:
     branches: [master]
-    paths:
-      - 'android/**'
-      - 'capacitor.config.ts'
-      - 'public/icons/**'
-      - '.github/workflows/android.yml'
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Version name (e.g. 1.0.1)'
+        description: 'Version name (e.g. 2.1.0)'
         required: false
-        default: '1.0'
+        default: '2.1.0'
 
 env:
   VERSION_CODE: ${{ github.run_number }}
-  VERSION_NAME: ${{ github.event.inputs.version_name || '1.0' }}
+  VERSION_NAME: ${{ github.event.inputs.version_name || '2.1.0' }}
 
 jobs:
   build:
-    name: Build Signed AAB
+    name: Build Signed AAB + Debug APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed for gh release create
 
     steps:
       - name: Checkout repository
@@ -49,7 +45,7 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Sync Capacitor (updates server.url config in Android project)
+      - name: Sync Capacitor (bundles web content into Android project)
         run: npx cap sync android
 
       - name: Decode keystore from secret
@@ -58,7 +54,7 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x android/gradlew
 
-      - name: Build release AAB
+      - name: Build signed release AAB
         working-directory: android
         env:
           KEYSTORE_PATH: sbh-release.keystore
@@ -72,12 +68,56 @@ jobs:
             "-PVERSION_CODE=$VERSION_CODE" \
             "-PVERSION_NAME=$VERSION_NAME"
 
-      - name: Upload AAB artifact
+      - name: Build debug APK (sideload testing)
+        working-directory: android
+        env:
+          JAVA_HOME: ${{ steps.setup-java.outputs.path }}
+        run: ./gradlew assembleDebug --no-daemon "-Dorg.gradle.java.home=$JAVA_HOME"
+
+      - name: Upload signed AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: sbh-release-${{ github.run_number }}.aab
           path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 30
+
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbh-debug-${{ github.run_number }}.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Update rolling "latest" GitHub Release with debug APK
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Rename APK for clarity
+          cp android/app/build/outputs/apk/debug/app-debug.apk sbh-latest.apk
+
+          # Delete existing "latest" pre-release tag if it exists
+          gh release delete latest --yes 2>/dev/null || true
+          git push origin :refs/tags/latest 2>/dev/null || true
+
+          # Create a fresh "latest" pre-release with the new APK
+          gh release create latest sbh-latest.apk \
+            --title "SBH Latest Debug APK (build ${{ github.run_number }})" \
+            --notes "$(cat <<'EOF'
+          ## Debug APK — Build ${{ github.run_number }}
+
+          Auto-built from master on every push. For **direct sideload testing** only.
+
+          ### How to install
+          1. Download **sbh-latest.apk** below
+          2. On Android: Settings → Apps → Special app access → Install unknown apps → enable for Files / browser
+          3. Open the APK and tap Install
+
+          ### What's in this build
+          See [CHANGELOG.md](https://github.com/kampav/SBH/blob/master/CHANGELOG.md) for details.
+          EOF
+          )" \
+            --prerelease \
+            --target master
 
       - name: Clean up keystore
         if: always()
