@@ -20,6 +20,27 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v2.8.0',
+    date: '2026-03-07',
+    highlights: [
+      'AI Health Coach — streaming Claude-powered conversational coach with condition-aware system prompt',
+      'Daily Check-in — personalised morning message with focus + evening reflection, cached in Firestore',
+      'PCOS Tracker — cycle log, symptom tracking, hormone-friendly workout phasing by menstrual phase, supplement log',
+      'Thyroid Tracker — TSH/FT4 history with range classification, daily fatigue + brain fog log, medication reminder',
+      'Care Team Report API — 30-day glucose, CGM, HbA1c, BP summary for GP/endocrinologist sharing (Diabetes Pro)',
+      'Coach card added to dashboard · PCOS + Thyroid quick-links in profile',
+    ],
+    fixes: [
+      'Coach chat falls back to default greeting if Claude API is unavailable',
+      'TSH range uses NICE/NHS standard (0.4–4.0 mIU/L) with per-lab disclaimer',
+    ],
+    privacy: [
+      'Cycle, fatigue, and TSH logs stored in users/{uid} subcollections — not shared',
+      'Care team report generated on-demand — never auto-shared; user controls distribution',
+      'Mental health safety rails: coach never prescribes, never diagnoses, always signposts professionals',
+    ],
+  },
+  {
     version: 'v2.7.0',
     date: '2026-03-07',
     highlights: [
@@ -233,7 +254,7 @@ export default function ReleaseNotesPage() {
           style={{ border: '1px solid rgba(124,58,237,0.25)' }}>
           <Sparkles size={18} style={{ color: '#a78bfa' }} />
           <div>
-            <p className="text-xs font-semibold text-1">Current version: v2.7.0</p>
+            <p className="text-xs font-semibold text-1">Current version: v2.8.0</p>
             <p className="text-xs text-3">Released {RELEASES[0].date}</p>
           </div>
         </div>

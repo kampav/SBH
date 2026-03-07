@@ -12,7 +12,7 @@ import { displayGlucose, glucoseColor, DEFAULT_GLUCOSE_SETTINGS } from '@/lib/he
 import { calcSleepScore, sleepScoreLabel } from '@/lib/health/sleepUtils'
 import { computeDailyContext } from '@/lib/health/daily-context'
 import Link from 'next/link'
-import { LogOut, Zap, Trophy, ChevronRight, User, Utensils, Dumbbell, Scale, TrendingUp, Activity, Moon, CheckSquare, Lightbulb, Brain, Sparkles, type LucideIcon } from 'lucide-react'
+import { LogOut, Zap, Trophy, ChevronRight, User, Utensils, Dumbbell, Scale, TrendingUp, Activity, Moon, CheckSquare, Lightbulb, Brain, Sparkles, Bot, type LucideIcon } from 'lucide-react'
 import ProgressRing from '@/components/ui/ProgressRing'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import {
@@ -312,6 +312,7 @@ export default function DashboardPage() {
           <QuickCard href="/blood-pressure"  Icon={Activity}    label="Blood Pressure" sub="Heart health"     color="#ef4444" done={false} />
           <QuickCard href="/insights"        Icon={Lightbulb}   label="Weekly Report"  sub="AI insights"      color="#f59e0b" done={false} />
           <QuickCard href="/health-feed"     Icon={Sparkles}    label="Health Feed"    sub="Ranked insights"  color="#a78bfa" done={false} />
+          <QuickCard href="/coach"           Icon={Bot}         label="AI Coach"       sub="Chat & check-in"  color="#06b6d4" done={false} />
         </div>
 
         {/* ── TODAY'S WORKOUT (phase + programme) ── */}
