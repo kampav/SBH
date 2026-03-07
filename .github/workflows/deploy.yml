@@ -67,7 +67,31 @@ jobs:
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/sbh/${{ env.SERVICE }}:${{ github.sha }}
           flags: '--allow-unauthenticated --min-instances=0 --max-instances=10 --memory=512Mi'
-          env_vars: ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+          env_vars: |
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }},
+            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }},
+            STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }},
+            STRIPE_PRO_MONTHLY_PRICE_ID=${{ secrets.STRIPE_PRO_MONTHLY_PRICE_ID }},
+            STRIPE_PRO_YEARLY_PRICE_ID=${{ secrets.STRIPE_PRO_YEARLY_PRICE_ID }},
+            STRIPE_PREMIUM_MONTHLY_PRICE_ID=${{ secrets.STRIPE_PREMIUM_MONTHLY_PRICE_ID }},
+            STRIPE_PREMIUM_YEARLY_PRICE_ID=${{ secrets.STRIPE_PREMIUM_YEARLY_PRICE_ID }},
+            STRIPE_FITNESS_PRO_MONTHLY_PRICE_ID=${{ secrets.STRIPE_FITNESS_PRO_MONTHLY_PRICE_ID }},
+            STRIPE_FITNESS_PRO_YEARLY_PRICE_ID=${{ secrets.STRIPE_FITNESS_PRO_YEARLY_PRICE_ID }},
+            STRIPE_DIABETES_PRO_MONTHLY_PRICE_ID=${{ secrets.STRIPE_DIABETES_PRO_MONTHLY_PRICE_ID }},
+            STRIPE_DIABETES_PRO_YEARLY_PRICE_ID=${{ secrets.STRIPE_DIABETES_PRO_YEARLY_PRICE_ID }},
+            STRIPE_MENTAL_WELLNESS_MONTHLY_PRICE_ID=${{ secrets.STRIPE_MENTAL_WELLNESS_MONTHLY_PRICE_ID }},
+            STRIPE_MENTAL_WELLNESS_YEARLY_PRICE_ID=${{ secrets.STRIPE_MENTAL_WELLNESS_YEARLY_PRICE_ID }},
+            STRIPE_HEALTH_OS_MONTHLY_PRICE_ID=${{ secrets.STRIPE_HEALTH_OS_MONTHLY_PRICE_ID }},
+            STRIPE_HEALTH_OS_YEARLY_PRICE_ID=${{ secrets.STRIPE_HEALTH_OS_YEARLY_PRICE_ID }},
+            FIREBASE_SERVICE_ACCOUNT_JSON=${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }},
+            NEXT_PUBLIC_FCM_VAPID_KEY=${{ secrets.NEXT_PUBLIC_FCM_VAPID_KEY }},
+            TYPESENSE_URL=${{ secrets.TYPESENSE_URL }},
+            TYPESENSE_API_KEY=${{ secrets.TYPESENSE_API_KEY }},
+            CRON_SECRET=${{ secrets.CRON_SECRET }},
+            DEXCOM_CLIENT_ID=${{ secrets.DEXCOM_CLIENT_ID }},
+            DEXCOM_CLIENT_SECRET=${{ secrets.DEXCOM_CLIENT_SECRET }},
+            DEXCOM_REDIRECT_URI=${{ secrets.DEXCOM_REDIRECT_URI }},
+            DEXCOM_SANDBOX=${{ secrets.DEXCOM_SANDBOX }}
 
       - name: Show deployment URL
         run: echo "Deployed to ${{ steps.deploy.outputs.url }}"
