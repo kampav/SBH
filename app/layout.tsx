@@ -5,6 +5,7 @@ import BottomNav from '@/components/layout/BottomNav'
 import OfflineBanner from '@/components/OfflineBanner'
 import AppInit from '@/components/AppInit'
 import PWAInstallBanner from '@/components/PWAInstallBanner'
+import CoachWidget from '@/components/coach/CoachWidget'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PWAInstallBanner />
         {children}
         <BottomNav />
+        <CoachWidget />
       </body>
     </html>
   )

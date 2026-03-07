@@ -104,12 +104,22 @@ export async function POST(req: NextRequest) {
   ]
 
   // Streaming response
-  const stream = await client.messages.stream({
-    model:      'claude-haiku-4-5-20251001',  // cost-controlled; paid tier gets Sonnet
-    max_tokens: 512,
-    system:     buildSystemPrompt(profile, conditions),
-    messages,
-  })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let stream: any
+  try {
+    stream = await client.messages.stream({
+      model:      'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      system:     buildSystemPrompt(profile, conditions),
+      messages,
+    })
+  } catch (err) {
+    console.error('[coach/chat] Anthropic stream error:', err)
+    return new Response(
+      JSON.stringify({ error: 'AI service unavailable' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
 
   const encoder = new TextEncoder()
   const readable = new ReadableStream({
@@ -123,7 +133,8 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(chunk.delta.text))
           }
         }
-      } catch {
+      } catch (err) {
+        console.error('[coach/chat] stream read error:', err)
         controller.error('Stream error')
       } finally {
         controller.close()

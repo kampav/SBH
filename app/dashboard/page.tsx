@@ -6,30 +6,129 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { getProfile, getNutrition, getRecentWorkouts, getMetrics, getNutritionHistory, getGlucoseSettings, getDailyGlucose, getStreak, updateStreak, getSleepHistory } from '@/lib/firebase/firestore'
+import {
+  getProfile, getNutrition, getRecentWorkouts, getMetrics,
+  getNutritionHistory, getGlucoseSettings, getDailyGlucose,
+  getStreak, updateStreak, getSleepHistory,
+} from '@/lib/firebase/firestore'
 import { UserProfile, GlucoseSettings, GlucoseReading, SleepEntry } from '@/lib/types'
-import { displayGlucose, glucoseColor, DEFAULT_GLUCOSE_SETTINGS } from '@/lib/health/glucoseUtils'
-import { calcSleepScore, sleepScoreLabel } from '@/lib/health/sleepUtils'
-import { computeDailyContext } from '@/lib/health/daily-context'
+import { displayGlucose } from '@/lib/health/glucoseUtils'
 import Link from 'next/link'
-import { LogOut, Zap, Trophy, ChevronRight, User, Utensils, Dumbbell, Scale, TrendingUp, Activity, Moon, CheckSquare, Lightbulb, Brain, Sparkles, Bot, type LucideIcon } from 'lucide-react'
+import {
+  LogOut, User,
+  Utensils, Dumbbell, Scale, TrendingUp,
+  Activity, Moon, CheckSquare, Brain,
+  Bot, Heart, Droplets, Pill,
+  CheckCircle, Circle, ChevronRight,
+  type LucideIcon,
+} from 'lucide-react'
 import ProgressRing from '@/components/ui/ProgressRing'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import {
-  getDailyTip, computeXP, getLevel, getLevelProgress,
-  computeStreak, computeWorkoutStreak, computeWeekCalendar,
-  isStreakMilestone, computeBadges, WeekDayStatus,
+  getDailyTip, computeXP, computeStreak, computeWorkoutStreak,
 } from '@/lib/gamification'
 
 const today = new Date().toISOString().slice(0, 10)
 
-const PHASES = [
-  { num: 1, name: 'Fat Loss Foundation',  color: '#10b981' },
-  { num: 2, name: 'Muscle Growth',         color: '#6366f1' },
-  { num: 3, name: 'Definition & Power',    color: '#f59e0b' },
-]
+const VIOLET = '#7c3aed'
+const CYAN   = '#06b6d4'
 
-const DAY_LABELS = ['Push + Core', 'HIIT + Legs', 'Pull + Abs', 'Active Recovery', 'Full Body Strength', 'Fat Burn Accelerator', 'Rest Day']
+// ── Greeting ──────────────────────────────────────────────────────────────────
+function getGreeting(name?: string): string {
+  const h = new Date().getHours()
+  const s = h < 5 ? 'Still up?' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+  return name ? `${s}, ${name.split(' ')[0]}` : s
+}
+
+// ── Today's Actions ───────────────────────────────────────────────────────────
+interface Action {
+  id: string
+  label: string
+  sub: string
+  href: string
+  done: boolean
+  icon: LucideIcon
+  color: string
+}
+
+function buildActions(opts: {
+  todayCalories: number
+  workoutDone: boolean
+  mealCount: number
+  weightLoggedRecently: boolean
+  sleepLogged: boolean
+  moodLogged: boolean
+  glucoseEnabled: boolean
+  glucoseLogged: boolean
+}): Action[] {
+  return [
+    {
+      id: 'meal',
+      label: opts.mealCount > 0 ? `${opts.mealCount} meal${opts.mealCount > 1 ? 's' : ''} logged` : 'Log your first meal',
+      sub:   opts.mealCount > 0 ? `${opts.todayCalories} kcal today` : 'Track calories & protein',
+      href:  '/nutrition',
+      done:  opts.mealCount > 0,
+      icon:  Utensils,
+      color: '#10b981',
+    },
+    {
+      id: 'workout',
+      label: opts.workoutDone ? 'Workout complete' : 'Log a workout',
+      sub:   opts.workoutDone ? 'Great work today!' : 'Keep your streak alive',
+      href:  '/workout',
+      done:  opts.workoutDone,
+      icon:  Dumbbell,
+      color: '#6366f1',
+    },
+    {
+      id: 'sleep',
+      label: opts.sleepLogged ? 'Sleep logged' : 'Log last night\'s sleep',
+      sub:   opts.sleepLogged ? 'Rest data recorded' : '7-9h is the sweet spot',
+      href:  '/sleep',
+      done:  opts.sleepLogged,
+      icon:  Moon,
+      color: '#a78bfa',
+    },
+    {
+      id: 'mood',
+      label: opts.moodLogged ? 'Mood checked in' : 'How are you feeling?',
+      sub:   opts.moodLogged ? 'Mental check-in done' : 'Track energy & anxiety',
+      href:  '/mood',
+      done:  opts.moodLogged,
+      icon:  Brain,
+      color: '#ec4899',
+    },
+    {
+      id: 'weight',
+      label: opts.weightLoggedRecently ? 'Weight logged' : 'Log your weight',
+      sub:   opts.weightLoggedRecently ? 'Progress tracked' : 'Daily body metric',
+      href:  '/metrics',
+      done:  opts.weightLoggedRecently,
+      icon:  Scale,
+      color: '#f59e0b',
+    },
+    ...(opts.glucoseEnabled ? [{
+      id:    'glucose',
+      label: opts.glucoseLogged ? 'Glucose logged' : 'Log glucose reading',
+      sub:   opts.glucoseLogged ? 'Today\'s reading saved' : 'Track blood sugar',
+      href:  '/glucose',
+      done:  opts.glucoseLogged,
+      icon:  Activity,
+      color: '#ef4444',
+    }] : []),
+  ]
+}
+
+// ── Tracker card grid ─────────────────────────────────────────────────────────
+interface TrackerDef {
+  href:  string
+  icon:  LucideIcon
+  label: string
+  sub:   string
+  color: string
+  value?: string
+  done?: boolean
+}
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -37,26 +136,34 @@ export default function DashboardPage() {
   const [authReady, setAuthReady] = useState(false)
   const [todayCalories, setTodayCalories] = useState(0)
   const [todayProtein, setTodayProtein] = useState(0)
+  const [mealCount, setMealCount] = useState(0)
   const [workoutDoneToday, setWorkoutDoneToday] = useState(false)
   const [workoutStreak, setWorkoutStreak] = useState(0)
   const [allStreak, setAllStreak] = useState(0)
-  const [weekCalendar, setWeekCalendar] = useState<WeekDayStatus[]>([])
   const [xp, setXp] = useState(0)
-  const [badgeCount, setBadgeCount] = useState(0)
-  const [programmeWeek, setProgrammeWeek] = useState(1)
-  const [aiInsights, setAiInsights] = useState<{ quote: string; insights: string[]; recommendation: string } | null>(null)
+  const [aiInsights, setAiInsights] = useState<{ quote: string; recommendation: string } | null>(null)
   const [insightsLoading, setInsightsLoading] = useState(false)
   const [glucoseSettings, setGlucoseSettings] = useState<GlucoseSettings | null>(null)
   const [latestGlucose, setLatestGlucose] = useState<GlucoseReading | null>(null)
-  const [insightBadge, setInsightBadge] = useState<string | null>(null)
   const [lastSleep, setLastSleep] = useState<SleepEntry | null>(null)
+  const [weightLoggedToday, setWeightLoggedToday] = useState(false)
+  const [moodLoggedToday] = useState(false)
+  const [hiddenTrackers, setHiddenTrackers] = useState<string[]>([])
+  const [customizing, setCustomizing] = useState(false)
+
+  // Load hidden trackers from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sbh_hidden_trackers')
+      if (saved) setHiddenTrackers(JSON.parse(saved))
+    } catch { /* ignore */ }
+  }, [])
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
       setAuthReady(true)
       if (!user) { router.push('/login'); return }
-      const saved = localStorage.getItem(`sbh_week_${user.uid}`)
-      setProgrammeWeek(saved ? Math.min(Math.max(parseInt(saved), 1), 12) : 1)
+
       const [p, nutrition, workouts, metrics, gs, todayGlucose, sleepHistory] = await Promise.all([
         getProfile(user.uid),
         getNutrition(user.uid, today),
@@ -66,6 +173,10 @@ export default function DashboardPage() {
         getDailyGlucose(user.uid, today),
         getSleepHistory(user.uid, 3),
       ])
+
+      if (!p?.onboardingComplete) { router.push('/onboarding'); return }
+      setProfile(p)
+
       if (gs?.consentGiven) {
         setGlucoseSettings(gs)
         if (todayGlucose?.readings?.length) {
@@ -74,78 +185,59 @@ export default function DashboardPage() {
         }
       }
       if (sleepHistory.length) setLastSleep(sleepHistory[sleepHistory.length - 1])
-      if (!p?.onboardingComplete) { router.push('/onboarding'); return }
-      setProfile(p)
+
       if (nutrition) {
         setTodayCalories(nutrition.totalCalories)
         setTodayProtein(nutrition.totalProteinG)
+        setMealCount(nutrition.meals?.length ?? 0)
       }
-      // Update Firestore streak and compute insight badge
-      const streak = await getStreak(user.uid).catch(() => null)
+
+      const todayMetric = metrics.find(m => m.date === today)
+      setWeightLoggedToday(!!todayMetric)
+
+      // Streak
       const hasActivity = !!(nutrition?.totalCalories || workouts.some(w => w.date === today))
-      const updatedStreak = hasActivity ? await updateStreak(user.uid, today).catch(() => streak) : streak
+      await getStreak(user.uid).catch(() => null)
+      if (hasActivity) await updateStreak(user.uid, today).catch(() => null)
+
       setWorkoutDoneToday(workouts.some(w => w.date === today))
       const wDates = workouts.map(w => w.date)
       const nDates = nutrition ? [today] : []
       const mDates = metrics.map(m => m.date)
-      const wStreak = computeWorkoutStreak(wDates)
-      setWorkoutStreak(wStreak)
-      const aStreak = computeStreak(Array.from(new Set([...wDates, ...nDates, ...mDates])).sort())
-      setAllStreak(aStreak)
-      // Compute DailyContext insight badge
-      if (p) {
-        const ctx = computeDailyContext({
-          uid: user.uid, todayNutrition: nutrition, recentMetrics: metrics, recentNutrition: [],
-          todayWorkout: workouts.find(w => w.date === today) ?? null,
-          streak: updatedStreak ?? null,
-          calorieTarget: p.calorieTarget, proteinTarget: p.proteinTargetG,
-          carbTarget: p.carbTargetG, fatTarget: p.fatTargetG,
-          trainingDaysPerWeek: p.trainingDaysPerWeek,
-        })
-        setInsightBadge(ctx.insightBadge)
-      }
-      setWeekCalendar(computeWeekCalendar(wDates, nDates))
-      const totalXp = computeXP(wDates, nDates, mDates)
-      setXp(totalXp)
-      const badges = computeBadges({
-        totalWorkouts: workouts.length,
-        totalNutritionDays: nDates.length,
-        totalWeightLogs: mDates.length,
-        workoutStreak: wStreak,
-        allStreak: aStreak,
-        xp: totalXp,
-      })
-      setBadgeCount(badges.filter(b => b.earned).length)
+      setWorkoutStreak(computeWorkoutStreak(wDates))
+      setAllStreak(computeStreak(Array.from(new Set([...wDates, ...nDates, ...mDates])).sort()))
+      setXp(computeXP(wDates, nDates, mDates))
 
-      // AI Insights — cached once per day per user
+      // AI Insights (cached per day)
       const cacheKey = `sbh_insights_${user.uid}_${today}`
       const cached = sessionStorage.getItem(cacheKey)
       if (cached) {
-        try { setAiInsights(JSON.parse(cached)) } catch { /* ignore */ }
-      } else {
-        const last7Dates = Array.from({ length: 7 }, (_, i) => {
+        try { setAiInsights(JSON.parse(cached)) } catch { /* */ }
+      } else if (p && (nutrition?.totalCalories || workouts.some(w => w.date === today))) {
+        setInsightsLoading(true)
+        const last7Nutrition = await getNutritionHistory(user.uid, 7)
+        const last7Days = Array.from({ length: 7 }, (_, i) => {
           const d = new Date(); d.setDate(d.getDate() - (6 - i))
           return d.toISOString().slice(0, 10)
+        }).map(date => {
+          const n = last7Nutrition.find(n => n.date === date)
+          return { date, calories: n?.totalCalories ?? 0, proteinG: n?.totalProteinG ?? 0, hadWorkout: !!workouts.find(w => w.date === date), weightKg: null }
         })
-        const last7Nutrition = await getNutritionHistory(user.uid, 7)
-        const last7Days = last7Dates.map(date => {
-          const nutEntry = last7Nutrition.find(n => n.date === date)
-          const workout  = workouts.find(w => w.date === date)
-          const metric   = metrics.find(m => m.date === date)
-          return { date, calories: nutEntry?.totalCalories ?? 0, proteinG: nutEntry?.totalProteinG ?? 0, hadWorkout: !!workout, weightKg: metric?.weightKg ?? null }
+        fetch('/api/ai-insights', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile: { calorieTarget: p.calorieTarget, proteinTargetG: p.proteinTargetG, goal: p.goal }, last7Days }),
         })
-        if (p && last7Days.some(d => d.calories > 0 || d.hadWorkout)) {
-          setInsightsLoading(true)
-          fetch('/api/ai-insights', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ profile: { calorieTarget: p.calorieTarget, proteinTargetG: p.proteinTargetG, weightKg: p.weightKg, goal: p.goal }, last7Days }),
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data?.quote) {
+              const compact = { quote: data.quote, recommendation: data.recommendation }
+              setAiInsights(compact)
+              sessionStorage.setItem(cacheKey, JSON.stringify(compact))
+            }
           })
-            .then(r => r.ok ? r.json() : null)
-            .then(data => { if (data?.quote) { setAiInsights(data); sessionStorage.setItem(cacheKey, JSON.stringify(data)) } })
-            .catch(() => {})
-            .finally(() => setInsightsLoading(false))
-        }
+          .catch(() => {})
+          .finally(() => setInsightsLoading(false))
       }
     })
     return unsub
@@ -153,355 +245,355 @@ export default function DashboardPage() {
 
   if (!authReady) return (
     <main className="min-h-screen mesh-bg flex items-center justify-center">
-      <div className="text-center space-y-3">
-        <div className="w-10 h-10 border-2 border-violet-500/60 border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-2 text-sm tracking-wide">Loading your stats…</p>
-      </div>
+      <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
     </main>
   )
 
   const calPct  = profile ? Math.min((todayCalories / profile.calorieTarget) * 100, 100) : 0
   const protPct = profile ? Math.min((todayProtein / profile.proteinTargetG) * 100, 100) : 0
-  const { level, title: levelTitle } = getLevel(xp)
-  const lvlPct  = getLevelProgress(xp)
   const tip     = getDailyTip()
-  const showMilestoneBanner = isStreakMilestone(workoutStreak) && workoutStreak > 0
   const greeting = getGreeting(profile?.displayName)
   const dayStr  = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
-  const phase   = programmeWeek <= 4 ? 1 : programmeWeek <= 8 ? 2 : 3
-  const currentPhase = PHASES[phase - 1]
-  const dow = new Date().getDay()
-  const todayLabel = DAY_LABELS[dow === 0 ? 6 : dow - 1]
+
+  const actions = buildActions({
+    todayCalories,
+    workoutDone:          workoutDoneToday,
+    mealCount,
+    weightLoggedRecently: weightLoggedToday,
+    sleepLogged:          !!lastSleep && lastSleep.date >= today,
+    moodLogged:           moodLoggedToday,
+    glucoseEnabled:       !!glucoseSettings?.consentGiven,
+    glucoseLogged:        !!latestGlucose,
+  })
+
+  const actionsDone    = actions.filter(a => a.done).length
+  const actionsTotal   = actions.length
+  const actionsPct     = Math.round((actionsDone / actionsTotal) * 100)
+
+  // Tracker cards grid — ALL equal size
+  const trackers: TrackerDef[] = [
+    {
+      href: '/nutrition', icon: Utensils, label: 'Nutrition',
+      sub: mealCount > 0 ? `${todayCalories} kcal` : 'Log meals',
+      color: '#10b981', done: mealCount > 0,
+    },
+    {
+      href: '/workout', icon: Dumbbell, label: 'Workout',
+      sub: workoutDoneToday ? 'Done today' : 'Log session',
+      color: '#6366f1', done: workoutDoneToday,
+    },
+    {
+      href: '/sleep', icon: Moon, label: 'Sleep',
+      sub: lastSleep ? `${lastSleep.durationH}h last night` : 'Log sleep',
+      color: '#a78bfa', done: !!lastSleep,
+    },
+    {
+      href: '/glucose', icon: Activity, label: 'Glucose',
+      sub: latestGlucose
+        ? displayGlucose(latestGlucose.valueMmol, glucoseSettings?.preferredUnit ?? 'mmol/L')
+        : 'Log reading',
+      color: '#ef4444', done: !!latestGlucose,
+    },
+    {
+      href: '/mood', icon: Brain, label: 'Mood',
+      sub: 'Mental check-in',
+      color: '#ec4899', done: moodLoggedToday,
+    },
+    {
+      href: '/metrics', icon: Scale, label: 'Weight',
+      sub: weightLoggedToday ? 'Logged today' : 'Daily weigh-in',
+      color: '#f59e0b', done: weightLoggedToday,
+    },
+    {
+      href: '/blood-pressure', icon: Heart, label: 'Blood Pressure',
+      sub: 'Heart health',
+      color: '#f43f5e', done: false,
+    },
+    {
+      href: '/habits', icon: CheckSquare, label: 'Habits',
+      sub: 'Daily streaks',
+      color: '#06b6d4', done: false,
+    },
+    {
+      href: '/coach', icon: Bot, label: 'AI Coach',
+      sub: 'Chat & check-in',
+      color: VIOLET, done: false,
+    },
+    {
+      href: '/insights', icon: TrendingUp, label: 'Weekly Report',
+      sub: 'AI insights',
+      color: '#fbbf24', done: false,
+    },
+    {
+      href: '/pcos', icon: Droplets, label: 'PCOS',
+      sub: 'Cycle & hormones',
+      color: '#f472b6', done: false,
+    },
+    {
+      href: '/thyroid', icon: Pill, label: 'Thyroid',
+      sub: 'TSH & fatigue',
+      color: '#34d399', done: false,
+    },
+  ]
 
   return (
-    <main className="min-h-screen mesh-bg page-pad">
-      {/* ── Frosted sticky header ── */}
-      <header className="page-header-bar px-4 pt-safe-top flex items-center justify-between h-14">
+    <main className="min-h-screen mesh-bg page-pad pb-28">
+
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <header className="page-header-bar px-4 flex items-center justify-between h-14">
         <div>
-          <p className="section-label">{dayStr}</p>
+          <p className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>{dayStr}</p>
+          <p className="text-base font-bold text-1 leading-tight">{greeting}</p>
         </div>
         <div className="flex items-center gap-1.5">
           <ThemeToggle />
-          <Link href="/profile" className="p-2 rounded-xl glass-elevated transition-colors" style={{color:'var(--text-2)'}}>
+          <Link href="/help" className="p-2 rounded-xl glass text-xs font-semibold"
+            style={{ color: 'var(--text-3)' }}>
+            Help
+          </Link>
+          <Link href="/profile" className="p-2 rounded-xl glass-elevated" style={{ color: 'var(--text-2)' }}>
             <User size={16} />
           </Link>
           <button onClick={() => signOut(auth).then(() => router.push('/login'))}
-            className="p-2 rounded-xl glass transition-colors" style={{color:'var(--text-3)'}}>
+            className="p-2 rounded-xl glass" style={{ color: 'var(--text-3)' }}>
             <LogOut size={16} />
           </button>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-3 relative pt-3">
+      <div className="max-w-2xl mx-auto px-4 space-y-4 pt-3">
 
-        {/* ── Hero greeting ── */}
-        <div className="fade-in-up px-1 pb-1">
-          <h1 className="hero-title gradient-text">{greeting}</h1>
+        {/* ── AI Inspiring Message ─────────────────────────────── */}
+        <div className="glass-elevated rounded-2xl px-4 py-3.5 space-y-1"
+          style={{ background: 'linear-gradient(135deg,rgba(124,58,237,0.1),rgba(6,182,212,0.06))' }}>
+          {insightsLoading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 border border-violet-400 border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs text-3">Preparing your personalised tip…</p>
+            </div>
+          ) : aiInsights ? (
+            <>
+              <p className="text-sm font-medium text-1 leading-snug italic">
+                &ldquo;{aiInsights.quote}&rdquo;
+              </p>
+              {aiInsights.recommendation && (
+                <p className="text-xs text-2 leading-relaxed pt-0.5">{aiInsights.recommendation}</p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-1 leading-snug">{tip}</p>
+          )}
         </div>
 
-        {/* ── TODAY'S PROGRESS (most important — first) ── */}
-        <div className="glass-elevated rounded-2xl p-4 fade-in-up anim-d1">
+        {/* ── Today's Progress rings ───────────────────────────── */}
+        <div className="glass-elevated rounded-2xl p-4">
           <div className="flex items-center justify-between mb-3">
-            <p className="section-label">Today&apos;s Progress</p>
-            {calPct >= 100 && <span className="text-xs font-bold text-emerald-400">🎯 Goal hit!</span>}
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
+              Today&apos;s Progress
+            </p>
+            {calPct >= 100 && (
+              <span className="text-xs font-bold" style={{ color: '#10b981' }}>Goal reached</span>
+            )}
           </div>
           <div className="flex items-center justify-around">
             <Link href="/nutrition">
-              <ProgressRing value={calPct} size={110} stroke={9} color="#10b981"
-                label={`${todayCalories}`} sublabel="kcal eaten" />
+              <ProgressRing value={calPct} size={96} stroke={8} color="#10b981"
+                label={`${todayCalories}`} sublabel="kcal" />
             </Link>
             <div className="text-center">
-              <p className="text-xs text-2 mb-1">Daily target</p>
-              <p className="hero-number gradient-text leading-none">{profile?.calorieTarget ?? '--'}</p>
-              <p className="text-xs text-3 mt-1">kcal / day</p>
-              {calPct > 0 && (
-                <p className="text-xs mt-2 font-semibold px-2 py-0.5 rounded-full"
-                  style={{
-                    color: calPct > 105 ? '#f43f5e' : calPct >= 90 ? '#10b981' : '#f59e0b',
-                    background: calPct > 105 ? 'rgba(244,63,94,0.1)' : calPct >= 90 ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
-                  }}>
-                  {calPct > 105 ? `+${Math.round(todayCalories - (profile?.calorieTarget ?? 0))} over` :
-                   calPct >= 90 ? 'On track ✓' :
-                   `${Math.round((profile?.calorieTarget ?? 0) - todayCalories)} left`}
-                </p>
-              )}
+              <p className="text-2xl font-black gradient-text">{actionsDone}<span className="text-base font-medium text-3">/{actionsTotal}</span></p>
+              <p className="text-xs text-3 mt-0.5">actions done</p>
+              <div className="w-16 h-1.5 rounded-full mx-auto mt-2" style={{ background: 'var(--ring-track)' }}>
+                <div className="h-1.5 rounded-full" style={{ width: `${actionsPct}%`, background: `linear-gradient(90deg,${VIOLET},${CYAN})` }} />
+              </div>
             </div>
             <Link href="/nutrition">
-              <ProgressRing value={protPct} size={110} stroke={9} color="#6366f1"
+              <ProgressRing value={protPct} size={96} stroke={8} color="#6366f1"
                 label={`${todayProtein}g`} sublabel="protein" />
             </Link>
           </div>
         </div>
 
-        {/* ── DAILY INSIGHT BADGE ── */}
-        {insightBadge && (
-          <div className="glass-cyan rounded-2xl px-4 py-3 flex items-center gap-3 fade-in-up anim-d2">
-            <span className="text-lg">✨</span>
-            <p className="text-sm font-semibold text-1">{insightBadge}</p>
+        {/* ── Today's Actions ──────────────────────────────────── */}
+        <div className="glass-elevated rounded-2xl overflow-hidden">
+          <div className="px-4 pt-4 pb-3 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
+              Today&apos;s Actions
+            </p>
+            <span className="text-xs font-bold" style={{ color: actionsDone === actionsTotal ? '#10b981' : VIOLET }}>
+              {actionsDone === actionsTotal ? 'All done!' : `${actionsTotal - actionsDone} left`}
+            </span>
           </div>
-        )}
-
-        {/* ── GLUCOSE WIDGET (shown only if consent given) ── */}
-        {glucoseSettings?.consentGiven && (
-          <Link href="/glucose" className="block glass-elevated rounded-2xl p-4 card-hover fade-in-up anim-d2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(16,185,129,0.15)' }}>
-                  <Activity size={18} style={{ color: '#10b981' }} />
+          <div className="divide-y" style={{ borderColor: 'var(--glass-border)' }}>
+            {actions.map(action => (
+              <Link key={action.id} href={action.href}
+                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/5">
+                <div className="shrink-0">
+                  {action.done
+                    ? <CheckCircle size={18} style={{ color: '#10b981' }} />
+                    : <Circle size={18} style={{ color: 'var(--text-3)' }} />}
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-2 uppercase tracking-widest">Glucose</p>
-                  {latestGlucose ? (
-                    <p className="font-bold text-sm"
-                      style={{ color: glucoseColor(latestGlucose.valueMmol, { ...DEFAULT_GLUCOSE_SETTINGS, ...glucoseSettings }) }}>
-                      {displayGlucose(latestGlucose.valueMmol, glucoseSettings.preferredUnit)}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-3">No reading today</p>
-                  )}
-                </div>
-              </div>
-              <div className="text-right">
-                {latestGlucose && (
-                  <p className="text-xs text-2">{latestGlucose.time} · {latestGlucose.context.replace(/_/g, ' ')}</p>
-                )}
-                <p className="text-xs font-semibold" style={{ color: '#7c3aed' }}>+ Log reading →</p>
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {/* ── SLEEP WIDGET ── */}
-        <Link href="/sleep" className="block glass-elevated rounded-2xl p-4 card-hover fade-in-up anim-d3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(124,58,237,0.15)' }}>
-                <Moon size={18} style={{ color: '#7c3aed' }} />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-2 uppercase tracking-widest">Sleep</p>
-                {lastSleep ? (
-                  <p className="font-bold text-sm" style={{ color: sleepScoreLabel(calcSleepScore(lastSleep.durationH, lastSleep.quality)).color }}>
-                    {lastSleep.durationH}h — {sleepScoreLabel(calcSleepScore(lastSleep.durationH, lastSleep.quality)).label}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold ${action.done ? 'line-through' : ''}`}
+                    style={{ color: action.done ? 'var(--text-3)' : 'var(--text-1)' }}>
+                    {action.label}
                   </p>
-                ) : (
-                  <p className="text-xs text-3">No sleep logged</p>
-                )}
-              </div>
-            </div>
-            <div className="text-right">
-              {lastSleep && <p className="text-xs text-2">{lastSleep.date} · Q{lastSleep.quality}/5</p>}
-              <p className="text-xs font-semibold" style={{ color: '#7c3aed' }}>
-                {lastSleep ? 'View →' : '+ Log sleep →'}
-              </p>
-            </div>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{action.sub}</p>
+                </div>
+                <ChevronRight size={14} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+              </Link>
+            ))}
           </div>
-        </Link>
-
-        {/* ── QUICK LOG (primary CTAs) ── */}
-        <p className="section-label px-1">Quick Actions</p>
-        <div className="grid grid-cols-2 gap-3">
-          <QuickCard href="/nutrition" Icon={Utensils} label="Log Meal" sub="Calories & macros" color="#10b981" done={todayCalories > 0} />
-          <QuickCard href="/workout"   Icon={Dumbbell}  label="Workout"  sub={todayLabel}        color="#6366f1" done={workoutDoneToday} />
-          <QuickCard href="/metrics"   Icon={Scale}     label="Log Weight" sub="Daily check-in"  color="#f59e0b" done={false} />
-          <QuickCard href="/metrics"   Icon={TrendingUp} label="Progress" sub="Charts & trends"  color="#ec4899" done={false} />
-          <QuickCard href="/habits"          Icon={CheckSquare} label="Habits"         sub="Daily streaks"    color="#10b981" done={false} />
-          <QuickCard href="/mood"            Icon={Brain}       label="Mood"           sub="Mental wellness"  color="#a78bfa" done={false} />
-          <QuickCard href="/blood-pressure"  Icon={Activity}    label="Blood Pressure" sub="Heart health"     color="#ef4444" done={false} />
-          <QuickCard href="/insights"        Icon={Lightbulb}   label="Weekly Report"  sub="AI insights"      color="#f59e0b" done={false} />
-          <QuickCard href="/health-feed"     Icon={Sparkles}    label="Health Feed"    sub="Ranked insights"  color="#a78bfa" done={false} />
-          <QuickCard href="/coach"           Icon={Bot}         label="AI Coach"       sub="Chat & check-in"  color="#06b6d4" done={false} />
         </div>
 
-        {/* ── TODAY'S WORKOUT (phase + programme) ── */}
-        <Link href="/workout" className="block glass-elevated rounded-2xl p-4 card-hover"
-          style={{borderColor: currentPhase.color + '30', border: `1px solid ${currentPhase.color}30`}}>
-          <div className="flex items-center justify-between">
+        {/* ── Streak pill ─────────────────────────────────────── */}
+        <div className="flex items-center gap-3">
+          <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-2 flex-1">
+            <span className="text-lg">🔥</span>
             <div>
-              <span className="text-xs px-2 py-0.5 rounded-full font-semibold inline-block mb-1.5"
-                style={{background: currentPhase.color + '18', color: currentPhase.color}}>
-                Phase {phase} · Week {programmeWeek}/12
-              </span>
-              <p className="font-bold text-1 text-sm">{todayLabel}</p>
-              <p className="text-xs text-2 mt-0.5">{currentPhase.name}</p>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              {workoutDoneToday && <span className="text-xs text-emerald-400 font-semibold">✓ Done</span>}
-              <ChevronRight size={20} style={{color: currentPhase.color}} />
+              <p className="text-sm font-bold text-1">{workoutStreak} day workout streak</p>
+              <p className="text-xs text-3">{allStreak} day all-activity streak</p>
             </div>
           </div>
-        </Link>
-
-        {/* ── AI COACH INSIGHTS ── */}
-        {(insightsLoading || aiInsights) && (
-          <div className="glass-elevated rounded-2xl p-4">
-            <p className="section-label mb-3">✨ AI Coach Insights</p>
-            {insightsLoading ? (
-              <div className="flex items-center gap-2 text-sm text-2 py-1">
-                <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-                Analysing your last 7 days…
-              </div>
-            ) : aiInsights && (
-              <div className="space-y-3">
-                <p className="text-sm italic leading-relaxed border-l-2 pl-3"
-                  style={{borderColor:'#7c3aed', color:'#a78bfa'}}>
-                  &ldquo;{aiInsights.quote}&rdquo;
-                </p>
-                <ul className="space-y-1.5">
-                  {aiInsights.insights.map((insight, i) => (
-                    <li key={i} className="flex items-start gap-2 text-xs text-2">
-                      <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{background:'#7c3aed'}} />
-                      {insight}
-                    </li>
-                  ))}
-                </ul>
-                <div className="rounded-xl p-3 text-xs" style={{background:'rgba(6,182,212,0.08)', border:'1px solid rgba(6,182,212,0.2)'}}>
-                  <p className="font-semibold mb-1" style={{color:'#06b6d4'}}>This week → try this</p>
-                  <p className="text-2">{aiInsights.recommendation}</p>
-                </div>
-              </div>
-            )}
+          <div className="glass rounded-2xl px-3 py-2.5 text-center">
+            <p className="text-sm font-bold gradient-text">{xp.toLocaleString()}</p>
+            <p className="text-xs text-3">XP</p>
           </div>
-        )}
+        </div>
 
-        {/* ── STREAKS + WEEK CALENDAR ── */}
-        <div className="glass-elevated rounded-2xl p-4 space-y-3">
-          {showMilestoneBanner && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold"
-              style={{background:'rgba(245,158,11,0.12)', color:'#f59e0b'}}>
-              🎉 {workoutStreak}-day workout streak milestone!
-            </div>
+        {/* ── Tracker Cards — uniform 2×grid ───────────────────── */}
+        <div>
+          <div className="flex items-center justify-between px-1 mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
+              My Trackers
+            </p>
+            <button
+              onClick={() => setCustomizing(true)}
+              className="text-xs font-semibold px-3 py-1 rounded-full transition-all active:scale-95"
+              style={{
+                background: 'rgba(124,58,237,0.12)',
+                border: '1px solid rgba(124,58,237,0.25)',
+                color: VIOLET,
+              }}
+            >
+              Customise
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {trackers
+              .filter(t => !hiddenTrackers.includes(t.label))
+              .map(t => (
+                <TrackerCard key={t.href + t.label} {...t} />
+              ))}
+          </div>
+          {hiddenTrackers.length > 0 && (
+            <button
+              onClick={() => setCustomizing(true)}
+              className="mt-3 w-full text-xs py-2 rounded-xl text-center transition-all"
+              style={{ color: 'var(--text-3)', border: '1px dashed var(--glass-border)' }}
+            >
+              +{hiddenTrackers.length} hidden tracker{hiddenTrackers.length > 1 ? 's' : ''} — tap Customise to show
+            </button>
           )}
-          <div className="flex items-center gap-5">
-            <div className="flex items-center gap-2.5">
-              <span className="text-4xl leading-none flame">🔥</span>
-              <div>
-                <p className="hero-number leading-none" style={{fontSize:'2.5rem'}}>{workoutStreak}</p>
-                <p className="section-label mt-0.5">workout streak</p>
-              </div>
-            </div>
-            <div className="h-10 w-px shrink-0" style={{background:'var(--glass-border)'}} />
-            <div>
-              <p className="text-2xl font-bold text-1 leading-tight">{allStreak}</p>
-              <p className="text-xs text-2">all-activity</p>
-            </div>
-            <div className="ml-auto">
-              <Link href="/metrics" className="flex items-center gap-1 text-xs text-amber-400 font-semibold">
-                <Trophy size={13} />
-                {badgeCount} badges
-              </Link>
-            </div>
-          </div>
+        </div>
 
-          {weekCalendar.length > 0 && (
-            <div>
-              <p className="text-xs text-3 uppercase tracking-widest mb-2">This Week</p>
-              <div className="grid grid-cols-7 gap-1">
-                {weekCalendar.map(day => {
-                  const dotColor = day.hasWorkout ? '#10b981' : day.hasNutrition ? '#7c3aed' : null
+        {/* ── Customise modal ──────────────────────────────────── */}
+        {customizing && (
+          <div className="fixed inset-0 z-50 flex items-end" onClick={() => setCustomizing(false)}>
+            <div
+              className="w-full rounded-t-2xl p-5 max-h-[80vh] overflow-y-auto"
+              style={{
+                background: 'var(--glass-bg)',
+                backdropFilter: 'blur(28px)',
+                WebkitBackdropFilter: 'blur(28px)',
+                border: '1px solid var(--glass-border)',
+                boxShadow: '0 -20px 60px rgba(0,0,0,0.5)',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-bold text-1">Customise Home Screen</p>
+                <button
+                  onClick={() => setCustomizing(false)}
+                  className="text-xs px-3 py-1.5 rounded-xl font-semibold"
+                  style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})`, color: '#fff' }}
+                >
+                  Done
+                </button>
+              </div>
+              <p className="text-xs mb-4" style={{ color: 'var(--text-3)' }}>
+                Toggle which trackers appear on your home screen.
+              </p>
+              <div className="space-y-2">
+                {trackers.map(t => {
+                  const hidden = hiddenTrackers.includes(t.label)
                   return (
-                    <div key={day.date} className="flex flex-col items-center gap-1">
-                      <p className="text-xs text-3">{day.dayName}</p>
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center transition-all"
-                        style={{
-                          background: dotColor ? dotColor + '20' : 'rgba(255,255,255,0.03)',
-                          border: day.isToday ? `1px solid ${dotColor ?? 'var(--text-3)'}60` : '1px solid transparent',
-                        }}>
-                        <div className="w-2.5 h-2.5 rounded-full"
-                          style={{background: dotColor ?? 'rgba(255,255,255,0.08)'}} />
+                    <button
+                      key={t.label}
+                      onClick={() => {
+                        const next = hidden
+                          ? hiddenTrackers.filter(h => h !== t.label)
+                          : [...hiddenTrackers, t.label]
+                        setHiddenTrackers(next)
+                        localStorage.setItem('sbh_hidden_trackers', JSON.stringify(next))
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl transition-all"
+                      style={{
+                        background: hidden ? 'rgba(255,255,255,0.03)' : `${t.color}12`,
+                        border: `1px solid ${hidden ? 'var(--glass-border)' : t.color + '30'}`,
+                      }}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: `${t.color}20` }}
+                      >
+                        <t.icon size={16} style={{ color: hidden ? 'var(--text-3)' : t.color }} />
                       </div>
-                    </div>
+                      <span
+                        className="flex-1 text-left text-sm font-medium"
+                        style={{ color: hidden ? 'var(--text-3)' : 'var(--text-1)' }}
+                      >
+                        {t.label}
+                      </span>
+                      <div
+                        className="w-11 h-6 rounded-full relative transition-all duration-200"
+                        style={{ background: hidden ? 'rgba(255,255,255,0.1)' : t.color }}
+                      >
+                        <div
+                          className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-200"
+                          style={{ left: hidden ? '2px' : '22px' }}
+                        />
+                      </div>
+                    </button>
                   )
                 })}
               </div>
-              <div className="flex gap-4 mt-2 text-xs text-3">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full inline-block" style={{background:'#10b981'}} /> Workout
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full inline-block" style={{background:'#7c3aed'}} /> Nutrition
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── XP / LEVEL ── */}
-        <div className="glass-elevated rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-2">
-              <Zap size={15} style={{color:'#f59e0b'}} />
-              <span className="text-sm font-bold gradient-text-gold">Level {level} · {levelTitle}</span>
-            </div>
-            <span className="text-xs font-semibold text-2">{xp.toLocaleString()} XP</span>
-          </div>
-          <div className="w-full rounded-full h-2" style={{background:'var(--ring-track)'}}>
-            <div className="xp-bar h-2 rounded-full"
-              style={{width:`${lvlPct}%`, background:'linear-gradient(90deg,#f59e0b,#fbbf24)'}} />
-          </div>
-        </div>
-
-        {/* ── MACRO TARGETS ── */}
-        {profile && (
-          <div className="glass-elevated rounded-2xl p-4">
-            <p className="section-label mb-3">Daily Targets</p>
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { label: 'Calories', val: `${profile.calorieTarget}`, unit: 'kcal', color: '#10b981' },
-                { label: 'Protein',  val: `${profile.proteinTargetG}`, unit: 'g',   color: '#6366f1' },
-                { label: 'Carbs',    val: `${profile.carbTargetG}`,    unit: 'g',   color: '#f59e0b' },
-                { label: 'Fat',      val: `${profile.fatTargetG}`,     unit: 'g',   color: '#f43f5e' },
-              ].map(t => (
-                <div key={t.label} className="glass rounded-xl p-2.5 text-center">
-                  <p className="text-xs text-2 mb-0.5">{t.label}</p>
-                  <p className="font-bold text-sm" style={{color: t.color}}>{t.val}</p>
-                  <p className="text-xs text-3">{t.unit}</p>
-                </div>
-              ))}
             </div>
           </div>
         )}
-
-        {/* ── DAILY TIP ── */}
-        <div className="glass-elevated rounded-2xl p-4">
-          <p className="section-label mb-2">Daily Science Tip</p>
-          <p className="text-sm text-1 leading-relaxed">{tip}</p>
-        </div>
 
       </div>
     </main>
   )
 }
 
-function getGreeting(name?: string): string {
-  const h = new Date().getHours()
-  const s = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
-  return name ? `${s}, ${name.split(' ')[0]}` : s
-}
-
-function QuickCard({ href, Icon, label, sub, color, done }: {
-  href: string; Icon: LucideIcon
-  label: string; sub: string; color: string; done: boolean
-}) {
+function TrackerCard({ href, icon: Icon, label, sub, color, done }: TrackerDef) {
   return (
     <Link href={href}
-      className="glass-elevated rounded-2xl p-3.5 card-hover flex items-center gap-3"
-      style={done ? { borderColor: color + '35' } : undefined}>
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-        style={{ background: color + '1a', border: `1px solid ${color}22` }}>
-        <Icon size={18} strokeWidth={2} style={{ color }} />
-      </div>
-      <div className="min-w-0">
-        <div className="flex items-center gap-1.5">
-          <p className="font-semibold text-sm text-1 truncate">{label}</p>
-          {done && (
-            <span className="text-[10px] font-bold px-1 py-px rounded-full"
-              style={{ color, background: color + '15' }}>✓</span>
-          )}
+      className="glass rounded-2xl p-4 flex flex-col gap-2.5 card-hover"
+      style={done ? { border: `1px solid ${color}35` } : undefined}>
+      <div className="flex items-center justify-between">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{ background: `${color}18`, border: `1px solid ${color}22` }}>
+          <Icon size={16} strokeWidth={2} style={{ color }} />
         </div>
-        <p className="text-xs text-2 truncate">{sub}</p>
+        {done && (
+          <CheckCircle size={14} style={{ color: '#10b981' }} />
+        )}
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-1">{label}</p>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{sub}</p>
       </div>
     </Link>
   )
