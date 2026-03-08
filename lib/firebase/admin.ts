@@ -6,9 +6,16 @@ function getOrInitAdminApp(): App {
     throw new Error('Firebase Admin not available during build')
   }
   if (getApps().length) return getApps()[0]
-  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
-    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
-    : undefined
+  let serviceAccount: object | undefined
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+  if (raw) {
+    try {
+      serviceAccount = JSON.parse(raw)
+    } catch {
+      // Value is base64-encoded (set via gcloud CLI) — decode first
+      serviceAccount = JSON.parse(Buffer.from(raw, 'base64').toString('utf8'))
+    }
+  }
   return initializeApp({
     credential: serviceAccount ? cert(serviceAccount) : undefined,
     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
