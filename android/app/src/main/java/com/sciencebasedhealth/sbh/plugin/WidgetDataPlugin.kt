@@ -7,6 +7,7 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import androidx.glance.appwidget.updateAll
 import com.sciencebasedhealth.sbh.widget.SBHWidget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
