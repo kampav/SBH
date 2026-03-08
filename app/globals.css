@@ -157,6 +157,17 @@ html, body {
   /* ── Page padding ────────────────────────────────── */
   .page-pad { padding-bottom: 104px; }
 
+  @media (min-width: 768px) {
+    /* Tablet/desktop: sidebar replaces bottom nav */
+    .page-pad {
+      padding-bottom: 2rem;
+      margin-left: 224px;   /* matches sidebar w-56 */
+    }
+    /* CoachWidget FAB and panel sit above page bottom (no bottom nav on md+) */
+    .coachwidget-panel { bottom: calc(1.25rem + 4rem) !important; }
+    .coachwidget-fab   { bottom: 1.25rem !important; }
+  }
+
   /* ── Typography scale ────────────────────────────── */
   .page-title {
     font-size: 1.875rem;

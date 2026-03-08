@@ -130,7 +130,7 @@ export default function CoachWidget() {
       {/* ── Chat panel ─────────────────────────────────────────────────────── */}
       {open && (
         <div
-          className="fixed right-4 z-50 flex flex-col rounded-2xl overflow-hidden"
+          className="coachwidget-panel fixed right-4 z-50 flex flex-col rounded-2xl overflow-hidden"
           style={{
             bottom: 'calc(4.5rem + env(safe-area-inset-bottom) + 4rem)',
             width: 'min(360px, calc(100vw - 2rem))',
@@ -264,7 +264,7 @@ export default function CoachWidget() {
       {/* ── FAB trigger ────────────────────────────────────────────────────── */}
       <button
         onClick={() => setOpen(v => !v)}
-        className="fixed right-4 z-50 flex items-center justify-center rounded-full shadow-xl transition-all duration-300 active:scale-90"
+        className="coachwidget-fab fixed right-4 z-50 flex items-center justify-center rounded-full shadow-xl transition-all duration-300 active:scale-90"
         style={{
           bottom: 'calc(4.5rem + env(safe-area-inset-bottom) + 0.75rem)',
           width: 52,

@@ -78,23 +78,28 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const message: string    = body.message ?? ''
   const history: { role: 'user' | 'assistant'; content: string }[] = body.history ?? []
+  const systemOverride: string | undefined = body.systemOverride
 
   if (!message.trim()) {
     return new Response(JSON.stringify({ error: 'Message required' }), { status: 400 })
   }
 
-  // Load user profile + conditions from Firestore
+  // Load user profile + conditions from Firestore (skip if caller provides a system override)
   const db = getAdminDb()
   let profile: UserProfile | null = null
   let conditions: ConditionProfile | null = null
-  try {
-    const snap = await db.collection('users').doc(uid).collection('profile').doc('data').get()
-    if (snap.exists) {
-      const data = snap.data() as UserProfile
-      profile    = data
-      conditions = data.conditionProfile ?? null
-    }
-  } catch { /* best-effort */ }
+  if (!systemOverride) {
+    try {
+      const snap = await db.collection('users').doc(uid).collection('profile').doc('data').get()
+      if (snap.exists) {
+        const data = snap.data() as UserProfile
+        profile    = data
+        conditions = data.conditionProfile ?? null
+      }
+    } catch { /* best-effort */ }
+  }
+
+  const systemPrompt = systemOverride ?? buildSystemPrompt(profile, conditions)
 
   // Build messages array (keep last 20 for context)
   const recentHistory = history.slice(-20)
@@ -110,7 +115,7 @@ export async function POST(req: NextRequest) {
     stream = await client.messages.stream({
       model:      'claude-haiku-4-5-20251001',
       max_tokens: 512,
-      system:     buildSystemPrompt(profile, conditions),
+      system:     systemPrompt,
       messages,
     })
   } catch (err) {

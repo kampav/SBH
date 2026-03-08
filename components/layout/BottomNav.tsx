@@ -102,18 +102,18 @@ export default function BottomNav() {
 
   return (
     <>
-      {/* ── Backdrop ─────────────────────────────────────────────────────────── */}
+      {/* ── Backdrop (mobile only) ───────────────────────────────────────────── */}
       {open && (
         <div
-          className="fixed inset-0 z-40"
+          className="fixed inset-0 z-40 md:hidden"
           style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
           onClick={() => setOpen(false)}
         />
       )}
 
-      {/* ── More Drawer ──────────────────────────────────────────────────────── */}
+      {/* ── More Drawer (mobile only) ────────────────────────────────────────── */}
       <div
-        className="fixed left-0 right-0 z-50 transition-all duration-300 ease-out"
+        className="fixed left-0 right-0 z-50 transition-all duration-300 ease-out md:hidden"
         style={{
           bottom: open
             ? 'calc(4.5rem + env(safe-area-inset-bottom))'
@@ -201,9 +201,9 @@ export default function BottomNav() {
         </div>
       </div>
 
-      {/* ── Bottom Tab Bar ───────────────────────────────────────────────────── */}
+      {/* ── Bottom Tab Bar (mobile only) ─────────────────────────────────────── */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 flex items-stretch"
+        className="fixed bottom-0 left-0 right-0 z-50 flex items-stretch md:hidden"
         style={{
           height: 'calc(4.5rem + env(safe-area-inset-bottom))',
           paddingBottom: 'env(safe-area-inset-bottom)',
@@ -264,6 +264,121 @@ export default function BottomNav() {
           <NavTab key={href} href={href} label={label} Icon={Icon} pathname={pathname} />
         ))}
       </nav>
+
+      {/* ── Left Sidebar (tablet / desktop) ──────────────────────────────────── */}
+      <aside
+        className="hidden md:flex fixed top-0 left-0 bottom-0 z-50 flex-col"
+        style={{
+          width: 224,
+          background: 'var(--nav-bg)',
+          backdropFilter: 'blur(28px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+          borderRight: '1px solid var(--glass-border)',
+          boxShadow: '1px 0 24px -8px rgba(0,0,0,0.35)',
+        }}
+      >
+        {/* Logo */}
+        <div
+          className="flex items-center gap-2.5 px-5 shrink-0"
+          style={{
+            height: 64,
+            borderBottom: '1px solid var(--glass-border)',
+            paddingTop: 'env(safe-area-inset-top)',
+          }}
+        >
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}
+          >
+            <span className="text-white font-black text-sm">S</span>
+          </div>
+          <div>
+            <span className="font-black text-sm tracking-tight" style={{ color: 'var(--text-1)' }}>SBH</span>
+            <p className="text-[9px] font-medium" style={{ color: 'var(--text-3)', letterSpacing: '0.06em' }}>SCIENCE BASED HEALTH</p>
+          </div>
+        </div>
+
+        {/* Scrollable nav */}
+        <div className="flex-1 overflow-y-auto py-3 px-3 space-y-5">
+          {/* Primary links */}
+          <div className="space-y-0.5">
+            {PRIMARY.map(({ href, label, Icon }) => {
+              const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200"
+                  style={{
+                    background: active ? 'rgba(124,58,237,0.14)' : 'transparent',
+                    border: `1px solid ${active ? 'rgba(124,58,237,0.22)' : 'transparent'}`,
+                    color: active ? '#7c3aed' : 'var(--text-2)',
+                  }}
+                >
+                  <Icon size={16} strokeWidth={active ? 2.5 : 1.75} />
+                  <span className="text-sm font-medium">{label}</span>
+                </Link>
+              )
+            })}
+          </div>
+
+          {/* More sections */}
+          {MORE_SECTIONS.map(({ title, color, items }) => (
+            <div key={title}>
+              <p
+                className="text-[9px] font-bold uppercase tracking-widest px-3 mb-1"
+                style={{ color }}
+              >
+                {title}
+              </p>
+              <div className="space-y-0.5">
+                {items.map(({ href, label, Icon }) => {
+                  const active = pathname === href || pathname.startsWith(href + '/')
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      className="flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200"
+                      style={{
+                        background: active ? `${color}18` : 'transparent',
+                        border: `1px solid ${active ? color + '30' : 'transparent'}`,
+                        color: active ? color : 'var(--text-2)',
+                      }}
+                    >
+                      <Icon size={14} strokeWidth={active ? 2.5 : 1.75} />
+                      <span className="text-xs font-medium">{label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Profile strip */}
+        <Link
+          href="/profile"
+          className="flex items-center gap-3 px-4 py-3.5 shrink-0 transition-opacity hover:opacity-80"
+          style={{ borderTop: '1px solid var(--glass-border)' }}
+        >
+          <div
+            className="flex-shrink-0 flex items-center justify-center rounded-full font-bold text-white"
+            style={{
+              width: 32, height: 32, fontSize: 11,
+              background: 'linear-gradient(135deg,#7c3aed,#06b6d4)',
+            }}
+          >
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-xs truncate" style={{ color: 'var(--text-1)' }}>
+              {displayName ?? 'Your Profile'}
+            </p>
+            <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>View profile</p>
+          </div>
+          <ChevronRight size={12} style={{ color: 'var(--text-3)' }} />
+        </Link>
+      </aside>
     </>
   )
 }
