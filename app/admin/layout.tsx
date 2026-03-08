@@ -33,6 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [adminEmail, setAdminEmail] = useState('')
   const [adminUid, setAdminUid]   = useState('')
   const [isMobile, setIsMobile]   = useState(false)
+  const [authError, setAuthError] = useState('')
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -53,14 +54,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) {
-          router.push('/dashboard')
+          const body = await res.json().catch(() => ({}))
+          setAuthError(`HTTP ${res.status}: ${body.error ?? 'Access denied'} (UID: ${user.uid})`)
+          setChecking(false)
           return
         }
         setAdminEmail(user.email ?? '')
         setAdminUid(user.uid)
-      } catch {
-        router.push('/dashboard')
-      } finally {
+      } catch (err) {
+        setAuthError(`Network error: ${err instanceof Error ? err.message : String(err)}`)
         setChecking(false)
       }
     })
@@ -69,30 +71,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (checking) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'var(--mesh-bg, #0f0f1a)',
-        }}
-      >
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--mesh-bg, #0f0f1a)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
-              border: '3px solid #7c3aed',
-              borderTopColor: 'transparent',
-              animation: 'spin 0.8s linear infinite',
-              margin: '0 auto 12px',
-            }}
-          />
+          <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid #7c3aed', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
           <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Checking admin access…</p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
+
+  if (authError) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--mesh-bg, #0f0f1a)', padding: 24 }}>
+        <div style={{ maxWidth: 480, textAlign: 'center' }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+          <p style={{ color: '#f43f5e', fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Admin Access Denied</p>
+          <p style={{ color: 'var(--text-3)', fontSize: 13, fontFamily: 'monospace', background: 'rgba(255,255,255,0.05)', padding: '10px 14px', borderRadius: 10, wordBreak: 'break-all' }}>{authError}</p>
+          <a href="/dashboard" style={{ display: 'inline-block', marginTop: 20, color: '#7c3aed', fontSize: 14 }}>← Back to dashboard</a>
+        </div>
       </div>
     )
   }
