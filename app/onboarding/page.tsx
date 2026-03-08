@@ -247,7 +247,7 @@ export default function OnboardingPage() {
             <div>
               <h2 className="font-semibold text-1 mb-1">Any health conditions? <span className="text-xs font-normal text-3">(optional)</span></h2>
               <p className="text-xs text-2">
-                Selecting conditions helps SBH personalise recommendations. This data is stored only for you
+                Selecting conditions helps HealthOS personalise recommendations. This data is stored only for you
                 and never shared. You can skip this step.
               </p>
             </div>
@@ -296,7 +296,7 @@ export default function OnboardingPage() {
 
             <div className="rounded-xl px-3 py-2.5 text-xs"
               style={{ background: 'rgba(124,58,237,0.08)', color: 'var(--text-2)', border: '1px solid rgba(124,58,237,0.15)' }}>
-              SBH is a wellness app, not a medical device. Always follow your doctor&apos;s advice.
+              HealthOS is a wellness app, not a medical device. Always follow your doctor&apos;s advice.
             </div>
 
             <div className="flex gap-2">
@@ -315,7 +315,7 @@ export default function OnboardingPage() {
             <div>
               <h2 className="font-semibold text-1 mb-1">Privacy &amp; Consent</h2>
               <p className="text-xs text-2">
-                SBH collects health data to provide personalised insights. Under UK GDPR, EU GDPR,
+                HealthOS collects health data to provide personalised insights. Under UK GDPR, EU GDPR,
                 India DPDP Act 2023, and UAE PDPL 2021, we need your explicit consent before
                 processing special category health data.
               </p>
@@ -331,7 +331,7 @@ export default function OnboardingPage() {
                 label={<>I have read and agree to the{' '}
                   <Link href="/privacy" target="_blank" className="text-violet-400 underline">Privacy Policy</Link>.</>} />
               <ConsentBox id="health" checked={healthDataConsent} onChange={setHealthDataConsent} required
-                label={<>I give <strong>explicit consent</strong> for SBH to process my health data
+                label={<>I give <strong>explicit consent</strong> for HealthOS to process my health data
                   (nutrition, workouts, sleep, glucose, body metrics) as described in the Privacy Policy.
                   This is special category data under GDPR Art 9 — I can withdraw consent by deleting my account.</>} />
               <ConsentBox id="marketing" checked={marketingConsent} onChange={setMarketingConsent}
@@ -340,7 +340,7 @@ export default function OnboardingPage() {
 
             <div className="glass-dark rounded-xl p-3">
               <p className="text-xs text-3">
-                <strong className="text-2">Data controller:</strong> SBH (Science Based Health).
+                <strong className="text-2">Data controller:</strong> HealthOS.
                 Stored in Google Cloud (europe-west2, London). Export or delete your data at any time
                 from your profile.
               </p>
@@ -351,7 +351,7 @@ export default function OnboardingPage() {
               <button onClick={handleComplete} disabled={saving || !canProceedConsent}
                 className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm disabled:opacity-40 transition-opacity"
                 style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>
-                {saving ? 'Setting up…' : 'Start SBH →'}
+                {saving ? 'Setting up…' : 'Start HealthOS →'}
               </button>
             </div>
           </div>

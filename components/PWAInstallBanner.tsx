@@ -53,7 +53,7 @@ export default function PWAInstallBanner() {
         <Download size={18} className="text-white" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-1">Add SBH to Home Screen</p>
+        <p className="text-sm font-semibold text-1">Add HealthOS to Home Screen</p>
         <p className="text-xs text-2">Faster access · Works offline</p>
       </div>
       <button onClick={handleInstall}

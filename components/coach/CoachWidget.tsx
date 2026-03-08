@@ -157,7 +157,7 @@ export default function CoachWidget() {
               <Bot size={14} className="text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold" style={{ color: 'var(--text-1)' }}>SBH Health Coach</p>
+              <p className="text-xs font-bold" style={{ color: 'var(--text-1)' }}>HealthOS Health Coach</p>
               <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>AI-powered · condition-aware</p>
             </div>
             <div className="flex items-center gap-1">

@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 const LAST_UPDATED = '7 March 2026'
 const CONTACT_EMAIL = 'privacy@sciencebasedhealth.app'
-const APP_NAME = 'Science Based Health (SBH)'
+const APP_NAME = 'HealthOS'
 
 export default function PrivacyPage() {
   return (
@@ -14,11 +14,11 @@ export default function PrivacyPage() {
       <header className="border-b border-slate-800 px-4 py-5 flex items-center gap-4">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>
-          <span className="text-sm font-black text-white">SBH</span>
+          <span className="text-sm font-black text-white">H</span>
         </div>
         <div>
           <h1 className="text-white font-bold text-lg leading-tight">Privacy Policy</h1>
-          <p className="text-xs text-slate-500">Science Based Health · Last updated {LAST_UPDATED}</p>
+          <p className="text-xs text-slate-500">HealthOS · Last updated {LAST_UPDATED}</p>
         </div>
       </header>
 
@@ -262,7 +262,7 @@ export default function PrivacyPage() {
               individuals under 18 years of age. Verifiable parental consent is required for users under 18.
             </li>
             <li>
-              <strong className="text-white">Data Fiduciary</strong> — Science Based Health acts as the Data Fiduciary
+              <strong className="text-white">Data Fiduciary</strong> — HealthOS acts as the Data Fiduciary
               under the DPDP Act for data collected through this application.
             </li>
             <li>

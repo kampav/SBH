@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
   const hour      = new Date().getHours()
   const timeSlot  = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
 
-  const prompt = `You are SBH Health Coach. Write a personalised daily ${timeSlot} check-in message for ${name}.
+  const prompt = `You are HealthOS Health Coach. Write a personalised daily ${timeSlot} check-in message for ${name}.
 
 Their active conditions: ${condList}
 Their goal: ${goal}

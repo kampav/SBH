@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test('landing page loads and shows CTA', async ({ page }) => {
   await page.goto('/')
-  await expect(page).toHaveTitle(/SBH/)
+  await expect(page).toHaveTitle(/HealthOS/)
   // Should have a sign-in or get-started button
   const cta = page.getByRole('link', { name: /get started|sign in|login/i })
   await expect(cta.first()).toBeVisible()

@@ -56,7 +56,7 @@ const INTEGRATIONS: IntegrationCard[] = [
     id: 'apple_health',
     name: 'Apple Health',
     logo: '⚪',
-    description: 'Import steps, heart rate, and weight from Apple Health on iOS. Requires SBH iOS app (coming soon).',
+    description: 'Import steps, heart rate, and weight from Apple Health on iOS. Requires HealthOS iOS app (coming soon).',
     deviceExamples: 'iPhone · Apple Watch',
     available: false,
     comingSoon: true,
@@ -333,7 +333,7 @@ function IntegrationsPageInner() {
           style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)' }}>
           <AlertCircle size={13} style={{ color: '#22d3ee', flexShrink: 0, marginTop: 2 }} />
           <p className="text-xs" style={{ color: 'var(--text-2)' }}>
-            <strong style={{ color: '#22d3ee' }}>Your data stays with you.</strong> Integration tokens are stored securely in your private Firestore account. SBH never shares your health data. You can disconnect any integration at any time and your data will be deleted.
+            <strong style={{ color: '#22d3ee' }}>Your data stays with you.</strong> Integration tokens are stored securely in your private Firestore account. HealthOS never shares your health data. You can disconnect any integration at any time and your data will be deleted.
           </p>
         </div>
       </div>

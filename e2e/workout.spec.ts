@@ -15,15 +15,15 @@ test.describe('Workout page (unauthenticated)', () => {
 })
 
 test.describe('Landing page', () => {
-  test('has SBH in title', async ({ page }) => {
+  test('has HealthOS in title', async ({ page }) => {
     await page.goto('/')
-    await expect(page).toHaveTitle(/SBH/)
+    await expect(page).toHaveTitle(/HealthOS/)
   })
 
   test('shows app name or hero text', async ({ page }) => {
     await page.goto('/')
     const body = await page.textContent('body')
-    expect(body).toMatch(/SBH|Science Based Health/i)
+    expect(body).toMatch(/HealthOS/i)
   })
 
   test('CTA links to register or login', async ({ page }) => {

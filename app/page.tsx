@@ -29,8 +29,8 @@ export default function Home() {
               <span className="w-1.5 h-1.5 rounded-full bg-violet-400 relative pulse-ring" />
               12-Week Home Transformation
             </div>
-            <h1 className="text-6xl font-black tracking-tight gradient-text">SBH</h1>
-            <p className="text-base font-semibold text-1">Science Based Health</p>
+            <h1 className="text-6xl font-black tracking-tight gradient-text">HealthOS</h1>
+            <p className="text-base font-semibold text-1">HealthOS</p>
             <p className="text-sm text-2 leading-relaxed">
               Evidence-backed training &amp; nutrition.<br />
               AI-powered. Science-driven. Results guaranteed.

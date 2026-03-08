@@ -73,8 +73,8 @@ export default function WorkoutHistoryPage() {
         </div>
         {workouts.length > 0 && (
           <button onClick={async () => {
-            const text = `My SBH workout totals:\n💪 ${workouts.length} workouts logged\n🏋️ ${Math.round(totalVolume / 1000)}t total volume\n⏱️ ${Math.round(totalMin / 60)}h of training\n📱 sbhealth.app`
-            const used = await shareStats('My SBH Workouts', text)
+            const text = `My HealthOS workout totals:\n💪 ${workouts.length} workouts logged\n🏋️ ${Math.round(totalVolume / 1000)}t total volume\n⏱️ ${Math.round(totalMin / 60)}h of training\n📱 sbhealth.app`
+            const used = await shareStats('My HealthOS Workouts', text)
             Analytics.statsShared('workouts')
             if (!used) { setShareToast(true); setTimeout(() => setShareToast(false), 2500) }
           }} className="p-2 rounded-xl glass-elevated">

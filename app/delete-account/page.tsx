@@ -72,7 +72,7 @@ export default function DeleteAccountPage() {
         <div className="w-full max-w-sm space-y-5 text-center">
           <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center"
             style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>
-            <span className="text-xl font-black text-white">SBH</span>
+            <span className="text-xl font-black text-white">HealthOS</span>
           </div>
           <h1 className="text-xl font-bold text-white">Account Deletion</h1>
           <div className="bg-slate-800 rounded-2xl p-6 space-y-4 text-left">
@@ -119,7 +119,7 @@ export default function DeleteAccountPage() {
         <div className="text-center">
           <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center"
             style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>
-            <span className="text-xl font-black text-white">SBH</span>
+            <span className="text-xl font-black text-white">HealthOS</span>
           </div>
           <h1 className="text-xl font-bold text-white">Delete Account & Data</h1>
           <p className="text-slate-400 text-sm mt-0.5">

@@ -429,8 +429,8 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={() => shareStats(
-                    'Join me on SBH',
-                    `I'm tracking my health & fitness on Science Based Health. Join me! 💪\n${window.location.origin}/register?ref=${referralCode}`,
+                    'Join me on HealthOS',
+                    `I'm tracking my health & fitness on HealthOS. Join me! 💪\n${window.location.origin}/register?ref=${referralCode}`,
                   )}
                   className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 glass"
                   style={{ color: '#06b6d4', borderColor: 'rgba(6,182,212,0.3)', border: '1px solid' }}>
@@ -774,7 +774,7 @@ export default function ProfilePage() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                           token: tokenDoc.token,
-                          title: '🔔 SBH Test Notification',
+                          title: '🔔 HealthOS Test Notification',
                           body: 'Push notifications are working correctly!',
                           url: '/dashboard',
                           tag: 'test',
@@ -847,7 +847,7 @@ export default function ProfilePage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-2">Data Export</p>
           </div>
           <p className="text-xs text-slate-400 mb-3">
-            Download all your SBH data as a CSV file (GDPR Article 20 — Right to Data Portability).
+            Download all your HealthOS data as a CSV file (GDPR Article 20 — Right to Data Portability).
             Includes nutrition, workouts, body metrics, sleep, and glucose readings.
           </p>
           <button
@@ -885,7 +885,7 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <p className="text-center text-xs text-3 pb-4">SBH · Science Based Health · v2.3.0</p>
+        <p className="text-center text-xs text-3 pb-4">HealthOS · v2.3.0</p>
       </div>
     </main>
   )

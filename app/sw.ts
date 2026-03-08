@@ -50,7 +50,7 @@ interface SBHPushPayload {
 self.addEventListener('push', (event: { data?: { json: () => SBHPushPayload }; waitUntil: (p: Promise<unknown>) => void }) => {
   const data: SBHPushPayload = event.data?.json() ?? {}
   event.waitUntil(
-    self.registration.showNotification(data.title ?? 'SBH', {
+    self.registration.showNotification(data.title ?? 'HealthOS', {
       body: data.body ?? 'You have a new notification',
       icon: data.icon ?? '/icons/icon-192.png',
       badge: '/icons/icon-96.png',

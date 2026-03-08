@@ -1,6 +1,6 @@
 {
-  "name": "SBH — Science Based Health",
-  "short_name": "SBH",
+  "name": "HealthOS",
+  "short_name": "HealthOS",
   "description": "Science-backed personal training, nutrition tracking & AI coaching",
   "start_url": "/dashboard?source=pwa",
   "display": "standalone",

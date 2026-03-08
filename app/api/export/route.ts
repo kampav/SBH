@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
   if (sleep.length) sections.push('\n# SLEEP\n' + toCsv(sleep))
 
   const csv = [
-    `# SBH Data Export — ${new Date().toISOString()}`,
+    `# HealthOS Data Export — ${new Date().toISOString()}`,
     `# User: ${uid}`,
     `# Generated under GDPR Article 20 (Right to Data Portability)`,
     '',

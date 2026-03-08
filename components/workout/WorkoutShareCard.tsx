@@ -40,10 +40,10 @@ const WorkoutShareCard = forwardRef<HTMLDivElement, WorkoutShareCardProps>(
             borderRadius: '10px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '20px', fontWeight: 700, color: '#fff',
-          }}>S</div>
+          }}>H</div>
           <div>
-            <div style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em' }}>SBH</div>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Science Based Health</div>
+            <div style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em' }}>HealthOS</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Science-backed coach</div>
           </div>
         </div>
 

@@ -10,13 +10,13 @@ import CoachWidget from '@/components/coach/CoachWidget'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'SBH — Science Based Health',
+  title: 'HealthOS',
   description: 'Science-backed personal training, nutrition tracking & AI coaching',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'SBH',
+    title: 'HealthOS',
   },
 }
 

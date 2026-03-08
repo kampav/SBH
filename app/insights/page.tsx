@@ -154,8 +154,8 @@ export default function InsightsPage() {
   async function handleShare() {
     if (!insight) return
     setSharing(true)
-    const text = `My SBH weekly score: ${insight.scores.overall}/100 🏆\nNutrition ${insight.scores.nutrition} | Workout ${insight.scores.workout} | Sleep ${insight.scores.sleep}\nTracking at sbhealth.app`
-    const usedShare = await shareStats('My SBH Weekly Insights', text)
+    const text = `My HealthOS weekly score: ${insight.scores.overall}/100 🏆\nNutrition ${insight.scores.nutrition} | Workout ${insight.scores.workout} | Sleep ${insight.scores.sleep}\nTracking at sbhealth.app`
+    const usedShare = await shareStats('My HealthOS Weekly Insights', text)
     Analytics.statsShared('weekly_insight')
     setSharing(false)
     if (!usedShare) { setShared(true); setTimeout(() => setShared(false), 2500) }

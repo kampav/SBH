@@ -89,7 +89,7 @@ export default async function PublicProfilePage({ params }: { params: { username
             background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
             textDecoration: 'none',
           }}>
-            Join SBH — It&apos;s Free →
+            Join HealthOS — It&apos;s Free →
           </Link>
           <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>
             sciencebased.health

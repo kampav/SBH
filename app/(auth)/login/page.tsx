@@ -144,9 +144,9 @@ export default function LoginPage() {
         <div className="text-center">
           <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center"
             style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>
-            <span className="text-xl font-black text-white">SBH</span>
+            <span className="text-xl font-black text-white">HealthOS</span>
           </div>
-          <h1 className="text-xl font-bold text-white">Science Based Health</h1>
+          <h1 className="text-xl font-bold text-white">HealthOS</h1>
           <p className="text-slate-400 text-sm mt-0.5">Sign in to your account</p>
         </div>
 

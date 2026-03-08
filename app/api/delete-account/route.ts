@@ -54,10 +54,10 @@ export async function POST(req: NextRequest) {
       await transporter.sendMail({
         from: process.env.EMAIL_FROM ?? `SBH <${process.env.SMTP_USER}>`,
         to: email,
-        subject: 'Your SBH data has been permanently deleted',
+        subject: 'Your HealthOS data has been permanently deleted',
         html: `
           <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
-            <h2 style="color:#7c3aed;margin-bottom:8px">Science Based Health</h2>
+            <h2 style="color:#7c3aed;margin-bottom:8px">HealthOS</h2>
             <p>Hi ${name},</p>
             <p>We're writing to confirm that your account and <strong>all associated data</strong>
                have been permanently deleted from SBH.</p>
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
                contact support immediately.</p>
             <p>Thank you for being part of SBH.</p>
             <p style="color:#64748b;font-size:12px;margin-top:24px">
-              Science Based Health · This is an automated message, please do not reply.
+              HealthOS · This is an automated message, please do not reply.
             </p>
           </div>
         `,

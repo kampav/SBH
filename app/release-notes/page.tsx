@@ -242,7 +242,7 @@ export default function ReleaseNotesPage() {
           <ArrowLeft size={16} className="text-slate-400" />
         </Link>
         <div>
-          <p className="section-label">Science Based Health</p>
+          <p className="section-label">HealthOS</p>
           <h1 className="page-title" style={{ fontSize: '1.25rem' }}>Release Notes</h1>
         </div>
       </header>

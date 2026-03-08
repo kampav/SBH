@@ -69,7 +69,7 @@ function RegisterForm() {
         <div className="text-center">
           <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center"
             style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>
-            <span className="text-xl font-black text-white">SBH</span>
+            <span className="text-xl font-black text-white">HealthOS</span>
           </div>
           <h1 className="text-xl font-bold text-white">Create your account</h1>
           <p className="text-slate-400 text-sm mt-0.5">Start your health journey today</p>
@@ -79,7 +79,7 @@ function RegisterForm() {
         {inviterName && (
           <div className="rounded-xl p-3 text-center text-sm font-medium"
             style={{ background: 'rgba(124,58,237,0.15)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.3)' }}>
-            🎉 Invited by {inviterName} — welcome to SBH!
+            🎉 Invited by {inviterName} — welcome to HealthOS!
           </div>
         )}
 

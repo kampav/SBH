@@ -436,8 +436,8 @@ export default function MetricsPage() {
           <p className="text-xs text-2 mt-1">{xp.toLocaleString()} total XP</p>
           <button
             onClick={async () => {
-              const text = `My SBH stats:\n🔥 Level ${level} — ${levelTitle}\n⚡ ${xp.toLocaleString()} XP\n🏆 ${earnedBadges.length} badges earned\n📱 sbhealth.app`
-              const used = await shareStats('My SBH Progress', text)
+              const text = `My HealthOS stats:\n🔥 Level ${level} — ${levelTitle}\n⚡ ${xp.toLocaleString()} XP\n🏆 ${earnedBadges.length} badges earned\n📱 sbhealth.app`
+              const used = await shareStats('My HealthOS Progress', text)
               Analytics.statsShared('badges')
               if (!used) { setShareToast(true); setTimeout(() => setShareToast(false), 2500) }
             }}

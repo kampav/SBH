@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">SBH</string>
-    <string name="title_activity_main">SBH</string>
+    <string name="app_name">HealthOS</string>
+    <string name="title_activity_main">HealthOS</string>
     <string name="package_name">com.sciencebasedhealth.sbh</string>
     <string name="custom_url_scheme">com.sciencebasedhealth.sbh</string>
     <string name="widget_description">Track your daily calories, macros, and streak at a glance</string>

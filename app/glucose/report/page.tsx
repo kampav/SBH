@@ -126,7 +126,7 @@ export default function GlucoseReportPage() {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-xl font-bold text-black">Glucose Monitoring Report</h1>
-              <p className="text-sm text-gray-600">Science Based Health (SBH) App</p>
+              <p className="text-sm text-gray-600">HealthOS App</p>
             </div>
             <div className="text-right text-sm text-gray-600">
               <p><strong>{profile?.displayName ?? 'Patient'}</strong></p>

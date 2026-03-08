@@ -293,11 +293,11 @@ export default function BottomNav() {
             className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0"
             style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', boxShadow: '0 4px 12px rgba(124,58,237,0.4)' }}
           >
-            <span className="text-white font-black text-base">S</span>
+            <span className="text-white font-black text-base">H</span>
           </div>
           <div>
-            <span className="font-black text-[15px] tracking-tight" style={{ color: 'var(--text-1)' }}>SBH</span>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-3)' }}>Science Based Health</p>
+            <span className="font-black text-[15px] tracking-tight" style={{ color: 'var(--text-1)' }}>HealthOS</span>
+            <p className="text-[9px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-3)' }}>Your science-backed coach</p>
           </div>
         </div>
 

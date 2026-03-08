@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'com.sciencebasedhealth.sbh',
-  appName: 'SBH',
+  appName: 'HealthOS',
   // webDir is required by @capacitor/assets for icon generation.
   // The app does NOT serve local assets — it loads the live URL below.
   webDir: 'public',

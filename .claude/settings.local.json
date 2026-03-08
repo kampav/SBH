@@ -42,7 +42,15 @@
       "Bash(gh run list --repo kampav/SBH --workflow=deploy.yml --limit=3 --json status,conclusion,createdAt,headSha)",
       "Bash(gcloud run revisions list --service=sbh-app --region=europe-west2 --limit=3 --format=\"table\\(name,createTime,status.conditions[0].status\\)\")",
       "Bash(xargs grep -l \"Firestore\\\\|firestore\")",
-      "Bash(xargs sed -i 's/max-w-2xl mx-auto/max-w-2xl lg:max-w-4xl mx-auto/g')"
+      "Bash(xargs sed -i 's/max-w-2xl mx-auto/max-w-2xl lg:max-w-4xl mx-auto/g')",
+      "Bash(node scripts/generate-icons.mjs)",
+      "Bash(__NEW_LINE_41ca2dad14767297__ sed -i 's/Science Based Health<\\\\/h2>/HealthOS<\\\\/h2>/g' \"app/api/delete-account/route.ts\")",
+      "Bash(sed -i 's/Science Based Health · This is an automated/HealthOS · This is an automated/g' \"app/api/delete-account/route.ts\")",
+      "Bash(__NEW_LINE_41ca2dad14767297__ sed -i 's/Science Based Health<\\\\/p>/HealthOS<\\\\/p>/g' \"components/layout/BottomNav.tsx\")",
+      "Bash(__NEW_LINE_41ca2dad14767297__ echo \"done\")",
+      "Bash(__NEW_LINE_e3685111490b13aa__ sed -i \"s/subject: ''Your SBH data has been permanently deleted''/subject: ''Your HealthOS data has been permanently deleted''/g\" \"app/api/delete-account/route.ts\")",
+      "Bash(__NEW_LINE_e3685111490b13aa__ sed -i \"s/Join SBH — It''s Free →/Join HealthOS — It''s Free →/g; s/Join SBH — It\\\\&apos;s Free →/Join HealthOS — It\\\\&apos;s Free →/g\" \"app/u/[username]/page.tsx\")",
+      "Bash(__NEW_LINE_e3685111490b13aa__ echo \"done final cleanup\")"
     ]
   }
 }

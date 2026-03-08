@@ -43,7 +43,7 @@ function buildNotificationText(stats: WeekStats, name: string): { title: string;
   const body = parts.length > 0 ? `Week recap: ${parts.join(' · ')}` : 'Check your weekly progress in the app!'
 
   return {
-    title: `📊 ${greeting ? greeting + ' ' : ''}Your weekly SBH summary`,
+    title: `📊 ${greeting ? greeting + ' ' : ''}Your weekly HealthOS summary`,
     body,
   }
 }

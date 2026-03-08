@@ -3,10 +3,10 @@
 
 export const APP = {
   // ── Identity ──────────────────────────────────────────────────────────
-  name:        'SBH',
-  fullName:    'Science Based Health',
+  name:        'HealthOS',
+  fullName:    'HealthOS',
   tagline:     'Your science-backed coach',
-  initials:    'SBH',
+  initials:    'H',
 
   // ── URLs ──────────────────────────────────────────────────────────────
   domain:      'sbhealth.app',
@@ -17,10 +17,10 @@ export const APP = {
 
   // ── Social ────────────────────────────────────────────────────────────
   supportEmail:  'hello@sbhealth.app',
-  privacyEmail:  'privacy@sciencebasedhealth.app',
+  privacyEmail:  'privacy@sbhealth.app',
 
   // ── Legal ─────────────────────────────────────────────────────────────
-  companyName: 'Science Based Health Ltd',
+  companyName: 'HealthOS Ltd',
   privacyUrl:  '/privacy',
   termsUrl:    '/privacy',
 } as const

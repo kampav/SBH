@@ -50,10 +50,10 @@ const FEATURES: FeatureSection[] = [
     steps: [
       'Choose a programme (Home 6-Day, Gym Upper/Lower, or Beginner 3-Day)',
       'Log sets, reps and weight for each exercise',
-      'SBH suggests weight increases based on your last session (progressive overload)',
+      'HealthOS suggests weight increases based on your last session (progressive overload)',
       'View your workout history and volume charts in the History tab',
     ],
-    aiRole: 'SBH calculates the right weight to progress each week using the progressive overload engine — it reads your last session and nudges you upwards when you\'re ready.',
+    aiRole: 'HealthOS calculates the right weight to progress each week using the progressive overload engine — it reads your last session and nudges you upwards when you\'re ready.',
   },
   {
     id: 'glucose',
@@ -93,7 +93,7 @@ const FEATURES: FeatureSection[] = [
       'Log your mood (1–5), energy, and anxiety level each day',
       'Write optional notes in the journal for a CBT thought record',
       'Complete the PHQ-9 monthly screening (shown if you have a Mental Health condition)',
-      'If scores are high, SBH shows crisis links to Samaritans (116 123) — safety first',
+      'If scores are high, HealthOS shows crisis links to Samaritans (116 123) — safety first',
     ],
     aiRole: 'The AI correlates your mood with sleep, nutrition, and exercise. Over time it surfaces insights like "Anxiety is lower on days you exercise before noon".',
   },
@@ -135,7 +135,7 @@ const FEATURES: FeatureSection[] = [
       'Log a BP reading from the Blood Pressure page',
       'Add context: morning, evening, after exercise, stressed',
       'See your 7-day average and NHS/BHS classification',
-      'If 3 consecutive readings are >140/90, SBH suggests speaking to your GP',
+      'If 3 consecutive readings are >140/90, HealthOS suggests speaking to your GP',
     ],
     aiRole: 'BP readings feed into your care team report and health feed. The AI flags sustained high readings and explains what lifestyle factors (sodium, stress, activity) typically contribute.',
   },
@@ -148,9 +148,9 @@ interface ChatMessage {
   streaming?: boolean
 }
 
-const HELP_SYSTEM_PROMPT = `You are the SBH Help Assistant — friendly, clear, and concise.
+const HELP_SYSTEM_PROMPT = `You are the HealthOS Help Assistant — friendly, clear, and concise.
 
-SBH (Science Based Health) is a health tracking app with these features:
+HealthOS is a health tracking app with these features:
 - Nutrition Tracker (calorie/macro logging, barcode scan, AI photo recognition)
 - Workout Logger (3 programmes, progressive overload, history)
 - Glucose Tracker (manual + Dexcom CGM integration)
@@ -274,7 +274,7 @@ export default function HelpPage() {
           <ArrowLeft size={16} style={{ color: 'var(--text-3)' }} />
         </Link>
         <div>
-          <p className="section-label">SBH</p>
+          <p className="section-label">HealthOS</p>
           <h1 className="page-title" style={{ fontSize: '1.25rem' }}>Help & Features</h1>
         </div>
       </header>
@@ -289,7 +289,7 @@ export default function HelpPage() {
               style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})` }}>
               <Bot size={13} className="text-white" />
             </div>
-            <p className="text-sm font-bold text-1">Ask the SBH Assistant</p>
+            <p className="text-sm font-bold text-1">Ask the HealthOS Assistant</p>
             {messages.length > 0 && (
               <button onClick={() => setMessages([])} className="ml-auto p-1 rounded-lg glass">
                 <RefreshCw size={11} style={{ color: 'var(--text-3)' }} />
@@ -347,7 +347,7 @@ export default function HelpPage() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={sending}
-              placeholder="Ask anything about SBH…"
+              placeholder="Ask anything about HealthOS…"
               rows={1}
               className="flex-1 glass rounded-xl px-3 py-2 text-xs text-1 placeholder:text-3 resize-none outline-none"
               style={{ minHeight: 34 }}
@@ -425,7 +425,7 @@ export default function HelpPage() {
           style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)' }}>
           <p className="text-xs font-semibold" style={{ color: '#22d3ee' }}>Your data, your control</p>
           <p className="text-xs text-2 leading-relaxed">
-            All your health data is stored privately in your account. SBH never sells data or shares it with third parties. You can export or delete everything from Profile → Account.
+            All your health data is stored privately in your account. HealthOS never sells data or shares it with third parties. You can export or delete everything from Profile → Account.
           </p>
         </div>
 

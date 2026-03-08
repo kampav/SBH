@@ -130,7 +130,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               marginRight: 8,
             }}
           >
-            ⚡ SBH
+            ⚡ HealthOS
           </span>
           {NAV.map(({ href, label, icon }) => {
             const active = pathname === href
@@ -213,7 +213,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               display: 'block',
             }}
           >
-            ⚡ SBH Admin
+            ⚡ HealthOS Admin
           </span>
         </div>
 

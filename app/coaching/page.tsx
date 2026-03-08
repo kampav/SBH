@@ -176,10 +176,10 @@ export default function CoachingPage() {
         {/* Hero banner */}
         <div className="glass-elevated rounded-2xl p-5 space-y-1"
           style={{ background: 'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(6,182,212,0.08))' }}>
-          <p className="text-sm font-bold text-1">1-on-1 expert coaching, built into SBH</p>
+          <p className="text-sm font-bold text-1">1-on-1 expert coaching, built into HealthOS</p>
           <p className="text-xs text-2 leading-relaxed">
             Work with certified diabetes educators, sports dietitians, and mental health specialists.
-            Sessions sync with your SBH data — no need to share screenshots.
+            Sessions sync with your HealthOS data — no need to share screenshots.
           </p>
           <div className="flex items-center gap-4 pt-1">
             <div className="flex items-center gap-1.5">
@@ -285,7 +285,7 @@ export default function CoachingPage() {
           <div className="flex-1">
             <p className="text-sm font-semibold text-1">Are you a health professional?</p>
             <p className="text-xs text-2 mt-0.5">
-              Join the SBH coaching network. Set your own rates, manage your schedule, and help clients using their real health data.
+              Join the HealthOS coaching network. Set your own rates, manage your schedule, and help clients using their real health data.
             </p>
           </div>
           <a href="mailto:coaches@sbhealth.app"

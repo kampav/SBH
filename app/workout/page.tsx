@@ -252,7 +252,7 @@ export default function WorkoutPage() {
         if (!blob) { setSharing(false); return }
         const file = new File([blob], 'sbh-workout.png', { type: 'image/png' })
         const shareData = {
-          title: 'Workout Complete — SBH',
+          title: 'Workout Complete — HealthOS',
           text: `Just crushed a workout! ${duration}min · ${volume.toFixed(0)}kg · ${calories}kcal`,
           files: [file],
         }
@@ -652,7 +652,7 @@ export default function WorkoutPage() {
 
         <div className="text-center text-xs text-3 pb-4 flex items-center justify-center gap-1">
           <ChevronRight size={10} />
-          SBH Training System
+          HealthOS Training System
         </div>
       </div>
     </main>

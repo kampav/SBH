@@ -169,7 +169,7 @@ export default function CoachPage() {
             <Bot size={14} className="text-white" />
           </div>
           <div>
-            <p className="text-sm font-bold text-1">SBH Health Coach</p>
+            <p className="text-sm font-bold text-1">HealthOS Health Coach</p>
             <p className="text-xs text-3">AI-powered · condition-aware</p>
           </div>
         </div>
