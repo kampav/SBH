@@ -1,3 +1,14 @@
+// pluginManagement must be the first block — allows the Gradle Plugin DSL to
+// resolve Kotlin 2.0 plugins (including org.jetbrains.kotlin.plugin.compose)
+// which cannot be loaded via the legacy buildscript{} classpath mechanism.
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
 include ':app'
 include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
