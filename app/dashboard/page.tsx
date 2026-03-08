@@ -501,9 +501,9 @@ export default function DashboardPage() {
 
       {/* ── Customise sheet ───────────────────────────────────── */}
       {customizing && (
-        <div className="fixed inset-0 z-50 flex items-end" onClick={() => setCustomizing(false)}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center" onClick={() => setCustomizing(false)}>
           <div
-            className="w-full rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto"
+            className="w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto"
             style={{
               background: 'var(--glass-bg)',
               backdropFilter: 'blur(28px)',

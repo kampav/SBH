@@ -322,9 +322,22 @@ html, body {
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
     border-bottom: 1px solid rgba(255,255,255,0.06);
+    /* Push content below the native status bar on notched phones */
+    padding-top: env(safe-area-inset-top);
   }
   [data-theme="light"] .page-header-bar {
     background: rgba(240,241,255,0.82);
     border-bottom-color: rgba(0,0,0,0.06);
+  }
+
+  /* ── Responsive font scaling ──────────────────────── */
+  @media (max-width: 380px) {
+    .hero-number { font-size: 2.75rem; }
+    .hero-title  { font-size: 1.75rem; }
+    .page-title  { font-size: 1.5rem; }
+  }
+  @media (min-width: 1024px) {
+    .hero-number { font-size: 4.25rem; }
+    .hero-title  { font-size: 2.75rem; }
   }
 }

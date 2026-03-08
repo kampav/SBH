@@ -95,8 +95,11 @@ export default function SleepPage() {
         loggedAt:  new Date() as unknown as import('@/lib/types').FirestoreTimestamp,
       }
       await saveSleep(uid, entry)
-      const updated = await getSleepHistory(uid, 30)
-      setHistory(updated)
+      // Update local state immediately — avoids a re-fetch that can hang on slow connections
+      setHistory(prev => {
+        const filtered = prev.filter(e => e.date !== entry.date)
+        return [...filtered, entry].sort((a, b) => a.date < b.date ? -1 : 1)
+      })
       setFormNotes('')
       setTab('history')
     } finally {
