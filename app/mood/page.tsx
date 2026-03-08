@@ -165,7 +165,7 @@ export default function MoodPage() {
       </header>
 
       {/* Crisis banner */}
-      <div className="max-w-2xl mx-auto px-4 pt-3">
+      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8 pt-3">
         <div className="rounded-2xl px-4 py-3 flex items-start gap-3 mb-4"
           style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.18)' }}>
           <AlertTriangle size={14} style={{ color: '#a78bfa', flexShrink: 0, marginTop: 2 }} />
@@ -177,7 +177,7 @@ export default function MoodPage() {
       </div>
 
       {/* Tabs */}
-      <div className="max-w-2xl mx-auto px-4">
+      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8">
         <div className="flex gap-1 glass rounded-2xl p-1 mb-4">
           {([['log', 'Check-in', Brain], ['history', 'History', TrendingUp], ['phq9', 'PHQ-9', ClipboardList]] as const).map(([t, label, Icon]) => (
             <button key={t} onClick={() => setTab(t)}

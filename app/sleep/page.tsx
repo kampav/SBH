@@ -128,7 +128,7 @@ export default function SleepPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-3 pt-4">
+      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8 space-y-3 pt-4">
 
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-2">

@@ -164,7 +164,7 @@ export default function MetricsPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-4 pt-4">
+      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8 space-y-4 pt-4">
 
         {/* Summary cards */}
         <div className="grid grid-cols-3 gap-2.5">

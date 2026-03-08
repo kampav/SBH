@@ -151,7 +151,7 @@ export default function HabitsPage() {
         </button>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-3 pt-3">
+      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8 space-y-3 pt-3">
 
         {/* Date */}
         <p className="text-xs text-3 px-1">

@@ -441,7 +441,7 @@ export default function NutritionPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-4 pt-4">
+      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8 space-y-4 pt-4">
 
         {/* Food Search — always visible */}
         <div ref={searchRef} className="glass-elevated rounded-2xl p-3 relative">

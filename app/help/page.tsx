@@ -279,7 +279,7 @@ export default function HelpPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-4 pt-3">
+      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8 space-y-4 pt-3">
 
         {/* ── Ask the AI ───────────────────────────────────────── */}
         <div className="glass-elevated rounded-2xl overflow-hidden"

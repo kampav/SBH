@@ -22,7 +22,7 @@ export default function PrivacyPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-8 text-sm leading-relaxed">
+      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8 py-8 space-y-8 text-sm leading-relaxed">
 
         <section>
           <p>

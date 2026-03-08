@@ -254,7 +254,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-4 pt-2">
+      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8 space-y-4 pt-2">
 
         {/* ── Hero: Daily Readiness ─────────────────────────────── */}
         <div

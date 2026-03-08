@@ -74,7 +74,7 @@ export default function ExercisesPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-3 pt-4">
+      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8 space-y-3 pt-4">
 
         {/* Search */}
         <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3">

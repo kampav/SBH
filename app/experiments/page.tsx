@@ -68,7 +68,7 @@ export default function ExperimentsPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 space-y-3">
+      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8 space-y-3">
 
         {/* Info card */}
         <div className="glass rounded-2xl p-4 space-y-1">
