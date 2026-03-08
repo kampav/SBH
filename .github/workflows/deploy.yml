@@ -91,7 +91,8 @@ jobs:
             DEXCOM_CLIENT_ID=${{ secrets.DEXCOM_CLIENT_ID }},
             DEXCOM_CLIENT_SECRET=${{ secrets.DEXCOM_CLIENT_SECRET }},
             DEXCOM_REDIRECT_URI=${{ secrets.DEXCOM_REDIRECT_URI }},
-            DEXCOM_SANDBOX=${{ secrets.DEXCOM_SANDBOX }}
+            DEXCOM_SANDBOX=${{ secrets.DEXCOM_SANDBOX }},
+            ADMIN_UIDS=${{ secrets.ADMIN_UIDS }}
 
       - name: Show deployment URL
         run: echo "Deployed to ${{ steps.deploy.outputs.url }}"

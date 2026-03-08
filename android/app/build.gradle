@@ -39,13 +39,17 @@ android {
     buildFeatures {
         compose = true
     }
-    kotlinOptions {
-        jvmTarget = '17'
-    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+// JVM Toolchain: forces BOTH compileJava and compileKotlin to use JDK 17,
+// regardless of which JDK runs Gradle (CI uses JDK 21). This is the only
+// reliable fix for the AGP 8+ JVM-target validation check.
+kotlin {
+    jvmToolchain(17)
 }
 
 repositories {
