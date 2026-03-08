@@ -579,26 +579,26 @@ function ActionTile({ href, icon: Icon, label, sub, done, color }: Tile) {
         scrollSnapAlign: 'start',
         background: done
           ? `linear-gradient(145deg,${color}28,${color}12)`
-          : 'rgba(255,255,255,0.05)',
-        border: `1.5px solid ${done ? color + '50' : 'rgba(255,255,255,0.08)'}`,
-        boxShadow: done ? `0 4px 16px ${color}22` : 'none',
+          : `${color}08`,
+        border: `1.5px solid ${done ? color + '60' : color + '35'}`,
+        boxShadow: done ? `0 4px 16px ${color}30` : `0 2px 8px ${color}10`,
       }}
     >
       <div
         className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all"
         style={{
-          background: done ? `${color}30` : 'rgba(255,255,255,0.07)',
-          border: `1px solid ${done ? color + '40' : 'rgba(255,255,255,0.1)'}`,
+          background: done ? `${color}35` : `${color}18`,
+          border: `1px solid ${color}${done ? '50' : '30'}`,
         }}
       >
         {done
           ? <CheckCircle size={20} style={{ color }} />
-          : <Icon size={20} strokeWidth={1.75} style={{ color: 'var(--text-3)' }} />
+          : <Icon size={20} strokeWidth={1.75} style={{ color }} />
         }
       </div>
       <p
         className="text-[11px] font-semibold text-center leading-tight"
-        style={{ color: done ? color : 'var(--text-2)' }}
+        style={{ color: done ? color : 'var(--text-1)' }}
       >
         {label}
       </p>
