@@ -120,7 +120,7 @@ private fun WidgetContent(
         // ── Header ────────────────────────────────────────────────────────────
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertical,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = "SBH",

@@ -58,7 +58,7 @@ class WidgetDataPlugin : Plugin() {
         // Trigger Glance widget refresh on the main thread
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                androidx.glance.appwidget.updateAll(context, SBHWidget::class.java)
+                SBHWidget().updateAll(context)
             } catch (e: Exception) {
                 // Widget not pinned on the home screen — safe to ignore
             }
