@@ -269,32 +269,35 @@ export default function BottomNav() {
       <aside
         className="hidden md:flex fixed top-0 left-0 bottom-0 z-50 flex-col"
         style={{
-          width: 224,
+          width: 240,
           background: 'var(--nav-bg)',
-          backdropFilter: 'blur(28px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+          backdropFilter: 'blur(32px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(200%)',
           borderRight: '1px solid var(--glass-border)',
-          boxShadow: '1px 0 24px -8px rgba(0,0,0,0.35)',
+          boxShadow: '2px 0 32px -8px rgba(0,0,0,0.4)',
         }}
       >
-        {/* Logo */}
+        {/* Logo strip with gradient accent line */}
         <div
-          className="flex items-center gap-2.5 px-5 shrink-0"
+          className="flex items-center gap-3 px-5 shrink-0 relative"
           style={{
-            height: 64,
-            borderBottom: '1px solid var(--glass-border)',
+            height: 68,
             paddingTop: 'env(safe-area-inset-top)',
+            borderBottom: '1px solid var(--glass-border)',
           }}
         >
+          {/* Violet accent line on left edge */}
+          <div className="absolute left-0 top-4 bottom-4 w-0.5 rounded-full"
+            style={{ background: 'linear-gradient(180deg,#7c3aed,#06b6d4)' }} />
           <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}
+            className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0"
+            style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', boxShadow: '0 4px 12px rgba(124,58,237,0.4)' }}
           >
-            <span className="text-white font-black text-sm">S</span>
+            <span className="text-white font-black text-base">S</span>
           </div>
           <div>
-            <span className="font-black text-sm tracking-tight" style={{ color: 'var(--text-1)' }}>SBH</span>
-            <p className="text-[9px] font-medium" style={{ color: 'var(--text-3)', letterSpacing: '0.06em' }}>SCIENCE BASED HEALTH</p>
+            <span className="font-black text-[15px] tracking-tight" style={{ color: 'var(--text-1)' }}>SBH</span>
+            <p className="text-[9px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-3)' }}>Science Based Health</p>
           </div>
         </div>
 

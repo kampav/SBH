@@ -161,7 +161,7 @@ html, body {
     /* Tablet/desktop: sidebar replaces bottom nav */
     .page-pad {
       padding-bottom: 2rem;
-      margin-left: 224px;   /* matches sidebar w-56 */
+      margin-left: 240px;   /* matches sidebar width */
     }
     /* CoachWidget FAB and panel sit above page bottom (no bottom nav on md+) */
     .coachwidget-panel { bottom: calc(1.25rem + 4rem) !important; }

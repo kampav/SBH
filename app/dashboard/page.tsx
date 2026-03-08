@@ -325,9 +325,9 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {/* Mobile: horizontal scroll | Desktop: wrap grid */}
+            {/* Mobile: horizontal scroll | Desktop: vertical list */}
             <div
-              className="flex gap-3 overflow-x-auto pb-2 lg:grid lg:grid-cols-3 lg:overflow-visible lg:pb-0"
+              className="flex gap-3 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:gap-0 lg:pb-0"
               style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}
             >
               {visibleTiles.map(tile => (
@@ -581,46 +581,66 @@ export default function DashboardPage() {
   )
 }
 
-// ── Action Tile (horizontal scroll item) ──────────────────────────────────────
+// ── Action Tile ────────────────────────────────────────────────────────────────
+// Mobile: compact vertical card in horizontal scroll
+// Desktop (lg+): full-width horizontal row with icon, labels, status
 function ActionTile({ href, icon: Icon, label, sub, done, color }: Tile) {
   return (
     <Link
       href={href}
-      className="shrink-0 lg:shrink lg:w-full flex flex-col items-center gap-2 rounded-2xl p-3 lg:p-4 transition-all duration-200 active:scale-95"
-      style={{
-        width: 86,
-        scrollSnapAlign: 'start',
-        background: done
-          ? `linear-gradient(145deg,${color}28,${color}12)`
-          : `${color}08`,
-        border: `1.5px solid ${done ? color + '60' : color + '35'}`,
-        boxShadow: done ? `0 4px 16px ${color}30` : `0 2px 8px ${color}10`,
-      }}
+      className="group transition-all duration-200 active:scale-95"
+      style={{ scrollSnapAlign: 'start' }}
     >
+      {/* ── Mobile card ── */}
       <div
-        className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all"
+        className="lg:hidden shrink-0 flex flex-col items-center gap-2 rounded-2xl p-3"
         style={{
-          background: done ? `${color}35` : `${color}18`,
-          border: `1px solid ${color}${done ? '50' : '30'}`,
+          width: 86,
+          background: done ? `linear-gradient(145deg,${color}28,${color}12)` : `${color}08`,
+          border: `1.5px solid ${done ? color + '60' : color + '35'}`,
+          boxShadow: done ? `0 4px 16px ${color}30` : `0 2px 8px ${color}10`,
         }}
       >
-        {done
-          ? <CheckCircle size={20} style={{ color }} />
-          : <Icon size={20} strokeWidth={1.75} style={{ color }} />
-        }
+        <div
+          className="w-11 h-11 rounded-2xl flex items-center justify-center"
+          style={{ background: done ? `${color}35` : `${color}18`, border: `1px solid ${color}${done ? '50' : '30'}` }}
+        >
+          {done ? <CheckCircle size={20} style={{ color }} /> : <Icon size={20} strokeWidth={1.75} style={{ color }} />}
+        </div>
+        <p className="text-[11px] font-semibold text-center leading-tight" style={{ color: done ? color : 'var(--text-1)' }}>
+          {label}
+        </p>
+        <span className="text-[10px] font-medium text-center leading-none" style={{ color: done ? color + 'cc' : 'var(--text-3)' }}>
+          {sub}
+        </span>
       </div>
-      <p
-        className="text-[11px] font-semibold text-center leading-tight"
-        style={{ color: done ? color : 'var(--text-1)' }}
+
+      {/* ── Desktop row ── */}
+      <div
+        className="hidden lg:flex items-center gap-3 px-3 py-2.5 rounded-xl"
+        style={{
+          background: done ? `${color}12` : 'transparent',
+          border: `1px solid ${done ? color + '40' : 'transparent'}`,
+          transition: 'all 0.2s',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${color}16`; (e.currentTarget as HTMLElement).style.border = `1px solid ${color}30` }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = done ? `${color}12` : 'transparent'; (e.currentTarget as HTMLElement).style.border = `1px solid ${done ? color + '40' : 'transparent'}` }}
       >
-        {label}
-      </p>
-      <span
-        className="text-[10px] font-medium text-center leading-none"
-        style={{ color: done ? color + 'cc' : 'var(--text-3)' }}
-      >
-        {sub}
-      </span>
+        <div
+          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: done ? `${color}30` : `${color}18` }}
+        >
+          {done ? <CheckCircle size={15} style={{ color }} /> : <Icon size={15} strokeWidth={1.75} style={{ color }} />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold leading-none" style={{ color: done ? color : 'var(--text-1)' }}>{label}</p>
+          <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-3)' }}>{sub}</p>
+        </div>
+        {done && (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${color}20`, color }}>Done</span>
+        )}
+        <ChevronRight size={13} style={{ color: 'var(--text-3)', opacity: 0.6 }} />
+      </div>
     </Link>
   )
 }
