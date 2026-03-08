@@ -234,149 +234,161 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen mesh-bg page-pad pb-32">
+    <main className="min-h-screen mesh-bg page-pad pb-32 lg:pb-8">
 
       {/* ── Header ──────────────────────────────────────────────── */}
-      <header className="page-header-bar px-4 flex items-center justify-between h-14">
+      <header className="page-header-bar px-4 lg:px-8 flex items-center justify-between h-14 lg:h-16">
         <div>
           <p className="text-[11px] font-medium" style={{ color: 'var(--text-3)' }}>{dayStr}</p>
-          <p className="text-lg font-black text-1 leading-tight">{greeting}</p>
+          <p className="text-lg lg:text-xl font-black text-1 leading-tight">{greeting}</p>
         </div>
         <div className="flex items-center gap-1.5">
           <ThemeToggle />
-          <Link href="/profile" className="p-1.5 rounded-xl glass-elevated" style={{ color: 'var(--text-2)' }}>
+          {/* Profile + logout only on mobile — sidebar has profile link on desktop */}
+          <Link href="/profile" className="p-1.5 rounded-xl glass-elevated md:hidden" style={{ color: 'var(--text-2)' }}>
             <User size={18} />
           </Link>
           <button onClick={() => signOut(auth).then(() => router.push('/login'))}
-            className="p-1.5 rounded-xl glass" style={{ color: 'var(--text-3)' }}>
+            className="p-1.5 rounded-xl glass md:hidden" style={{ color: 'var(--text-3)' }}>
             <LogOut size={16} />
           </button>
         </div>
       </header>
 
-      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8 space-y-4 pt-2">
+      {/* ── Desktop bento grid | Mobile single column ───────────── */}
+      <div className="px-4 lg:px-8 pt-3 lg:pt-5 lg:grid lg:grid-cols-[1fr_340px] lg:gap-6 lg:items-start">
 
-        {/* ── Hero: Daily Readiness ─────────────────────────────── */}
-        <div
-          className="rounded-3xl overflow-hidden relative"
-          style={{
-            background: 'linear-gradient(135deg,rgba(124,58,237,0.25) 0%,rgba(6,182,212,0.15) 50%,rgba(244,63,94,0.1) 100%)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
-          }}
-        >
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20"
-              style={{ background: `radial-gradient(circle,${readinessColor},transparent)` }} />
-            <div className="absolute -bottom-6 -left-6 w-32 h-32 rounded-full opacity-10"
-              style={{ background: `radial-gradient(circle,${CYAN},transparent)` }} />
-          </div>
-          <div className="relative flex items-center gap-5 p-5">
-            <div className="shrink-0">
-              <ProgressRing
-                value={readiness}
-                size={110}
-                stroke={10}
-                color={readinessColor}
-                label={`${readiness}`}
-                sublabel="score"
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: readinessColor }}>
-                Daily Readiness
-              </p>
-              <p className="text-2xl font-black text-1 leading-none mb-3">
-                {readiness >= 70 ? 'Great shape' : readiness >= 40 ? 'Getting there' : 'Just starting'}
-                <span className="text-sm font-medium text-3 ml-1">, {firstName}</span>
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <StatPill emoji="✅" value={`${actionsDone}/${actionsTotal}`} label="tasks" color={readinessColor} />
-                <StatPill emoji="🔥" value={`${workoutStreak}d`} label="streak" color="#f97316" />
-                <StatPill emoji="⚡" value={xp.toLocaleString()} label="XP" color={CYAN} />
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* ═══ LEFT COLUMN ════════════════════════════════════════ */}
+        <div className="space-y-4">
 
-        {/* ── Today's Actions + Trackers — unified horizontal scroll ── */}
-        <div>
-          <div className="flex items-center justify-between px-0.5 mb-3">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
-                Today&apos;s Actions
-              </p>
-              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>
-                {actionsDone === actionsTotal ? '🎉 All daily tasks done!' : `${actionsTotal - actionsDone} daily tasks remaining`}
-              </p>
-            </div>
-            <button
-              onClick={() => setCustomizing(true)}
-              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-all active:scale-95"
-              style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)', color: VIOLET }}
-            >
-              <Settings2 size={11} />
-              Customise
-            </button>
-          </div>
-
+          {/* ── Hero: Daily Readiness ─────────────────────────────── */}
           <div
-            className="flex gap-3 overflow-x-auto pb-2"
-            style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}
+            className="rounded-3xl overflow-hidden relative"
+            style={{
+              background: 'linear-gradient(135deg,rgba(124,58,237,0.25) 0%,rgba(6,182,212,0.15) 50%,rgba(244,63,94,0.1) 100%)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
+            }}
           >
-            {visibleTiles.map(tile => (
-              <ActionTile key={tile.id} {...tile} />
-            ))}
-          </div>
-        </div>
-
-        {/* ── Nutrition progress ───────────────────────────────── */}
-        <div className="glass-elevated rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
-              Nutrition Today
-            </p>
-            <Link href="/nutrition" className="text-xs font-semibold" style={{ color: VIOLET }}>
-              Log meal →
-            </Link>
-          </div>
-          <div className="flex items-center gap-5">
-            <Link href="/nutrition" className="shrink-0">
-              <ProgressRing value={calPct} size={80} stroke={7} color="#10b981"
-                label={todayCalories > 0 ? `${todayCalories}` : '0'} sublabel="kcal" />
-            </Link>
-            <div className="flex-1 space-y-3">
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span style={{ color: 'var(--text-2)' }}>Calories</span>
-                  <span className="font-semibold" style={{ color: '#10b981' }}>
-                    {todayCalories}<span style={{ color: 'var(--text-3)' }}>/{profile?.calorieTarget ?? 0}</span>
-                  </span>
-                </div>
-                <div className="h-2 rounded-full" style={{ background: 'var(--ring-track)' }}>
-                  <div className="h-2 rounded-full transition-all duration-700"
-                    style={{ width: `${calPct}%`, background: 'linear-gradient(90deg,#10b981,#34d399)' }} />
-                </div>
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20"
+                style={{ background: `radial-gradient(circle,${readinessColor},transparent)` }} />
+              <div className="absolute -bottom-6 -left-6 w-32 h-32 rounded-full opacity-10"
+                style={{ background: `radial-gradient(circle,${CYAN},transparent)` }} />
+            </div>
+            <div className="relative flex items-center gap-5 p-5 lg:p-7">
+              <div className="shrink-0">
+                <ProgressRing
+                  value={readiness}
+                  size={110}
+                  stroke={10}
+                  color={readinessColor}
+                  label={`${readiness}`}
+                  sublabel="score"
+                />
               </div>
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span style={{ color: 'var(--text-2)' }}>Protein</span>
-                  <span className="font-semibold" style={{ color: '#6366f1' }}>
-                    {todayProtein}g<span style={{ color: 'var(--text-3)' }}>/{profile?.proteinTargetG ?? 0}g</span>
-                  </span>
-                </div>
-                <div className="h-2 rounded-full" style={{ background: 'var(--ring-track)' }}>
-                  <div className="h-2 rounded-full transition-all duration-700"
-                    style={{ width: `${protPct}%`, background: 'linear-gradient(90deg,#6366f1,#818cf8)' }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: readinessColor }}>
+                  Daily Readiness
+                </p>
+                <p className="text-2xl lg:text-3xl font-black text-1 leading-none mb-3">
+                  {readiness >= 70 ? 'Great shape' : readiness >= 40 ? 'Getting there' : 'Just starting'}
+                  <span className="text-sm font-medium text-3 ml-2">{firstName}</span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <StatPill emoji="✅" value={`${actionsDone}/${actionsTotal}`} label="tasks" color={readinessColor} />
+                  <StatPill emoji="🔥" value={`${workoutStreak}d`} label="streak" color="#f97316" />
+                  <StatPill emoji="⚡" value={xp.toLocaleString()} label="XP" color={CYAN} />
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* ── For You — hyper-personalised section ─────────────── */}
-        <div className="space-y-3">
-          <p className="text-xs font-bold uppercase tracking-widest px-0.5" style={{ color: 'var(--text-3)' }}>
+          {/* ── Today's Actions ───────────────────────────────────── */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
+                  Today&apos;s Actions
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>
+                  {actionsDone === actionsTotal ? '🎉 All daily tasks done!' : `${actionsTotal - actionsDone} remaining`}
+                </p>
+              </div>
+              <button
+                onClick={() => setCustomizing(true)}
+                className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-all active:scale-95"
+                style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)', color: VIOLET }}
+              >
+                <Settings2 size={11} />
+                Customise
+              </button>
+            </div>
+
+            {/* Mobile: horizontal scroll | Desktop: wrap grid */}
+            <div
+              className="flex gap-3 overflow-x-auto pb-2 lg:grid lg:grid-cols-3 lg:overflow-visible lg:pb-0"
+              style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}
+            >
+              {visibleTiles.map(tile => (
+                <ActionTile key={tile.id} {...tile} />
+              ))}
+            </div>
+          </div>
+
+          {/* ── Nutrition progress ─────────────────────────────────── */}
+          <div className="glass-elevated rounded-2xl p-4 lg:p-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
+                Nutrition Today
+              </p>
+              <Link href="/nutrition" className="text-xs font-semibold" style={{ color: VIOLET }}>
+                Log meal →
+              </Link>
+            </div>
+            <div className="flex items-center gap-5">
+              <Link href="/nutrition" className="shrink-0">
+                <ProgressRing value={calPct} size={80} stroke={7} color="#10b981"
+                  label={todayCalories > 0 ? `${todayCalories}` : '0'} sublabel="kcal" />
+              </Link>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span style={{ color: 'var(--text-2)' }}>Calories</span>
+                    <span className="font-semibold" style={{ color: '#10b981' }}>
+                      {todayCalories}<span style={{ color: 'var(--text-3)' }}>/{profile?.calorieTarget ?? 0}</span>
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full" style={{ background: 'var(--ring-track)' }}>
+                    <div className="h-2 rounded-full transition-all duration-700"
+                      style={{ width: `${calPct}%`, background: 'linear-gradient(90deg,#10b981,#34d399)' }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span style={{ color: 'var(--text-2)' }}>Protein</span>
+                    <span className="font-semibold" style={{ color: '#6366f1' }}>
+                      {todayProtein}g<span style={{ color: 'var(--text-3)' }}>/{profile?.proteinTargetG ?? 0}g</span>
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full" style={{ background: 'var(--ring-track)' }}>
+                    <div className="h-2 rounded-full transition-all duration-700"
+                      style={{ width: `${protPct}%`, background: 'linear-gradient(90deg,#6366f1,#818cf8)' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>{/* end LEFT COLUMN */}
+
+        {/* ═══ RIGHT COLUMN (desktop) / below on mobile ══════════ */}
+        <div className="space-y-3 mt-4 lg:mt-0">
+
+          <p className="text-xs font-bold uppercase tracking-widest px-0.5 hidden lg:block" style={{ color: 'var(--text-3)' }}>
+            For You
+          </p>
+          <p className="text-xs font-bold uppercase tracking-widest px-0.5 lg:hidden mt-4" style={{ color: 'var(--text-3)' }}>
             For You
           </p>
 
@@ -495,7 +507,8 @@ export default function DashboardPage() {
             </div>
             <ChevronRight size={15} style={{ color: 'var(--text-3)' }} />
           </Link>
-        </div>
+
+        </div>{/* end RIGHT COLUMN */}
 
       </div>
 
@@ -573,7 +586,7 @@ function ActionTile({ href, icon: Icon, label, sub, done, color }: Tile) {
   return (
     <Link
       href={href}
-      className="shrink-0 flex flex-col items-center gap-2 rounded-2xl p-3 transition-all duration-200 active:scale-95"
+      className="shrink-0 lg:shrink lg:w-full flex flex-col items-center gap-2 rounded-2xl p-3 lg:p-4 transition-all duration-200 active:scale-95"
       style={{
         width: 86,
         scrollSnapAlign: 'start',
