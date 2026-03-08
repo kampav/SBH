@@ -1,7 +1,7 @@
 plugins {
-    id 'com.android.application'
-    id 'org.jetbrains.kotlin.android' version '2.0.21'
-    id 'org.jetbrains.kotlin.plugin.compose' version '2.0.21'
+    id 'com.android.application'                              // resolved from buildscript classpath
+    id 'org.jetbrains.kotlin.android'                         // resolved from buildscript classpath
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.0.21' // resolved from pluginManagement repos
 }
 
 android {
