@@ -61,6 +61,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
         setAdminEmail(user.email ?? '')
         setAdminUid(user.uid)
+        setChecking(false)
       } catch (err) {
         setAuthError(`Network error: ${err instanceof Error ? err.message : String(err)}`)
         setChecking(false)
