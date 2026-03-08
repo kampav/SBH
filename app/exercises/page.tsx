@@ -2,13 +2,14 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
+import { useEffect, useState, useCallback } from 'react'
+import { onAuthStateChanged, User } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
-import { ALL_EXERCISES, EXERCISE_INFO, MUSCLE_GROUPS, PROGRAMMES } from '@/lib/workout/exerciseData'
+import { ALL_EXERCISES, EXERCISE_INFO, MUSCLE_GROUPS, PROGRAMMES, ExerciseDef } from '@/lib/workout/exerciseData'
+import ExerciseDetailSheet from '@/components/workout/ExerciseDetailSheet'
 import Link from 'next/link'
-import { ArrowLeft, Search, X, ChevronDown, ChevronUp, ExternalLink, Dumbbell } from 'lucide-react'
+import { ArrowLeft, Search, X, Dumbbell } from 'lucide-react'
 
 const PROGRAMME_LABELS: Record<string, string> = {
   home_6day: '🏠 Home',
@@ -26,20 +27,30 @@ const MUSCLE_COLORS: Record<string, string> = {
   'Back/Glutes': '#10b981',
 }
 
+function getAppearsIn(exerciseName: string): string[] {
+  return Object.entries(PROGRAMMES)
+    .filter(([, days]) => days.some(d => d.exercises.some(e => e.name === exerciseName)))
+    .map(([key]) => PROGRAMME_LABELS[key] ?? key)
+}
+
 export default function ExercisesPage() {
   const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMuscle, setSelectedMuscle] = useState<string>('All')
-  const [expandedName, setExpandedName] = useState<string | null>(null)
+  const [selected, setSelected] = useState<ExerciseDef | null>(null)
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, user => {
+    const unsub = onAuthStateChanged(auth, u => {
       setAuthReady(true)
-      if (!user) router.push('/login')
+      setUser(u)
+      if (!u) router.push('/login')
     })
     return unsub
   }, [router])
+
+  const closeSheet = useCallback(() => setSelected(null), [])
 
   if (!authReady) return (
     <main className="min-h-screen mesh-bg flex items-center justify-center">
@@ -59,7 +70,7 @@ export default function ExercisesPage() {
         </Link>
         <div>
           <p className="section-label">{ALL_EXERCISES.length} exercises · 3 programmes</p>
-          <h1 className="page-title" style={{fontSize:'1.25rem'}}>Exercise Library</h1>
+          <h1 className="page-title" style={{ fontSize: '1.25rem' }}>Exercise Library</h1>
         </div>
       </header>
 
@@ -97,7 +108,7 @@ export default function ExercisesPage() {
         </div>
 
         {/* Count */}
-        <p className="text-xs text-3 px-1">{filtered.length} exercise{filtered.length !== 1 ? 's' : ''}</p>
+        <p className="text-xs text-3 px-1">{filtered.length} exercise{filtered.length !== 1 ? 's' : ''} · tap to see cues</p>
 
         {/* Exercise list */}
         {filtered.length === 0 ? (
@@ -109,21 +120,17 @@ export default function ExercisesPage() {
           <div className="space-y-2">
             {filtered.map(ex => {
               const info = EXERCISE_INFO[ex.name]
-              const isOpen = expandedName === ex.name
               const muscleColor = MUSCLE_COLORS[ex.muscleGroup] ?? '#7c3aed'
-              const appearsIn = Object.entries(PROGRAMMES)
-                .filter(([, days]) => days.some(d => d.exercises.some(e => e.name === ex.name)))
-                .map(([key]) => PROGRAMME_LABELS[key] ?? key)
+              const hasCues = !!(info?.cues?.length || info?.mistakes?.length)
 
               return (
-                <div key={ex.name}
-                  className="glass rounded-2xl overflow-hidden"
-                  style={isOpen ? { border: '1px solid rgba(124,58,237,0.2)' } : {}}>
-
-                  {/* Header row */}
-                  <button
-                    className="w-full flex items-center gap-3 p-4 text-start"
-                    onClick={() => setExpandedName(isOpen ? null : ex.name)}>
+                <button
+                  key={ex.name}
+                  className="glass rounded-2xl w-full text-start transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  style={{ border: hasCues ? '1px solid rgba(255,255,255,0.05)' : undefined }}
+                  onClick={() => setSelected(ex)}
+                >
+                  <div className="flex items-center gap-3 p-4">
                     <span className="text-xl flex-shrink-0">{ex.emoji}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-1 truncate">{ex.name}</p>
@@ -131,48 +138,42 @@ export default function ExercisesPage() {
                         {ex.sets} sets · {ex.repRange}{ex.isTime ? '' : ' reps'} · {ex.restSeconds}s rest
                       </p>
                     </div>
-                    <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
-                      style={{ background: muscleColor + '18', color: muscleColor }}>
-                      {ex.muscleGroup}
-                    </span>
-                    {isOpen
-                      ? <ChevronUp size={14} style={{ color: 'var(--text-3)' }} className="flex-shrink-0" />
-                      : <ChevronDown size={14} style={{ color: 'var(--text-3)' }} className="flex-shrink-0" />
-                    }
-                  </button>
-
-                  {/* Expanded detail */}
-                  {isOpen && (
-                    <div className="px-4 pb-4 space-y-3 border-t border-white/5">
-                      {info?.description && (
-                        <p className="text-sm text-2 leading-relaxed pt-3">{info.description}</p>
-                      )}
-
-                      <div className="flex flex-wrap gap-1.5">
-                        {appearsIn.map(label => (
-                          <span key={label} className="text-xs px-2 py-0.5 rounded-full glass"
-                            style={{ color: 'var(--text-2)' }}>
-                            {label}
-                          </span>
-                        ))}
-                      </div>
-
-                      {info?.videoUrl && (
-                        <a href={info.videoUrl} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl"
-                          style={{ background: 'rgba(124,58,237,0.15)', color: '#7c3aed' }}>
-                          <ExternalLink size={12} />
-                          Watch tutorial
-                        </a>
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                      <span className="text-xs px-2 py-0.5 rounded-full"
+                        style={{ background: muscleColor + '18', color: muscleColor }}>
+                        {ex.muscleGroup}
+                      </span>
+                      {hasCues && (
+                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>
+                          Cues →
+                        </span>
                       )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                </button>
               )
             })}
           </div>
         )}
       </div>
+
+      {/* Detail sheet */}
+      {selected && user && (
+        <ExerciseDetailSheet
+          name={selected.name}
+          emoji={selected.emoji}
+          muscleGroup={selected.muscleGroup}
+          muscleColor={MUSCLE_COLORS[selected.muscleGroup] ?? '#7c3aed'}
+          sets={selected.sets}
+          repRange={selected.repRange}
+          restSeconds={selected.restSeconds}
+          isTime={selected.isTime}
+          info={EXERCISE_INFO[selected.name]}
+          uid={user.uid}
+          appearsIn={getAppearsIn(selected.name)}
+          onClose={closeSheet}
+        />
+      )}
     </main>
   )
 }

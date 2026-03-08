@@ -5,6 +5,7 @@ import { onAuthStateChanged, getIdToken, type User as FirebaseUser } from 'fireb
 import { auth } from '@/lib/firebase'
 import { Bot, X, Send, Minimize2, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -22,6 +23,7 @@ const VIOLET = '#7c3aed'
 const CYAN   = '#06b6d4'
 
 export default function CoachWidget() {
+  const pathname = usePathname()
   const [open, setOpen]         = useState(false)
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -120,6 +122,8 @@ export default function CoachWidget() {
       setSending(false)
     }
   }, [firebaseUser, messages, sending])
+
+  if (pathname.startsWith('/admin')) return null
 
   return (
     <>

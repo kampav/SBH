@@ -91,7 +91,7 @@ export default function BottomNav() {
   useEffect(() => { setOpen(false) }, [pathname])
 
   const hide = ['/', '/login', '/register', '/onboarding'].some(
-    p => pathname === p || pathname.startsWith('/onboarding')
+    p => pathname === p || pathname.startsWith('/onboarding') || pathname.startsWith('/admin')
   )
   if (hide) return null
 

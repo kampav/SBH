@@ -17,9 +17,10 @@ import Link from 'next/link'
 import {
   LogOut, User,
   Utensils, Dumbbell, Scale, TrendingUp,
-  Activity, Moon, CheckSquare, Brain,
-  Bot, Heart, Droplets, Pill,
-  CheckCircle, Zap, Settings2,
+  Activity, Moon, Brain,
+  Bot, Heart, CheckSquare,
+  CheckCircle, Zap, Settings2, X,
+  Sparkles, ChevronRight,
   type LucideIcon,
 } from 'lucide-react'
 import ProgressRing from '@/components/ui/ProgressRing'
@@ -38,29 +39,39 @@ function getGreeting(name?: string): string {
   return name ? `${s}, ${name.split(' ')[0]}` : s
 }
 
-interface Action {
+// All tile types unified
+interface Tile {
   id: string; label: string; sub: string; href: string
-  done: boolean; icon: LucideIcon; color: string
+  done?: boolean; icon: LucideIcon; color: string
+  /** If true, counts toward readiness ring */
+  isDailyAction?: boolean
+  /** If true, shown by default; can be hidden */
+  defaultVisible?: boolean
 }
 
-function buildActions(opts: {
-  todayCalories: number; workoutDone: boolean; mealCount: number
-  weightLoggedRecently: boolean; sleepLogged: boolean; moodLogged: boolean
-  glucoseEnabled: boolean; glucoseLogged: boolean
-}): Action[] {
-  return [
-    { id: 'meal',    label: 'Nutrition', sub: opts.mealCount > 0 ? `${opts.todayCalories} kcal` : 'Log meals',        href: '/nutrition', done: opts.mealCount > 0,           icon: Utensils, color: '#10b981' },
-    { id: 'workout', label: 'Workout',   sub: opts.workoutDone ? 'Done!' : 'Log session',                              href: '/workout',   done: opts.workoutDone,             icon: Dumbbell, color: '#6366f1' },
-    { id: 'sleep',   label: 'Sleep',     sub: opts.sleepLogged ? 'Logged' : 'Log sleep',                               href: '/sleep',     done: opts.sleepLogged,             icon: Moon,     color: '#a78bfa' },
-    { id: 'mood',    label: 'Mood',      sub: opts.moodLogged ? 'Checked in' : 'Check in',                             href: '/mood',      done: opts.moodLogged,              icon: Brain,    color: '#ec4899' },
-    { id: 'weight',  label: 'Weight',    sub: opts.weightLoggedRecently ? 'Logged' : 'Weigh in',                       href: '/metrics',   done: opts.weightLoggedRecently,    icon: Scale,    color: '#f59e0b' },
-    ...(opts.glucoseEnabled ? [{ id: 'glucose', label: 'Glucose', sub: opts.glucoseLogged ? 'Logged' : 'Log reading', href: '/glucose',  done: opts.glucoseLogged,           icon: Activity, color: '#ef4444' }] : []),
-  ]
+type ConditionKey =
+  | 'DIABETES_T1' | 'DIABETES_T2' | 'MENTAL_HEALTH' | 'HEART_HEALTH'
+  | 'PCOS' | 'THYROID' | 'WEIGHT_LOSS' | 'MUSCLE_GAIN' | 'ATHLETIC' | 'GENERAL'
+
+const CONDITION_TIPS: Record<ConditionKey, { title: string; tip: string; color: string; emoji: string }> = {
+  DIABETES_T1:    { title: 'Diabetes tip',        tip: 'Monitor carbs carefully — consistent meal timing helps stabilise glucose levels throughout the day.',      color: '#ef4444', emoji: '🩸' },
+  DIABETES_T2:    { title: 'Diabetes tip',        tip: 'A 10-minute walk after meals can significantly reduce post-meal glucose spikes.',                           color: '#f97316', emoji: '🚶' },
+  MENTAL_HEALTH:  { title: 'Mental wellness',     tip: "Today's mood check-in takes 30 seconds. Small steps in self-awareness compound into real change.",          color: '#ec4899', emoji: '🧠' },
+  HEART_HEALTH:   { title: 'Heart health',        tip: 'Regular blood pressure logging helps spot trends early. Even 2 readings a week make a difference.',        color: '#f43f5e', emoji: '❤️' },
+  PCOS:           { title: 'PCOS support',        tip: 'Low-GI foods and resistance training are two of the strongest evidence-based interventions for PCOS.',     color: '#f472b6', emoji: '🌸' },
+  THYROID:        { title: 'Thyroid health',      tip: 'Consistent meal timing supports thyroid hormone absorption. Avoid large meals late at night.',              color: '#34d399', emoji: '🦋' },
+  WEIGHT_LOSS:    { title: 'Weight management',   tip: 'Protein keeps you full and preserves muscle. Hitting your protein target helps prevent overeating.',        color: '#f59e0b', emoji: '⚖️' },
+  MUSCLE_GAIN:    { title: 'Muscle building',     tip: 'Progressive overload + hitting protein = muscle growth. Check both boxes today.',                           color: '#6366f1', emoji: '💪' },
+  ATHLETIC:       { title: 'Performance tip',     tip: 'Track sleep as carefully as your training sessions — adaptation and recovery happen during sleep.',         color: '#06b6d4', emoji: '🏅' },
+  GENERAL:        { title: 'Health tip',          tip: 'Consistency beats perfection. Every log you make is a data point that builds a healthier future.',          color: '#7c3aed', emoji: '✨' },
 }
 
-interface TrackerDef {
-  href: string; icon: LucideIcon; label: string
-  sub: string; color: string; value?: string; done?: boolean
+function getConditionTip(profile: UserProfile | null) {
+  if (!profile?.conditionProfile?.conditions?.length) {
+    return CONDITION_TIPS.GENERAL
+  }
+  const first = profile.conditionProfile.conditions[0] as ConditionKey
+  return CONDITION_TIPS[first] ?? CONDITION_TIPS.GENERAL
 }
 
 export default function DashboardPage() {
@@ -81,13 +92,13 @@ export default function DashboardPage() {
   const [lastSleep, setLastSleep]             = useState<SleepEntry | null>(null)
   const [weightLoggedToday, setWeightLoggedToday] = useState(false)
   const [moodLoggedToday]                     = useState(false)
-  const [hiddenTrackers, setHiddenTrackers]   = useState<string[]>([])
+  const [hiddenTiles, setHiddenTiles]         = useState<string[]>([])
   const [customizing, setCustomizing]         = useState(false)
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('sbh_hidden_trackers')
-      if (saved) setHiddenTrackers(JSON.parse(saved))
+      const saved = localStorage.getItem('sbh_hidden_tiles')
+      if (saved) setHiddenTiles(JSON.parse(saved))
     } catch { /* ignore */ }
   }, [])
 
@@ -184,37 +195,43 @@ export default function DashboardPage() {
   const greeting = getGreeting(profile?.displayName)
   const dayStr   = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
   const firstName = profile?.displayName?.split(' ')[0] ?? 'there'
+  const condTip   = getConditionTip(profile)
+  const sleepLogged = !!lastSleep && lastSleep.date >= today
 
-  const actions = buildActions({
-    todayCalories, workoutDone: workoutDoneToday, mealCount,
-    weightLoggedRecently: weightLoggedToday,
-    sleepLogged: !!lastSleep && lastSleep.date >= today,
-    moodLogged: moodLoggedToday,
-    glucoseEnabled: !!glucoseSettings?.consentGiven,
-    glucoseLogged: !!latestGlucose,
-  })
+  // All tiles — daily actions + tracker shortcuts, unified
+  const allTiles: Tile[] = [
+    { id: 'meal',    label: 'Nutrition',      sub: mealCount > 0 ? `${todayCalories} kcal` : 'Log meals',        href: '/nutrition',      done: mealCount > 0,        icon: Utensils,    color: '#10b981', isDailyAction: true, defaultVisible: true },
+    { id: 'workout', label: 'Workout',        sub: workoutDoneToday ? 'Done!' : 'Log session',                    href: '/workout',         done: workoutDoneToday,     icon: Dumbbell,    color: '#6366f1', isDailyAction: true, defaultVisible: true },
+    { id: 'sleep',   label: 'Sleep',          sub: sleepLogged ? 'Logged' : 'Log sleep',                         href: '/sleep',           done: sleepLogged,          icon: Moon,        color: '#a78bfa', isDailyAction: true, defaultVisible: true },
+    { id: 'mood',    label: 'Mood',           sub: moodLoggedToday ? 'Checked in' : 'Check in',                  href: '/mood',            done: moodLoggedToday,      icon: Brain,       color: '#ec4899', isDailyAction: true, defaultVisible: true },
+    { id: 'weight',  label: 'Weight',         sub: weightLoggedToday ? 'Logged' : 'Weigh in',                    href: '/metrics',         done: weightLoggedToday,    icon: Scale,       color: '#f59e0b', isDailyAction: true, defaultVisible: true },
+    ...(glucoseSettings?.consentGiven ? [{
+      id: 'glucose', label: 'Glucose', sub: latestGlucose ? displayGlucose(latestGlucose.valueMmol, glucoseSettings?.preferredUnit ?? 'mmol/L') : 'Log reading',
+      href: '/glucose', done: !!latestGlucose, icon: Activity, color: '#ef4444', isDailyAction: true, defaultVisible: true,
+    }] : []),
+    { id: 'bp',      label: 'Blood Pressure', sub: 'Heart health',    href: '/blood-pressure', icon: Heart,       color: '#f43f5e', defaultVisible: true },
+    { id: 'habits',  label: 'Habits',         sub: 'Daily streaks',   href: '/habits',         icon: CheckSquare, color: CYAN,      defaultVisible: true },
+    { id: 'coach',   label: 'AI Coach',       sub: 'Chat & check-in', href: '/coach',          icon: Bot,         color: VIOLET,    defaultVisible: true },
+    { id: 'insights',label: 'Weekly Report',  sub: 'AI insights',     href: '/insights',        icon: TrendingUp,  color: '#fbbf24', defaultVisible: false },
+    { id: 'feed',    label: 'Health Feed',    sub: 'Your score',      href: '/health-feed',    icon: Sparkles,    color: '#06b6d4', defaultVisible: false },
+  ]
 
-  const actionsDone  = actions.filter(a => a.done).length
-  const actionsTotal = actions.length
-  const readiness    = Math.round((actionsDone / actionsTotal) * 100)
+  const visibleTiles = allTiles.filter(t => !hiddenTiles.includes(t.id))
+  const dailyActions = allTiles.filter(t => t.isDailyAction)
+  const actionsDone  = dailyActions.filter(t => t.done).length
+  const actionsTotal = dailyActions.length
+  const readiness    = actionsTotal > 0 ? Math.round((actionsDone / actionsTotal) * 100) : 0
   const readinessColor =
     readiness >= 70 ? '#10b981' :
     readiness >= 40 ? '#f59e0b' : '#f43f5e'
 
-  const trackers: TrackerDef[] = [
-    { href: '/nutrition',     icon: Utensils,    label: 'Nutrition',      sub: mealCount > 0 ? `${todayCalories} kcal today` : 'Log meals',           color: '#10b981', done: mealCount > 0 },
-    { href: '/workout',       icon: Dumbbell,    label: 'Workout',        sub: workoutDoneToday ? 'Done today' : 'Log session',                         color: '#6366f1', done: workoutDoneToday },
-    { href: '/sleep',         icon: Moon,        label: 'Sleep',          sub: lastSleep ? `${lastSleep.durationH}h last night` : 'Log sleep',          color: '#a78bfa', done: !!lastSleep },
-    { href: '/glucose',       icon: Activity,    label: 'Glucose',        sub: latestGlucose ? displayGlucose(latestGlucose.valueMmol, glucoseSettings?.preferredUnit ?? 'mmol/L') : 'Log reading', color: '#ef4444', done: !!latestGlucose },
-    { href: '/mood',          icon: Brain,       label: 'Mood',           sub: 'Mental check-in',                                                        color: '#ec4899', done: moodLoggedToday },
-    { href: '/metrics',       icon: Scale,       label: 'Weight',         sub: weightLoggedToday ? 'Logged today' : 'Daily weigh-in',                   color: '#f59e0b', done: weightLoggedToday },
-    { href: '/blood-pressure',icon: Heart,       label: 'Blood Pressure', sub: 'Heart health',                                                           color: '#f43f5e', done: false },
-    { href: '/habits',        icon: CheckSquare, label: 'Habits',         sub: 'Daily streaks',                                                          color: '#06b6d4', done: false },
-    { href: '/coach',         icon: Bot,         label: 'AI Coach',       sub: 'Chat & check-in',                                                        color: VIOLET,    done: false },
-    { href: '/insights',      icon: TrendingUp,  label: 'Weekly Report',  sub: 'AI insights',                                                            color: '#fbbf24', done: false },
-    { href: '/pcos',          icon: Droplets,    label: 'PCOS',           sub: 'Cycle & hormones',                                                       color: '#f472b6', done: false },
-    { href: '/thyroid',       icon: Pill,        label: 'Thyroid',        sub: 'TSH & fatigue',                                                          color: '#34d399', done: false },
-  ]
+  function toggleTile(id: string) {
+    const next = hiddenTiles.includes(id)
+      ? hiddenTiles.filter(h => h !== id)
+      : [...hiddenTiles, id]
+    setHiddenTiles(next)
+    localStorage.setItem('sbh_hidden_tiles', JSON.stringify(next))
+  }
 
   return (
     <main className="min-h-screen mesh-bg page-pad pb-32">
@@ -248,16 +265,13 @@ export default function DashboardPage() {
             boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
           }}
         >
-          {/* Background orbs */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20"
               style={{ background: `radial-gradient(circle,${readinessColor},transparent)` }} />
             <div className="absolute -bottom-6 -left-6 w-32 h-32 rounded-full opacity-10"
               style={{ background: `radial-gradient(circle,${CYAN},transparent)` }} />
           </div>
-
           <div className="relative flex items-center gap-5 p-5">
-            {/* Readiness ring */}
             <div className="shrink-0">
               <ProgressRing
                 value={readiness}
@@ -268,8 +282,6 @@ export default function DashboardPage() {
                 sublabel="score"
               />
             </div>
-
-            {/* Stats */}
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: readinessColor }}>
                 Daily Readiness
@@ -278,8 +290,6 @@ export default function DashboardPage() {
                 {readiness >= 70 ? 'Great shape' : readiness >= 40 ? 'Getting there' : 'Just starting'}
                 <span className="text-sm font-medium text-3 ml-1">, {firstName}</span>
               </p>
-
-              {/* Stat pills row */}
               <div className="flex flex-wrap gap-2">
                 <StatPill emoji="✅" value={`${actionsDone}/${actionsTotal}`} label="tasks" color={readinessColor} />
                 <StatPill emoji="🔥" value={`${workoutStreak}d`} label="streak" color="#f97316" />
@@ -289,30 +299,33 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Today's Actions — horizontal tile scroll ─────────── */}
+        {/* ── Today's Actions + Trackers — unified horizontal scroll ── */}
         <div>
           <div className="flex items-center justify-between px-0.5 mb-3">
-            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
-              Today&apos;s Actions
-            </p>
-            <span
-              className="text-xs font-bold px-2 py-0.5 rounded-full"
-              style={{
-                background: actionsDone === actionsTotal ? 'rgba(16,185,129,0.15)' : 'rgba(124,58,237,0.12)',
-                color: actionsDone === actionsTotal ? '#10b981' : VIOLET,
-              }}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
+                Today&apos;s Actions
+              </p>
+              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>
+                {actionsDone === actionsTotal ? '🎉 All daily tasks done!' : `${actionsTotal - actionsDone} daily tasks remaining`}
+              </p>
+            </div>
+            <button
+              onClick={() => setCustomizing(true)}
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-all active:scale-95"
+              style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)', color: VIOLET }}
             >
-              {actionsDone === actionsTotal ? 'All done!' : `${actionsTotal - actionsDone} left`}
-            </span>
+              <Settings2 size={11} />
+              Customise
+            </button>
           </div>
 
-          {/* Horizontal scroll */}
           <div
-            className="flex gap-3 overflow-x-auto pb-1"
+            className="flex gap-3 overflow-x-auto pb-2"
             style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}
           >
-            {actions.map(action => (
-              <ActionTile key={action.id} {...action} />
+            {visibleTiles.map(tile => (
+              <ActionTile key={tile.id} {...tile} />
             ))}
           </div>
         </div>
@@ -328,13 +341,11 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="flex items-center gap-5">
-            {/* Rings */}
             <Link href="/nutrition" className="shrink-0">
               <ProgressRing value={calPct} size={80} stroke={7} color="#10b981"
                 label={todayCalories > 0 ? `${todayCalories}` : '0'} sublabel="kcal" />
             </Link>
             <div className="flex-1 space-y-3">
-              {/* Calorie bar */}
               <div>
                 <div className="flex justify-between text-xs mb-1">
                   <span style={{ color: 'var(--text-2)' }}>Calories</span>
@@ -347,7 +358,6 @@ export default function DashboardPage() {
                     style={{ width: `${calPct}%`, background: 'linear-gradient(90deg,#10b981,#34d399)' }} />
                 </div>
               </div>
-              {/* Protein bar */}
               <div>
                 <div className="flex justify-between text-xs mb-1">
                   <span style={{ color: 'var(--text-2)' }}>Protein</span>
@@ -364,68 +374,127 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── AI Tip ──────────────────────────────────────────────── */}
-        <div
-          className="rounded-2xl px-4 py-3 flex items-start gap-3"
-          style={{
-            background: 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(6,182,212,0.05))',
-            border: '1px solid rgba(124,58,237,0.15)',
-          }}
-        >
-          <div
-            className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center mt-0.5"
-            style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})` }}
-          >
-            <Bot size={13} className="text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            {insightsLoading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 border border-violet-400 border-t-transparent rounded-full animate-spin" />
-                <p className="text-xs text-3">Crafting your personalised tip…</p>
-              </div>
-            ) : aiInsights ? (
-              <>
-                <p className="text-sm font-medium text-1 leading-snug">&ldquo;{aiInsights.quote}&rdquo;</p>
-                {aiInsights.recommendation && (
-                  <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-3)' }}>{aiInsights.recommendation}</p>
-                )}
-              </>
-            ) : (
-              <p className="text-sm text-1 leading-snug">{tip}</p>
-            )}
-          </div>
-        </div>
+        {/* ── For You — hyper-personalised section ─────────────── */}
+        <div className="space-y-3">
+          <p className="text-xs font-bold uppercase tracking-widest px-0.5" style={{ color: 'var(--text-3)' }}>
+            For You
+          </p>
 
-        {/* ── My Trackers ──────────────────────────────────────── */}
-        <div>
-          <div className="flex items-center justify-between px-0.5 mb-3">
-            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
-              My Trackers
-            </p>
-            <button
-              onClick={() => setCustomizing(true)}
-              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-all active:scale-95"
-              style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)', color: VIOLET }}
+          {/* AI Coach daily check-in card */}
+          <Link
+            href="/coach"
+            className="block rounded-2xl p-4 transition-all duration-200 active:scale-[0.98]"
+            style={{
+              background: `linear-gradient(135deg,${VIOLET}22,${CYAN}14)`,
+              border: `1px solid ${VIOLET}28`,
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})` }}
+              >
+                <Bot size={18} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>Chat with your AI Coach</p>
+                <p className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--text-3)' }}>
+                  {insightsLoading
+                    ? 'Analysing your health data…'
+                    : aiInsights?.recommendation
+                    ? aiInsights.recommendation
+                    : 'Ask me anything about your health today'}
+                </p>
+              </div>
+              <ChevronRight size={16} style={{ color: 'var(--text-3)' }} />
+            </div>
+          </Link>
+
+          {/* AI Quote / insight */}
+          {(aiInsights || insightsLoading) && (
+            <div
+              className="rounded-2xl px-4 py-3 flex items-start gap-3"
+              style={{
+                background: 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(6,182,212,0.05))',
+                border: '1px solid rgba(124,58,237,0.15)',
+              }}
             >
-              <Settings2 size={11} />
-              Customise
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {trackers
-              .filter(t => !hiddenTrackers.includes(t.label))
-              .map(t => <TrackerCard key={t.href + t.label} {...t} />)}
-          </div>
-          {hiddenTrackers.length > 0 && (
-            <button
-              onClick={() => setCustomizing(true)}
-              className="mt-3 w-full text-xs py-2 rounded-xl text-center"
-              style={{ color: 'var(--text-3)', border: '1px dashed var(--glass-border)' }}
-            >
-              +{hiddenTrackers.length} hidden — tap Customise to show
-            </button>
+              <div
+                className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center mt-0.5"
+                style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})` }}
+              >
+                <Sparkles size={12} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                {insightsLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 border border-violet-400 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-xs text-3">Crafting your personalised insight…</p>
+                  </div>
+                ) : aiInsights ? (
+                  <p className="text-sm font-medium text-1 leading-snug">&ldquo;{aiInsights.quote}&rdquo;</p>
+                ) : null}
+              </div>
+            </div>
           )}
+
+          {/* Condition-specific tip */}
+          <div
+            className="rounded-2xl p-4"
+            style={{
+              background: `${condTip.color}10`,
+              border: `1px solid ${condTip.color}22`,
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0 mt-0.5">{condTip.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: condTip.color }}>
+                  {condTip.title}
+                </p>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-1)' }}>
+                  {condTip.tip}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Static tip if no AI insights yet */}
+          {!aiInsights && !insightsLoading && (
+            <div
+              className="rounded-2xl px-4 py-3 flex items-start gap-3"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid var(--glass-border)',
+              }}
+            >
+              <div className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center mt-0.5"
+                style={{ background: 'rgba(124,58,237,0.15)' }}>
+                <Zap size={12} style={{ color: VIOLET }} />
+              </div>
+              <p className="text-sm text-1 leading-snug flex-1">{tip}</p>
+            </div>
+          )}
+
+          {/* Health Feed CTA */}
+          <Link
+            href="/health-feed"
+            className="flex items-center gap-3 rounded-2xl p-4 transition-all duration-200 active:scale-[0.98]"
+            style={{
+              background: 'rgba(6,182,212,0.08)',
+              border: '1px solid rgba(6,182,212,0.2)',
+            }}
+          >
+            <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center"
+              style={{ background: 'rgba(6,182,212,0.15)' }}>
+              <Sparkles size={16} style={{ color: CYAN }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>Your Health Feed</p>
+              <p className="text-xs" style={{ color: 'var(--text-3)' }}>Personalised insights &amp; recommendations</p>
+            </div>
+            <ChevronRight size={15} style={{ color: 'var(--text-3)' }} />
+          </Link>
         </div>
 
       </div>
@@ -444,48 +513,47 @@ export default function DashboardPage() {
             }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Handle */}
             <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: 'var(--glass-border)' }} />
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-base font-bold text-1">Customise Home Screen</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-base font-bold text-1">Customise Today&apos;s Actions</p>
               <button
                 onClick={() => setCustomizing(false)}
-                className="text-xs px-4 py-1.5 rounded-full font-semibold"
-                style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})`, color: '#fff' }}
+                className="p-1.5 rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-2)' }}
               >
-                Done
+                <X size={16} />
               </button>
             </div>
+            <p className="text-xs mb-4" style={{ color: 'var(--text-3)' }}>
+              Choose which tiles appear in your Today&apos;s Actions scroll
+            </p>
             <div className="space-y-2">
-              {trackers.map(t => {
-                const hidden = hiddenTrackers.includes(t.label)
+              {allTiles.map(tile => {
+                const hidden = hiddenTiles.includes(tile.id)
                 return (
                   <button
-                    key={t.label}
-                    onClick={() => {
-                      const next = hidden
-                        ? hiddenTrackers.filter(h => h !== t.label)
-                        : [...hiddenTrackers, t.label]
-                      setHiddenTrackers(next)
-                      localStorage.setItem('sbh_hidden_trackers', JSON.stringify(next))
-                    }}
+                    key={tile.id}
+                    onClick={() => toggleTile(tile.id)}
                     className="w-full flex items-center gap-3 p-3 rounded-2xl transition-all active:scale-[0.98]"
                     style={{
-                      background: hidden ? 'rgba(255,255,255,0.03)' : `${t.color}10`,
-                      border: `1px solid ${hidden ? 'var(--glass-border)' : t.color + '28'}`,
+                      background: hidden ? 'rgba(255,255,255,0.03)' : `${tile.color}10`,
+                      border: `1px solid ${hidden ? 'var(--glass-border)' : tile.color + '28'}`,
                     }}
                   >
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ background: `${t.color}20` }}>
-                      <t.icon size={16} style={{ color: hidden ? 'var(--text-3)' : t.color }} />
+                      style={{ background: `${tile.color}20` }}>
+                      <tile.icon size={16} style={{ color: hidden ? 'var(--text-3)' : tile.color }} />
                     </div>
-                    <span className="flex-1 text-left text-sm font-medium"
-                      style={{ color: hidden ? 'var(--text-3)' : 'var(--text-1)' }}>
-                      {t.label}
-                    </span>
-                    {/* iOS-style toggle */}
+                    <div className="flex-1 text-left">
+                      <p className="text-sm font-medium" style={{ color: hidden ? 'var(--text-3)' : 'var(--text-1)' }}>
+                        {tile.label}
+                      </p>
+                      {tile.isDailyAction && (
+                        <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>Daily action</p>
+                      )}
+                    </div>
                     <div className="w-12 h-6 rounded-full relative transition-all duration-200 shrink-0"
-                      style={{ background: hidden ? 'rgba(255,255,255,0.12)' : t.color }}>
+                      style={{ background: hidden ? 'rgba(255,255,255,0.12)' : tile.color }}>
                       <div className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200"
                         style={{ left: hidden ? '2px' : '26px' }} />
                     </div>
@@ -501,7 +569,7 @@ export default function DashboardPage() {
 }
 
 // ── Action Tile (horizontal scroll item) ──────────────────────────────────────
-function ActionTile({ href, icon: Icon, label, sub, done, color }: Action) {
+function ActionTile({ href, icon: Icon, label, sub, done, color }: Tile) {
   return (
     <Link
       href={href}
@@ -516,7 +584,6 @@ function ActionTile({ href, icon: Icon, label, sub, done, color }: Action) {
         boxShadow: done ? `0 4px 16px ${color}22` : 'none',
       }}
     >
-      {/* Icon bubble */}
       <div
         className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all"
         style={{
@@ -526,19 +593,15 @@ function ActionTile({ href, icon: Icon, label, sub, done, color }: Action) {
       >
         {done
           ? <CheckCircle size={20} style={{ color }} />
-          : <Icon size={20} strokeWidth={1.75} style={{ color: done ? color : 'var(--text-3)' }} />
+          : <Icon size={20} strokeWidth={1.75} style={{ color: 'var(--text-3)' }} />
         }
       </div>
-
-      {/* Label */}
       <p
         className="text-[11px] font-semibold text-center leading-tight"
         style={{ color: done ? color : 'var(--text-2)' }}
       >
         {label}
       </p>
-
-      {/* Status */}
       <span
         className="text-[10px] font-medium text-center leading-none"
         style={{ color: done ? color + 'cc' : 'var(--text-3)' }}
@@ -560,35 +623,5 @@ function StatPill({ emoji, value, label, color }: { emoji: string; value: string
       <span className="text-xs font-bold leading-none" style={{ color }}>{value}</span>
       <span className="text-[10px] leading-none" style={{ color: 'var(--text-3)' }}>{label}</span>
     </div>
-  )
-}
-
-// ── Tracker Card ──────────────────────────────────────────────────────────────
-function TrackerCard({ href, icon: Icon, label, sub, color, done }: TrackerDef) {
-  return (
-    <Link
-      href={href}
-      className="glass rounded-2xl p-4 flex flex-col gap-2.5 transition-all duration-200 active:scale-[0.97]"
-      style={done ? { border: `1px solid ${color}35`, boxShadow: `0 0 0 1px ${color}15` } : undefined}
-    >
-      <div className="flex items-center justify-between">
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center"
-          style={{ background: `${color}18`, border: `1px solid ${color}22` }}
-        >
-          <Icon size={16} strokeWidth={2} style={{ color }} />
-        </div>
-        {done && (
-          <div className="w-5 h-5 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(16,185,129,0.15)' }}>
-            <Zap size={10} style={{ color: '#10b981' }} />
-          </div>
-        )}
-      </div>
-      <div>
-        <p className="text-sm font-semibold text-1">{label}</p>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{sub}</p>
-      </div>
-    </Link>
   )
 }

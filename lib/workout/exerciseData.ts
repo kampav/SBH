@@ -27,12 +27,34 @@ export interface ProgrammeDay {
 }
 
 // ─── Per-exercise tutorial video + brief how-to description ──────────────────
-export const EXERCISE_INFO: Record<string, { videoUrl: string; description: string }> = {
+export interface ExerciseInfo {
+  videoUrl: string
+  description: string
+  cues?: string[]      // 3-5 coaching cues shown in detail sheet
+  mistakes?: string[]  // 2-4 common errors shown in detail sheet
+}
+
+export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
   // ── Bodyweight Push ──────────────────────────────────────────────────────
-  'Push-ups':               { videoUrl: 'https://youtu.be/IODxDxX7oi4', description: 'Hands shoulder-width, elbows at 45°. Lower chest to floor, press back up keeping body in a straight line.' },
+  'Push-ups': {
+    videoUrl: 'https://youtu.be/IODxDxX7oi4',
+    description: 'Hands shoulder-width, elbows at 45°. Lower chest to floor, press back up keeping body in a straight line.',
+    cues: ['Place hands slightly wider than shoulder-width', 'Keep elbows at 45° — not flared out', 'Brace core and squeeze glutes throughout', 'Lower chest to within 2cm of the floor', 'Full lockout at the top on every rep'],
+    mistakes: ['Flaring elbows to 90° (puts shoulder at risk)', 'Sagging hips mid-set (core drops out)', 'Partial reps — not reaching full depth or lockout'],
+  },
   'Incline Push-ups':       { videoUrl: 'https://youtu.be/cfns5KzHorc', description: 'Hands elevated on a chair or step. Same push-up form — easier angle targets upper chest.' },
-  'Chair Dips':             { videoUrl: 'https://youtu.be/0326dy_-CzM', description: 'Hands on chair edge, slide off. Lower until elbows hit 90°, press back up. Keep back close to the chair.' },
-  'Pike Push-ups':          { videoUrl: 'https://youtu.be/sposDXWEB0A', description: 'Form an inverted V with hips raised high. Bend elbows to lower head toward floor — mimics an overhead press.' },
+  'Chair Dips': {
+    videoUrl: 'https://youtu.be/0326dy_-CzM',
+    description: 'Hands on chair edge, slide off. Lower until elbows hit 90°, press back up. Keep back close to the chair.',
+    cues: ['Keep back close to the chair throughout', 'Lower until elbows reach 90° — no further', 'Press through the heel of the hand to lockout', 'Keep shoulders depressed (not shrugging)'],
+    mistakes: ['Going too deep (excessive shoulder internal rotation)', 'Flaring elbows wide instead of pointing back', 'Using leg drive to help on hard reps'],
+  },
+  'Pike Push-ups': {
+    videoUrl: 'https://youtu.be/sposDXWEB0A',
+    description: 'Form an inverted V with hips raised high. Bend elbows to lower head toward floor — mimics an overhead press.',
+    cues: ['Hips as high as possible — create a sharp V shape', 'Lower head between/slightly in front of hands', 'Elbows track outward as in a press', 'Full extension at top, squeeze shoulders'],
+    mistakes: ['Hips dropping into a regular push-up (loses shoulder emphasis)', 'Not going low enough to feel shoulder load'],
+  },
   'Circuit: Push-ups ×4':   { videoUrl: 'https://youtu.be/IODxDxX7oi4', description: '4-round circuit. Minimal rest between moves, 90 s rest between rounds. Maintain form even when tired.' },
   // ── Core ────────────────────────────────────────────────────────────────
   'Plank Hold':             { videoUrl: 'https://youtu.be/pSHjTRCQxIw', description: 'Forearms down, body in a straight line. Brace abs, squeeze glutes, breathe steadily. Don\'t let hips sag or rise.' },
@@ -78,25 +100,90 @@ export const EXERCISE_INFO: Record<string, { videoUrl: string; description: stri
   'Shoulder Mobility':      { videoUrl: 'https://youtu.be/FSSDLDhbacc', description: 'Arm circles, cross-body stretch, doorway chest opener. No pain — gentle range of motion work only.' },
   'Full Body Stretch Flow':  { videoUrl: 'https://youtu.be/FSSDLDhbacc', description: 'Cat-cow, quad stretch, hamstring stretch, thoracic rotation. Hold each position 30–45 s. Breathe deeply.' },
   // ── Gym — Compound ───────────────────────────────────────────────────────
-  'Barbell Bench Press':    { videoUrl: 'https://youtu.be/vcBig73ojpE', description: 'Feet flat, arch maintained, grip slightly wider than shoulder-width. Lower to mid-chest, drive up explosively.' },
-  'Overhead Press':         { videoUrl: 'https://youtu.be/2yjwXTZQDDI', description: 'Bar at collar bone, elbows slightly forward. Brace core, press straight up, lock out overhead. Keep ribs down.' },
-  'Barbell Rows':           { videoUrl: 'https://youtu.be/G8l_8chR5BE', description: 'Hip hinge at 45°, bar close to shins. Drive elbows back to hip pockets. Controlled descent — no jerking.' },
-  'Pull-ups':               { videoUrl: 'https://youtu.be/eGo4IYlbE5g', description: 'Hang with full arm extension. Drive elbows down to ribs, chin above bar. No kipping — strict control only.' },
+  'Barbell Bench Press': {
+    videoUrl: 'https://youtu.be/vcBig73ojpE',
+    description: 'Feet flat, arch maintained, grip slightly wider than shoulder-width. Lower to mid-chest, drive up explosively.',
+    cues: ['Set shoulder blades back and down into the bench', 'Grip 1.5× shoulder-width, wrists stacked over elbows', 'Lower bar to mid-chest in a slight arc', 'Drive feet into the floor for leg drive', 'Explosive press up, 2-sec controlled descent'],
+    mistakes: ['Bouncing the bar off the chest (momentum, not muscle)', 'Lifting hips off the bench (arch too extreme)', 'Bar path drifting toward the neck (elbow flare)'],
+  },
+  'Overhead Press': {
+    videoUrl: 'https://youtu.be/2yjwXTZQDDI',
+    description: 'Bar at collar bone, elbows slightly forward. Brace core, press straight up, lock out overhead. Keep ribs down.',
+    cues: ['Start bar at clavicle level, elbows just in front', 'Brace core — imagine a punch coming to the stomach', 'Press the bar up and slightly back over the traps', 'Full lockout overhead, shrug shoulders at top', 'Keep ribs down — avoid lumbar hyperextension'],
+    mistakes: ['Excessive lower back arch to compensate for tight lats', 'Bar path drifting forward instead of up', 'No lockout — stopping 80% of the way up'],
+  },
+  'Barbell Rows': {
+    videoUrl: 'https://youtu.be/G8l_8chR5BE',
+    description: 'Hip hinge at 45°, bar close to shins. Drive elbows back to hip pockets. Controlled descent — no jerking.',
+    cues: ['Hip hinge to ~45°, chest facing floor', 'Keep bar close to legs throughout the pull', 'Drive elbows back toward hip pockets (not ceiling)', 'Squeeze shoulder blades at top', 'Lower under control — 2 sec eccentric'],
+    mistakes: ['Jerking with the lower back to initiate the pull', 'Elbows flaring out (turns into an upright row)', 'Dropping the bar without controlling the descent'],
+  },
+  'Pull-ups': {
+    videoUrl: 'https://youtu.be/eGo4IYlbE5g',
+    description: 'Hang with full arm extension. Drive elbows down to ribs, chin above bar. No kipping — strict control only.',
+    cues: ['Dead hang to start — full arm extension', 'Depress and retract shoulder blades before pulling', 'Drive elbows down toward your back pockets', 'Chin clears the bar — full range only', 'Lower over 2–3 seconds to full dead hang'],
+    mistakes: ['Kipping or swinging to gain momentum', 'Half reps — not reaching full extension at the bottom', 'Pulling with biceps instead of initiating with the back'],
+  },
   'Face Pulls':             { videoUrl: 'https://youtu.be/rep-qVOkqgk', description: 'Cable at face height, palms in. Pull to forehead with elbows high. Externally rotate shoulders at end position.' },
-  'Lateral Raises':         { videoUrl: 'https://youtu.be/3VcKaXpzqRo', description: 'Slight elbow bend, raise to shoulder height only. Lead with pinkies. Slow 3-sec lowering phase — no swinging.' },
-  'Barbell Squats':         { videoUrl: 'https://youtu.be/ultWZbUMPL8', description: 'Bar on upper traps, brace core. Drive knees out, squat to parallel. Keep heels flat throughout.' },
-  'Romanian Deadlifts':     { videoUrl: 'https://youtu.be/JCXUYuzwNrM', description: 'Slight knee bend, hinge at hips, bar close to legs. Feel hamstring stretch at bottom. Drive hips forward to stand.' },
+  'Lateral Raises': {
+    videoUrl: 'https://youtu.be/3VcKaXpzqRo',
+    description: 'Slight elbow bend, raise to shoulder height only. Lead with pinkies. Slow 3-sec lowering phase — no swinging.',
+    cues: ['Slight elbow bend throughout', 'Lead with the pinky side of the hand', 'Raise to shoulder height — no higher', '3-second controlled descent every rep', 'Keep torso still — no momentum'],
+    mistakes: ['Shrugging the traps as the weight rises', 'Swinging the body to help raise the weight', 'Going above shoulder height (loses delt, loads trap)'],
+  },
+  'Barbell Squats': {
+    videoUrl: 'https://youtu.be/ultWZbUMPL8',
+    description: 'Bar on upper traps, brace core. Drive knees out, squat to parallel. Keep heels flat throughout.',
+    cues: ['Bar on upper traps (high bar) or mid-traps (low bar)', 'Brace 360° into your belt/waistband before descent', 'Drive knees out in line with toes throughout', 'Break parallel — crease of hip below top of knee', 'Drive hips up and forward to lockout'],
+    mistakes: ['Knees caving inward (valgus collapse)', 'Heels rising off the floor (ankle mobility issue)', 'Excessive forward lean (quad/upper back weakness)', 'Butt wink at depth — stop just above where it occurs'],
+  },
+  'Romanian Deadlifts': {
+    videoUrl: 'https://youtu.be/JCXUYuzwNrM',
+    description: 'Slight knee bend, hinge at hips, bar close to legs. Feel hamstring stretch at bottom. Drive hips forward to stand.',
+    cues: ['Soft knee bend — not a squat', 'Push hips back, not down', 'Bar stays in contact with legs throughout', 'Feel the hamstring stretch (not lower back)', 'Drive hips through to full extension at top'],
+    mistakes: ['Rounding the lower back at the bottom', 'Going too deep — losing neutral spine', 'Bar drifting away from the legs'],
+  },
   'Leg Press':              { videoUrl: 'https://youtu.be/IZxyjW7MPJQ', description: 'Feet shoulder-width at mid-sled. Lower until knees at 90°. Don\'t fully lock out — keep tension on quads.' },
   'Leg Curls':              { videoUrl: 'https://youtu.be/ELOCsoDSmrg', description: 'Full range of motion — don\'t cheat by shifting hips. Control the lowering phase for 3 seconds.' },
-  'Standing Calf Raises':   { videoUrl: 'https://youtu.be/gwLzBJYoWlI', description: 'Deep stretch at bottom, pause and squeeze at top. Slow 3-second descent for maximum muscle growth.' },
+  'Standing Calf Raises': {
+    videoUrl: 'https://youtu.be/gwLzBJYoWlI',
+    description: 'Deep stretch at bottom, pause and squeeze at top. Slow 3-second descent for maximum muscle growth.',
+    cues: ['Full range — deep stretch at the bottom', 'Pause 1 second at peak contraction', '3-second controlled descent', 'Keep knees straight but not locked', 'Use a step for deeper range of motion'],
+    mistakes: ['Bouncing out of the bottom (no stretch stimulus)', 'Partial reps (not reaching full dorsiflexion)', 'Too much weight with no control'],
+  },
   'Incline Bench Press':    { videoUrl: 'https://youtu.be/DbFgADa2PL8', description: '30–45° incline. Same technique as flat bench — lower bar to upper chest. Targets clavicular pec head.' },
-  'Cable Rows':             { videoUrl: 'https://youtu.be/GZbfZ033f74', description: 'Sit tall, pull handle to lower sternum. Squeeze shoulder blades together. Slow 2-sec return to full extension.' },
+  'Cable Rows': {
+    videoUrl: 'https://youtu.be/GZbfZ033f74',
+    description: 'Sit tall, pull handle to lower sternum. Squeeze shoulder blades together. Slow 2-sec return to full extension.',
+    cues: ['Sit tall — no slouching', 'Full reach forward before each rep', 'Pull to lower sternum/upper abdomen', 'Squeeze shoulder blades together at finish', '2-second return to full extension'],
+    mistakes: ['Using body sway to generate momentum', 'Not reaching full extension between reps', 'Pulling too high (turns into a face pull)'],
+  },
   'Tricep Pushdowns':       { videoUrl: 'https://youtu.be/2-LAMcpzODU', description: 'Elbows pinned to sides. Push to full extension, squeeze triceps. Control return — don\'t let elbows flare out.' },
-  'Barbell Curls':          { videoUrl: 'https://youtu.be/kwG2ipFRgfo', description: 'Elbows pinned at sides. Full curl, squeeze at top, slow 2-sec descent. No swinging — strict form only.' },
-  'Conventional Deadlift':  { videoUrl: 'https://youtu.be/op9kVnSso6Q', description: 'Feet hip-width, bar over mid-foot. Brace hard, drive the floor away. Bar stays close to body throughout.' },
+  'Barbell Curls': {
+    videoUrl: 'https://youtu.be/kwG2ipFRgfo',
+    description: 'Elbows pinned at sides. Full curl, squeeze at top, slow 2-sec descent. No swinging — strict form only.',
+    cues: ['Pin elbows to sides — they stay still', 'Full curl to chin height, squeeze at top', '2-second descent — feel the stretch', 'Keep wrists neutral (not curled)', 'No body sway — strict throughout'],
+    mistakes: ['Swinging torso to heave the weight up', 'Letting elbows drift forward (loses bicep tension)', 'Dropping the bar fast without controlling the negative'],
+  },
+  'Conventional Deadlift': {
+    videoUrl: 'https://youtu.be/op9kVnSso6Q',
+    description: 'Feet hip-width, bar over mid-foot. Brace hard, drive the floor away. Bar stays close to body throughout.',
+    cues: ['Feet hip-width, bar over mid-foot (not touching)', 'Grip just outside legs, brace hard before lifting', '"Push the floor away" — think leg press, not pull', 'Bar stays in contact with shins throughout', 'Lock hips out fully at the top — no hyperextension'],
+    mistakes: ['Jerking the bar from the floor (slack not taken out)', 'Bar drifting away from the body', 'Rounding the upper back', 'Hyperextending the lower back at lockout'],
+  },
   'Front Squats':           { videoUrl: 'https://youtu.be/m4ytaCJZpl0', description: 'Bar across front delts, elbows high. More upright torso than back squat. Greater quad and core demand.' },
-  'Bulgarian Split Squats': { videoUrl: 'https://youtu.be/2C-uNgKwPLE', description: 'Rear foot elevated on bench. Lower front knee to 90°. Keep torso upright. Push through front heel to stand.' },
-  'Hip Thrusts':            { videoUrl: 'https://youtu.be/SEdqd1n0cvg', description: 'Upper back on bench, bar across hips. Drive through heels, squeeze glutes hard at top. Full hip extension.' },
+  'Bulgarian Split Squats': {
+    videoUrl: 'https://youtu.be/2C-uNgKwPLE',
+    description: 'Rear foot elevated on bench. Lower front knee to 90°. Keep torso upright. Push through front heel to stand.',
+    cues: ['Rear foot on bench, laces down', 'Front foot far enough forward that shin stays vertical', 'Lower until front thigh is parallel', 'Keep torso upright throughout', 'Push through the heel to stand'],
+    mistakes: ['Front foot too close (knee travels far past toes)', 'Leaning forward excessively at the bottom', 'Rear knee touching the floor with a thud (no control)'],
+  },
+  'Hip Thrusts': {
+    videoUrl: 'https://youtu.be/SEdqd1n0cvg',
+    description: 'Upper back on bench, bar across hips. Drive through heels, squeeze glutes hard at top. Full hip extension.',
+    cues: ['Upper back on bench at mid-scapula level', 'Feet hip-width, drive through heels', 'Squeeze glutes hard at full extension', 'Chin tucked — look at your knees', 'Pause 1 second at the top each rep'],
+    mistakes: ['Hyperextending the lower back (glutes not firing)', 'Feet too close (quads take over)', 'Not reaching full hip extension'],
+  },
   'Seated Calf Raises':     { videoUrl: 'https://youtu.be/gwLzBJYoWlI', description: 'Targets the soleus (lower calf). Same full-range principle — deep stretch then slow squeeze. Use the knee pad.' },
 }
 
