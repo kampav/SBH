@@ -52,7 +52,9 @@
       "Bash(__NEW_LINE_e3685111490b13aa__ sed -i \"s/Join SBH — It''s Free →/Join HealthOS — It''s Free →/g; s/Join SBH — It\\\\&apos;s Free →/Join HealthOS — It\\\\&apos;s Free →/g\" \"app/u/[username]/page.tsx\")",
       "Bash(__NEW_LINE_e3685111490b13aa__ echo \"done final cleanup\")",
       "Bash(node -e \":*)",
-      "Bash(node scripts/patch-insights.mjs)"
+      "Bash(node scripts/patch-insights.mjs)",
+      "Bash(npx next build)",
+      "Bash(grep -r \"from.*firebase/firestore\" app/**/page.tsx)"
     ]
   }
 }

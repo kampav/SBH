@@ -8,8 +8,9 @@ import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
 import { db } from '@/lib/firebase'
 import { doc, collection, addDoc, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore'
+import { getProfile } from '@/lib/firebase/firestore'
 import Link from 'next/link'
-import { ArrowLeft, Plus, Calendar, Pill, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Plus, Calendar, Pill, TrendingUp, AlertCircle, CheckCircle, Info } from 'lucide-react'
 
 const VIOLET = '#7c3aed'
 const ROSE   = '#f43f5e'
@@ -82,6 +83,7 @@ export default function PCOSPage() {
   const router = useRouter()
   const [uid, setUid] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  const [hasPcosCondition, setHasPcosCondition] = useState<boolean | null>(null)
   const [entries, setEntries] = useState<CycleEntry[]>([])
   const [, setSupplements] = useState<SupplementLog | null>(null)
   const [lastPeriodDate, setLastPeriodDate] = useState('')
@@ -96,6 +98,10 @@ export default function PCOSPage() {
       setAuthReady(true)
       if (!u) { router.push('/login'); return }
       setUid(u.uid)
+      getProfile(u.uid).then(p => {
+        const conditions = (p?.conditionProfile?.conditions ?? []) as string[]
+        setHasPcosCondition(conditions.includes('pcos'))
+      }).catch(() => setHasPcosCondition(false))
     })
     return unsub
   }, [router])
@@ -214,6 +220,18 @@ export default function PCOSPage() {
           <AlertCircle size={12} style={{ color: '#22d3ee', flexShrink: 0, marginTop: 2 }} />
           <p className="text-xs text-2">Tracking tool only — not medical advice. Discuss any concerns with your GP or endocrinologist.</p>
         </div>
+
+        {/* Condition not in profile */}
+        {hasPcosCondition === false && (
+          <div className="rounded-2xl px-3 py-2.5 flex items-start gap-2"
+            style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)' }}>
+            <Info size={12} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 2 }} />
+            <p className="text-xs text-2">
+              This module is designed for users with PCOS. You haven&apos;t added this condition to your health profile.{' '}
+              <Link href="/onboarding" className="underline" style={{ color: '#f59e0b' }}>Update your profile</Link> for personalised AI guidance.
+            </p>
+          </div>
+        )}
 
         {/* Current phase */}
         {phaseInfo && (

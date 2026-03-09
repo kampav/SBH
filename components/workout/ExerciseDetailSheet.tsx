@@ -58,11 +58,12 @@ export default function ExerciseDetailSheet({
 
       {/* Sheet */}
       <div
-        className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl overflow-hidden"
+        className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl overflow-hidden mx-auto"
         style={{
           background: '#0C1320',
           border: '1px solid rgba(255,255,255,0.08)',
           maxHeight: '90dvh',
+          maxWidth: '680px',
         }}
       >
         {/* Drag handle */}

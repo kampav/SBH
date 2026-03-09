@@ -8,8 +8,9 @@ import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
 import { db } from '@/lib/firebase'
 import { doc, collection, addDoc, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore'
+import { getProfile } from '@/lib/firebase/firestore'
 import Link from 'next/link'
-import { ArrowLeft, Plus, Bell, TrendingUp, TrendingDown, Minus, AlertCircle, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Plus, Bell, TrendingUp, TrendingDown, Minus, AlertCircle, CheckCircle, Info } from 'lucide-react'
 
 const VIOLET = '#7c3aed'
 const TEAL   = '#14b8a6'
@@ -59,6 +60,7 @@ export default function ThyroidPage() {
   const router = useRouter()
   const [uid, setUid] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  const [hasThyroidCondition, setHasThyroidCondition] = useState<boolean | null>(null)
   const [tshEntries, setTshEntries] = useState<TSHEntry[]>([])
   const [fatigueLogs, setFatigueLogs] = useState<FatigueLog[]>([])
   const [activeTab, setActiveTab] = useState<'tsh' | 'fatigue' | 'medication'>('tsh')
@@ -86,6 +88,10 @@ export default function ThyroidPage() {
       setAuthReady(true)
       if (!u) { router.push('/login'); return }
       setUid(u.uid)
+      getProfile(u.uid).then(p => {
+        const conditions = (p?.conditionProfile?.conditions ?? []) as string[]
+        setHasThyroidCondition(conditions.includes('hypothyroidism'))
+      }).catch(() => setHasThyroidCondition(false))
     })
     return unsub
   }, [router])
@@ -177,6 +183,18 @@ export default function ThyroidPage() {
           <AlertCircle size={12} style={{ color: '#22d3ee', flexShrink: 0, marginTop: 2 }} />
           <p className="text-xs text-2">Tracking tool only. Never adjust medication without consulting your endocrinologist or GP.</p>
         </div>
+
+        {/* Condition not in profile */}
+        {hasThyroidCondition === false && (
+          <div className="rounded-2xl px-3 py-2.5 flex items-start gap-2"
+            style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)' }}>
+            <Info size={12} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 2 }} />
+            <p className="text-xs text-2">
+              This module is designed for users with a thyroid condition. You haven&apos;t added Thyroid to your health profile.{' '}
+              <Link href="/onboarding" className="underline" style={{ color: '#f59e0b' }}>Update your profile</Link> for personalised AI guidance.
+            </p>
+          </div>
+        )}
 
         {/* Latest TSH summary */}
         {latestTSH && (() => {

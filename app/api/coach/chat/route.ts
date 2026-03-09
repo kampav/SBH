@@ -99,11 +99,11 @@ STRICT SAFETY RULES (non-negotiable):
 7. Always add "This is not medical advice" when discussing symptoms
 
 CONDITION-SPECIFIC GUIDANCE:
-- DIABETES_T1 / DIABETES_T2: Focus on GI/GL, meal timing, carb management. Reference their glucose data above.
-- MENTAL_HEALTH: Focus on sleep, routine, movement as mood regulation. Reference mood scores. CBT-informed language.
-- HEART_HEALTH: Focus on sodium, saturated fat, aerobic zone 2, stress reduction.
-- PCOS: Focus on low-GI nutrition, strength training, anti-inflammatory foods, cycle-aware phasing.
-- THYROID: Focus on iodine, selenium, fatigue-aware exercise, medication consistency.
+- type2_diabetes / prediabetes: Focus on GI/GL, meal timing, carb management. Reference their glucose data above.
+- anxiety / depression: Focus on sleep, routine, movement as mood regulation. Reference mood scores. CBT-informed language.
+- heart_disease / hypertension: Focus on sodium, saturated fat, aerobic zone 2, stress reduction.
+- pcos: Focus on low-GI nutrition, strength training, anti-inflammatory foods, cycle-aware phasing.
+- hypothyroidism: Focus on iodine, selenium, fatigue-aware exercise, medication consistency.
 
 Keep responses conversational and HealthOS-branded. End with a small encouraging nudge when appropriate.`
 }
@@ -156,8 +156,8 @@ export async function POST(req: NextRequest) {
       const sevenDaysAgoStr = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
       const todayStr = new Date().toISOString().slice(0, 10)
       const conditionKeys = (conditions?.conditions ?? []) as string[]
-      const isDiabetic     = conditionKeys.some(c => c === 'DIABETES_T1' || c === 'DIABETES_T2')
-      const isMentalHealth = conditionKeys.includes('MENTAL_HEALTH')
+      const isDiabetic     = conditionKeys.some(c => c === 'type2_diabetes' || c === 'prediabetes')
+      const isMentalHealth = conditionKeys.some(c => c === 'anxiety' || c === 'depression')
 
       // Parallel fetch of all health data
       const [nutritionSnaps, workoutSnaps, sleepSnaps, metricSnaps, habitLogSnap, glucoseSnaps, moodSnaps] =

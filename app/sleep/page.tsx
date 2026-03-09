@@ -37,6 +37,7 @@ export default function SleepPage() {
   const [authReady, setAuthReady] = useState(false)
   const [history, setHistory] = useState<SleepEntry[]>([])
   const [saving, setSaving]   = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [tab, setTab]         = useState<'log' | 'history'>('log')
 
   // form state
@@ -82,6 +83,7 @@ export default function SleepPage() {
   async function handleLog() {
     if (!uid) return
     setSaving(true)
+    setSaveError('')
     try {
       const dur = calcSleepDuration(formBedtime, formWake)
       const entry: SleepEntry = {
@@ -95,13 +97,14 @@ export default function SleepPage() {
         loggedAt:  new Date() as unknown as import('@/lib/types').FirestoreTimestamp,
       }
       await saveSleep(uid, entry)
-      // Update local state immediately — avoids a re-fetch that can hang on slow connections
       setHistory(prev => {
         const filtered = prev.filter(e => e.date !== entry.date)
         return [...filtered, entry].sort((a, b) => a.date < b.date ? -1 : 1)
       })
       setFormNotes('')
       setTab('history')
+    } catch {
+      setSaveError('Failed to save. Check your connection and try again.')
     } finally {
       setSaving(false)
     }
@@ -250,6 +253,9 @@ export default function SleepPage() {
                 className="w-full glass-dark rounded-xl px-3 py-2.5 text-sm text-1 border border-white/10 resize-none" />
             </div>
 
+            {saveError && (
+              <p className="text-xs text-rose-400 text-center">{saveError}</p>
+            )}
             <button onClick={handleLog} disabled={saving}
               className="w-full py-3 rounded-xl font-semibold text-white transition-opacity disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>

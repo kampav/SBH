@@ -55,33 +55,37 @@ export default function ChallengesPage() {
       const weekKey = getWeekStart()
       const todayStr = new Date().toISOString().slice(0, 10)
 
-      const [p, workouts, streakDoc, nutrition, board] = await Promise.all([
-        getProfile(user.uid),
-        getRecentWorkouts(user.uid, 14),
-        getStreak(user.uid),
-        getNutritionHistory(user.uid, 7),
-        getLeaderboard(weekKey, 50),
-      ])
+      try {
+        const [p, workouts, streakDoc, nutrition, board] = await Promise.all([
+          getProfile(user.uid),
+          getRecentWorkouts(user.uid, 14),
+          getStreak(user.uid),
+          getNutritionHistory(user.uid, 7),
+          getLeaderboard(weekKey, 50).catch(() => [] as LeaderboardEntry[]),
+        ])
 
-      setProfile(p)
-      setStreak(streakDoc?.currentStreak ?? 0)
-      setLeaderboard(board)
+        setProfile(p)
+        setStreak(streakDoc?.currentStreak ?? 0)
+        setLeaderboard(board)
 
-      // Workouts this Mon–Sun
-      const thisMonday = weekKey
-      const thisSunday = new Date(weekKey)
-      thisSunday.setDate(thisSunday.getDate() + 6)
-      const thisSundayStr = thisSunday.toISOString().slice(0, 10)
-      const weekCount = workouts.filter(w => w.date >= thisMonday && w.date <= thisSundayStr &&
-        w.exercises.some(e => e.sets.some(s => s.completed))).length
-      setWeekWorkouts(weekCount)
+        // Workouts this Mon–Sun
+        const thisMonday = weekKey
+        const thisSunday = new Date(weekKey)
+        thisSunday.setDate(thisSunday.getDate() + 6)
+        const thisSundayStr = thisSunday.toISOString().slice(0, 10)
+        const weekCount = workouts.filter(w => w.date >= thisMonday && w.date <= thisSundayStr &&
+          w.exercises.some(e => e.sets.some(s => s.completed))).length
+        setWeekWorkouts(weekCount)
 
-      // Calorie days ≥90% of target (last 7 days)
-      const target = p?.calorieTarget ?? 2000
-      const calDays = nutrition.filter(n => (n.totalCalories ?? 0) >= target * 0.9 && n.date <= todayStr).length
-      setCalorieDays(calDays)
-
-      setLoading(false)
+        // Calorie days ≥90% of target (last 7 days)
+        const target = p?.calorieTarget ?? 2000
+        const calDays = nutrition.filter(n => (n.totalCalories ?? 0) >= target * 0.9 && n.date <= todayStr).length
+        setCalorieDays(calDays)
+      } catch {
+        // Best-effort load — show page with defaults on error
+      } finally {
+        setLoading(false)
+      }
     })
     return unsub
   }, [router])

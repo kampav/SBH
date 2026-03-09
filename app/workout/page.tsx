@@ -11,13 +11,13 @@ import { estimateCaloriesBurned } from '@/lib/health/calculations'
 import { DailyWorkout, ExerciseLog, SetLog, ProgrammeKey, UserProfile } from '@/lib/types'
 import { getSuggestion, formatSuggestion } from '@/lib/health/progressive-overload'
 import { serverTimestamp } from 'firebase/firestore'
-import { ExternalLink, Check, Trophy, Dumbbell, Heart, ChevronRight, Play, History, BookOpen, Share2 } from 'lucide-react'
+import { ExternalLink, Check, Trophy, Dumbbell, Heart, ChevronRight, Play, History, BookOpen, Share2, Search, Plus, X, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import RestTimerOverlay from '@/components/workout/RestTimerOverlay'
 import WorkoutShareCard from '@/components/workout/WorkoutShareCard'
 import { getWeekStart } from '@/lib/utils'
 import {
-  type ExerciseDef, EXERCISE_INFO, PROGRAMMES,
+  type ExerciseDef, EXERCISE_INFO, PROGRAMMES, ALL_EXERCISES, MUSCLE_GROUPS,
 } from '@/lib/workout/exerciseData'
 
 // ─── 12-Week Phases ───────────────────────────────────────────────────────────
@@ -97,6 +97,11 @@ export default function WorkoutPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [sharing, setSharing] = useState(false)
   const shareCardRef = useRef<HTMLDivElement>(null)
+  const [isCustomMode, setIsCustomMode] = useState(false)
+  const [customExerciseDefs, setCustomExerciseDefs] = useState<ExerciseDef[]>([])
+  const [customSearch, setCustomSearch] = useState('')
+  const [customMuscle, setCustomMuscle] = useState('All')
+  const [customStarted, setCustomStarted] = useState(false)
 
   // ISO date strings for Mon–Sun of the current week (index 0=Mon, 6=Sun)
   const weekDates = useMemo(() => {
@@ -205,7 +210,7 @@ export default function WorkoutPage() {
     const prog = PROGRAMME[selectedDay]
     const workout: DailyWorkout = {
       date: todayStr,
-      programmeDay: prog.label,
+      programmeDay: isCustomMode ? 'Custom Workout' : prog.label,
       exercises,
       durationMinutes,
       totalVolumeKg,
@@ -380,6 +385,10 @@ export default function WorkoutPage() {
           </div>
         </div>
         <div className="flex gap-2">
+            <button onClick={() => { setIsCustomMode(m => !m); setCustomStarted(false); setCustomExerciseDefs([]); setCustomSearch(''); setCustomMuscle('All') }}
+              className="p-2 rounded-xl glass-elevated" title="Build custom workout">
+              <Pencil size={16} style={{ color: isCustomMode ? '#7c3aed' : 'var(--text-3)' }} />
+            </button>
             <Link href="/exercises" className="p-2 rounded-xl glass-elevated" title="Exercise library">
               <BookOpen size={16} className="text-slate-400" />
             </Link>
@@ -420,6 +429,107 @@ export default function WorkoutPage() {
           </div>
         </div>
 
+
+        {/* Custom workout builder */}
+        {isCustomMode && !customStarted && (
+          <div className="glass rounded-2xl p-4 space-y-3 border" style={{ borderColor: '#7c3aed40' }}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-1">Build Your Workout</p>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: '#7c3aed20', color: '#7c3aed' }}>
+                {customExerciseDefs.length} selected
+              </span>
+            </div>
+
+            {/* Search */}
+            <div className="glass-dark rounded-xl px-3 py-2 flex items-center gap-2">
+              <Search size={13} style={{ color: 'var(--text-3)' }} className="flex-shrink-0" />
+              <input type="text" placeholder="Search exercises…"
+                value={customSearch} onChange={e => setCustomSearch(e.target.value)}
+                className="flex-1 bg-transparent text-sm text-1 placeholder:text-3 outline-none" />
+              {customSearch && <button onClick={() => setCustomSearch('')}><X size={12} style={{ color: 'var(--text-3)' }} /></button>}
+            </div>
+
+            {/* Muscle filter */}
+            <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+              {['All', ...MUSCLE_GROUPS.slice(0, 10)].map(mg => (
+                <button key={mg} onClick={() => setCustomMuscle(mg)}
+                  className="flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors"
+                  style={{ background: customMuscle === mg ? '#7c3aed' : 'rgba(255,255,255,0.06)', color: customMuscle === mg ? '#fff' : 'var(--text-2)' }}>
+                  {mg}
+                </button>
+              ))}
+            </div>
+
+            {/* Exercise list */}
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {ALL_EXERCISES
+                .filter(e => customMuscle === 'All' || e.muscleGroup === customMuscle)
+                .filter(e => !customSearch || e.name.toLowerCase().includes(customSearch.toLowerCase()))
+                .slice(0, 30)
+                .map(ex => {
+                  const isAdded = customExerciseDefs.some(d => d.name === ex.name)
+                  return (
+                    <div key={ex.name} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                      style={{ background: isAdded ? 'rgba(124,58,237,0.12)' : 'rgba(255,255,255,0.03)', border: isAdded ? '1px solid rgba(124,58,237,0.3)' : '1px solid rgba(255,255,255,0.05)' }}>
+                      <span className="text-lg flex-shrink-0">{ex.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-1 truncate">{ex.name}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>{ex.muscleGroup} · {ex.sets}×{ex.repRange}</p>
+                      </div>
+                      <button onClick={() => {
+                        if (isAdded) {
+                          setCustomExerciseDefs(prev => prev.filter(d => d.name !== ex.name))
+                        } else {
+                          setCustomExerciseDefs(prev => [...prev, ex])
+                        }
+                      }}
+                        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
+                        style={{ background: isAdded ? '#7c3aed' : 'rgba(255,255,255,0.08)' }}>
+                        {isAdded ? <Check size={12} className="text-white" /> : <Plus size={12} style={{ color: 'var(--text-3)' }} />}
+                      </button>
+                    </div>
+                  )
+                })}
+            </div>
+
+            {customExerciseDefs.length > 0 && (
+              <button
+                onClick={() => {
+                  const logs: ExerciseLog[] = customExerciseDefs.map(ex => ({
+                    exerciseName: ex.name,
+                    muscleGroup: ex.muscleGroup,
+                    videoUrl: EXERCISE_INFO[ex.name]?.videoUrl,
+                    sets: Array.from({ length: ex.sets }, (_, i) => ({
+                      setNumber: i + 1,
+                      weightKg: 0,
+                      reps: 0,
+                      completed: false,
+                      restSeconds: ex.restSeconds,
+                    } satisfies import('@/lib/types').SetLog)),
+                  }))
+                  setExercises(logs)
+                  setCustomStarted(true)
+                  setCompleted(false)
+                }}
+                className="w-full py-3 rounded-xl font-semibold text-white text-sm"
+                style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>
+                Start Custom Workout ({customExerciseDefs.length} exercises)
+              </button>
+            )}
+          </div>
+        )}
+
+        {isCustomMode && customStarted && (
+          <div className="glass rounded-xl px-3 py-2 flex items-center justify-between">
+            <p className="text-xs text-2">Custom workout · {customExerciseDefs.length} exercises</p>
+            <button onClick={() => { setCustomStarted(false); setExercises([]) }}
+              className="text-xs font-semibold" style={{ color: '#7c3aed' }}>
+              Change exercises
+            </button>
+          </div>
+        )}
+
         {/* Phase info card */}
         <div className="glass rounded-2xl p-3 border" style={{borderColor: currentPhase.color + '30'}}>
           <div className="flex items-center justify-between">
@@ -453,7 +563,7 @@ export default function WorkoutPage() {
         )}
 
         {/* Progress bar */}
-        {!prog.isRest && totalSets > 0 && (
+        {(!prog.isRest || (isCustomMode && customStarted)) && totalSets > 0 && (
           <div className="glass rounded-2xl p-4">
             <div className="flex justify-between text-xs mb-2">
               <span className="text-2">Sets completed</span>
@@ -472,7 +582,7 @@ export default function WorkoutPage() {
         )}
 
         {/* Progressive overload banner — data-driven */}
-        {!prog.isRest && lastWeekWorkout && (
+        {(!prog.isRest || (isCustomMode && customStarted)) && lastWeekWorkout && (
           <div className="glass rounded-2xl p-3 flex items-center gap-3">
             <span className="text-xl">📈</span>
             <div>
@@ -483,8 +593,8 @@ export default function WorkoutPage() {
         )}
 
         {/* Exercise cards */}
-        {!prog.isRest && exercises.map((ex, exIdx) => {
-          const def = prog.exercises[exIdx]
+        {(!prog.isRest || (isCustomMode && customStarted)) && exercises.map((ex, exIdx) => {
+          const def = isCustomMode ? customExerciseDefs[exIdx] : prog.exercises[exIdx]
           if (!def) return null  // guard: stale exercises state during day switch
           const info = EXERCISE_INFO[ex.exerciseName]
           const videoUrl = info?.videoUrl ?? ex.videoUrl
@@ -508,7 +618,7 @@ export default function WorkoutPage() {
                     {ex.muscleGroup} · {def?.sets} sets × {def?.repRange} {def?.isTime ? '' : 'reps'}
                   </p>
                   {info?.description && (
-                    <p className="text-xs mt-1 leading-relaxed" style={{color:'#64748b'}}>{info.description}</p>
+                    <p className="text-xs mt-1" style={{color:'#64748b', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden'}}>{info.description}</p>
                   )}
                   {hint && (
                     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full mt-1 font-medium"
@@ -590,7 +700,7 @@ export default function WorkoutPage() {
         })}
 
         {/* Video references */}
-        {!prog.isRest && (
+        {(!prog.isRest || (isCustomMode && customStarted)) && (
           <div className="glass rounded-2xl p-4">
             <p className="text-xs text-2 font-semibold uppercase tracking-widest mb-3">Reference Videos</p>
             <div className="space-y-2">
@@ -642,7 +752,7 @@ export default function WorkoutPage() {
           </div>
         </div>
 
-        {!prog.isRest && (
+        {(!prog.isRest || (isCustomMode && customStarted)) && (
           <button onClick={finishWorkout} disabled={saving}
             className="w-full py-4 rounded-2xl font-bold text-lg text-white disabled:opacity-50 transition-opacity"
             style={{background: prog.gradient, boxShadow:`0 0 32px -8px ${prog.color}60`}}>

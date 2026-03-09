@@ -64,6 +64,7 @@ export default function MoodPage() {
   const [anxiety, setAnxiety] = useState<MoodLevel>(2)
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [savedToday, setSavedToday] = useState(false)
 
   // History
@@ -104,22 +105,30 @@ export default function MoodPage() {
   async function saveMood() {
     if (!uid) return
     setSaving(true)
-    const now = new Date()
-    const entry: MoodEntry = {
-      id: now.toISOString(),
-      date: now.toISOString().slice(0, 10),
-      time: now.toTimeString().slice(0, 5),
-      mood,
-      energy,
-      anxiety,
-      notes: notes.trim() || undefined,
-      loggedAt: serverTimestamp() as never,
+    setSaveError('')
+    try {
+      const now = new Date()
+      // sanitise id — colons in ISO string can cause issues on some platforms
+      const id = now.toISOString().replace(/[:.]/g, '-')
+      const entry: MoodEntry = {
+        id,
+        date: now.toISOString().slice(0, 10),
+        time: now.toTimeString().slice(0, 5),
+        mood,
+        energy,
+        anxiety,
+        notes: notes.trim() || undefined,
+        loggedAt: serverTimestamp() as never,
+      }
+      await saveMoodEntry(uid, entry)
+      setSavedToday(true)
+      setNotes('')
+      await loadHistory()
+    } catch {
+      setSaveError('Failed to save. Check your connection and try again.')
+    } finally {
+      setSaving(false)
     }
-    await saveMoodEntry(uid, entry)
-    setSavedToday(true)
-    setSaving(false)
-    setNotes('')
-    await loadHistory()
   }
 
   async function submitPHQ9() {
@@ -280,6 +289,7 @@ export default function MoodPage() {
               />
             </div>
 
+            {saveError && <p className="text-xs text-rose-400 text-center pb-1">{saveError}</p>}
             <button onClick={saveMood} disabled={saving}
               className="w-full py-3.5 rounded-2xl font-semibold text-sm text-white disabled:opacity-50 transition-all"
               style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>

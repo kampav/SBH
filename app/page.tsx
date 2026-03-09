@@ -1,12 +1,36 @@
 import Link from 'next/link'
 
-const FEATURES = [
-  { emoji: '🏋️', label: '6-Day Programme', sub: 'Push · HIIT · Pull · Mobility · Strength · Burn' },
-  { emoji: '📅', label: '12-Week Phases', sub: 'Fat Loss → Muscle Growth → Definition' },
-  { emoji: '⚡', label: 'Auto Overload', sub: '+2 reps when 90% complete' },
-  { emoji: '📸', label: 'AI Food Scan', sub: 'Photo → instant macros' },
-  { emoji: '📦', label: 'Barcode Scan', sub: 'Scan any product label' },
-  { emoji: '📊', label: 'Body Charts', sub: 'Chest · Waist · Neck trends' },
+const FEATURE_GROUPS = [
+  {
+    title: 'Track Everything',
+    color: '#10b981',
+    items: [
+      { emoji: '🥗', label: 'Nutrition', sub: 'Macros · AI scan · barcode' },
+      { emoji: '🏋️', label: 'Workouts', sub: 'Progressive overload' },
+      { emoji: '😴', label: 'Sleep', sub: 'Duration + quality' },
+      { emoji: '😊', label: 'Mood', sub: 'PHQ-9 · daily check-in' },
+    ],
+  },
+  {
+    title: 'AI-Powered',
+    color: '#7c3aed',
+    items: [
+      { emoji: '🤖', label: 'AI Coach', sub: 'Grounded health chat' },
+      { emoji: '💡', label: 'Insights', sub: 'Weekly scores + actions' },
+      { emoji: '📸', label: 'Food Scan', sub: 'Photo → macros' },
+      { emoji: '🩸', label: 'Glucose AI', sub: 'Nudges + HbA1c' },
+    ],
+  },
+  {
+    title: 'Condition Support',
+    color: '#06b6d4',
+    items: [
+      { emoji: '💉', label: 'Diabetes', sub: 'Glucose · TIR · report' },
+      { emoji: '🫀', label: 'Heart', sub: 'BP · sodium · zone 2' },
+      { emoji: '🌸', label: 'PCOS', sub: 'Cycle · phases · supplements' },
+      { emoji: '🦋', label: 'Thyroid', sub: 'TSH · fatigue · meds' },
+    ],
+  },
 ]
 
 export default function Home() {
@@ -21,19 +45,19 @@ export default function Home() {
           style={{background:'radial-gradient(circle, #f43f5e, transparent)', filter:'blur(40px)'}} />
       </div>
 
-      <div className="relative max-w-md w-full space-y-5">
+      <div className="relative max-w-lg w-full space-y-5">
+        {/* Hero */}
         <div className="glass-strong rounded-3xl p-8 text-center space-y-5">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass text-xs font-medium mb-2"
               style={{color:'#a78bfa'}}>
               <span className="w-1.5 h-1.5 rounded-full bg-violet-400 relative pulse-ring" />
-              12-Week Home Transformation
+              AI-powered · 24 health modules
             </div>
             <h1 className="text-6xl font-black tracking-tight gradient-text">HealthOS</h1>
-            <p className="text-base font-semibold text-1">HealthOS</p>
             <p className="text-sm text-2 leading-relaxed">
-              Evidence-backed training &amp; nutrition.<br />
-              AI-powered. Science-driven. Results guaranteed.
+              Your personal health operating system.<br />
+              Track, analyse, and improve — backed by science.
             </p>
           </div>
 
@@ -45,20 +69,28 @@ export default function Home() {
             </Link>
             <Link href="/register"
               className="w-full py-3.5 px-6 glass rounded-2xl font-semibold text-sm text-1 hover:bg-violet-500/10 transition-all">
-              Create Account
+              Create Free Account
             </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2.5">
-          {FEATURES.map(f => (
-            <div key={f.label} className="glass rounded-2xl p-3 text-center card-hover">
-              <div className="text-2xl mb-1.5">{f.emoji}</div>
-              <p className="text-xs font-semibold text-1 leading-tight">{f.label}</p>
-              <p className="text-xs text-3 mt-0.5 leading-tight">{f.sub}</p>
+        {/* Feature groups */}
+        {FEATURE_GROUPS.map(group => (
+          <div key={group.title} className="glass rounded-2xl p-4 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: group.color }}>
+              {group.title}
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {group.items.map(f => (
+                <div key={f.label} className="glass-dark rounded-xl p-2.5 text-center card-hover">
+                  <div className="text-xl mb-1">{f.emoji}</div>
+                  <p className="text-xs font-semibold text-1 leading-tight">{f.label}</p>
+                  <p className="text-xs text-3 mt-0.5 leading-tight">{f.sub}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
 
         <p className="text-center text-xs text-3">Next.js 14 · Firebase · GCP · Claude AI</p>
       </div>

@@ -163,7 +163,8 @@ export default function InsightsPage() {
   async function handleShare() {
     if (!insight) return
     setSharing(true)
-    const text = `My HealthOS weekly score: ${insight.scores.overall}/100 🏆\nNutrition ${insight.scores.nutrition} | Workout ${insight.scores.workout} | Sleep ${insight.scores.sleep}\nTracking at sbhealth.app`
+    const moodPart = insight.scores.mood ? ` | Mood ${insight.scores.mood}` : ''
+    const text = `My HealthOS weekly score: ${insight.scores.overall}/100 🏆\nNutrition ${insight.scores.nutrition} | Workout ${insight.scores.workout} | Sleep ${insight.scores.sleep}${moodPart}\nTracking at sbhealth.app`
     const usedShare = await shareStats('My HealthOS Weekly Insights', text)
     Analytics.statsShared('weekly_insight')
     setSharing(false)
@@ -240,10 +241,13 @@ export default function InsightsPage() {
 
           {/* Score rings */}
           <div className="glass rounded-2xl p-4">
-            <div className="grid grid-cols-4 gap-2">
+            <div className={`grid gap-2 ${insight.scores.mood ? 'grid-cols-5' : 'grid-cols-4'}`}>
               <ScoreRing label="Nutrition" score={insight.scores.nutrition} color="#10b981" />
               <ScoreRing label="Workout"   score={insight.scores.workout}   color="#7c3aed" />
               <ScoreRing label="Sleep"     score={insight.scores.sleep}     color="#06b6d4" />
+              {insight.scores.mood ? (
+                <ScoreRing label="Mood" score={insight.scores.mood} color="#ec4899" />
+              ) : null}
               <ScoreRing label="Overall"   score={insight.scores.overall}   color="#f59e0b" />
             </div>
           </div>
