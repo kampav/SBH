@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { calcSleepScore } from '@/lib/health/sleepUtils'
-import { SleepEntry, DailyNutrition, DailyWorkout, DailyMetric, UserProfile, WeeklyInsight } from '@/lib/types'
+import { SleepEntry, DailyNutrition, DailyWorkout, DailyMetric, UserProfile, WeeklyInsight, ConditionProfile } from '@/lib/types'
 
 export const runtime = 'nodejs'
 
@@ -47,6 +47,12 @@ function calcOverall(nutrition: number, workout: number, sleep: number): number 
   return Math.round(nutrition * 0.35 + workout * 0.35 + sleep * 0.30)
 }
 
+function calcMoodScore(moodEntries: { mood?: number }[]): number {
+  if (moodEntries.length === 0) return 0
+  const avg = moodEntries.reduce((s, e) => s + (e.mood ?? 5), 0) / moodEntries.length
+  return Math.round((avg / 10) * 100)
+}
+
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
@@ -60,6 +66,8 @@ export async function POST(req: NextRequest) {
       workouts: DailyWorkout[]
       metrics: DailyMetric[]
       sleep: SleepEntry[]
+      mood?: { mood: number; energy?: number; date: string }[]
+      conditions?: ConditionProfile
     }
     weekStartDate: string
   }
@@ -72,6 +80,7 @@ export async function POST(req: NextRequest) {
   const nutritionScore = calcNutritionScore(weekData.nutrition, profile)
   const workoutScore   = calcWorkoutScore(weekData.workouts, profile)
   const sleepScore     = calcSleepScoreAvg(weekData.sleep)
+  const moodScore      = calcMoodScore(weekData.mood ?? [])
   const overallScore   = calcOverall(nutritionScore, workoutScore, sleepScore)
 
   // ── Week summary stats ────────────────────────────────────────────────────────
@@ -114,14 +123,16 @@ IMPORTANT RESTRICTIONS:
       content: `Analyse this user's week and provide personalised feedback.
 
 User profile: goal=${profile.goal}, calorie target=${profile.calorieTarget} kcal, protein target=${profile.proteinTargetG}g
+Conditions: ${(weekData.conditions?.conditions ?? []).join(', ') || 'none'}
 
 Week summary:
 - Nutrition logged: ${loggedNutrition.length}/7 days | Avg calories: ${avgCalories} kcal | Avg protein: ${avgProteinG}g
 - Workouts completed: ${weekData.workouts.length} (target: ${profile.trainingDaysPerWeek}/week)
 - Sleep: ${weekData.sleep.length} nights logged, avg ${avgSleepH}h
 - Weight change this week: ${weightDeltaKg !== null ? `${weightDeltaKg > 0 ? '+' : ''}${weightDeltaKg} kg` : 'not enough data'}
+- Mood check-ins: ${(weekData.mood ?? []).length} entries${(weekData.mood ?? []).length > 0 ? ` | avg ${((weekData.mood ?? []).reduce((s, e) => s + (e.mood ?? 5), 0) / (weekData.mood ?? []).length).toFixed(1)}/10` : ''}
 
-Scores: Nutrition ${nutritionScore}/100, Workout ${workoutScore}/100, Sleep ${sleepScore}/100, Overall ${overallScore}/100
+Scores: Nutrition ${nutritionScore}/100, Workout ${workoutScore}/100, Sleep ${sleepScore}/100${moodScore > 0 ? `, Mood ${moodScore}/100` : ''}, Overall ${overallScore}/100
 
 Return ONLY valid JSON with these exact keys:
 {
@@ -149,7 +160,7 @@ No markdown, no extra text — just the JSON object.`,
     narrative: parsed.narrative ?? '',
     highlights: parsed.highlights ?? [],
     actions: parsed.actions ?? [],
-    scores: { nutrition: nutritionScore, workout: workoutScore, sleep: sleepScore, overall: overallScore },
+    scores: { nutrition: nutritionScore, workout: workoutScore, sleep: sleepScore, mood: moodScore, overall: overallScore },
     weekData: weekSummary,
   }
 

@@ -1,9 +1,67 @@
 # Changelog
 
-All notable changes to SBH are documented here.
+All notable changes to HealthOS are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [2.6.0] — 2026-03-09
+
+### Changed
+- **App renamed HealthOS** — all user-facing "SBH" / "Science Based Health" strings replaced across 35+ files
+- New **HealthOS icons** generated (SVG→sharp): violet→cyan "H" monogram, 48–512px PNG+WebP
+- Admin, manifest, capacitor, Android strings all updated
+
+### Added
+- **Dashboard action tiles → responsive grid**: lg: 2-col, xl: 3-col on desktop (was vertical list)
+- Desktop sidebar logo updated: "H" monogram + "HealthOS / Your science-backed coach"
+
+---
+
+## [2.5.0] — 2026-03-08
+
+### Added
+- **AI Coach fully grounded** — chat route now fetches last 7d nutrition, workouts, sleep, glucose (diabetics), mood (mental health), habits and passes to Claude system prompt
+- **Admin real subscription tiers** — `/api/admin/stats` uses Firestore `collectionGroup('subscription')` for real Free/Pro/Premium counts
+- **Weekly insights enriched** — mood history + condition profile sent to AI route; mood score included in overall score
+- **README** completely rewritten for v2.6.0 with full feature table
+
+---
+
+## [2.4.0] — 2026-03-08
+
+### Added
+- **Left sidebar navigation** (tablet/desktop ≥768px): gradient accent line, logo, scrollable nav sections, profile strip
+- **Bottom nav hidden on md+**: `md:hidden` applied to tab bar, More drawer, backdrop
+- **Content safe area**: `.page-header-bar` gains `padding-top: env(safe-area-inset-top)`
+- **Responsive page widths**: all 24 pages use `max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8`
+- **CoachWidget repositioned** on md+: `bottom: 1.25rem` (no bottom nav offset)
+- **Dashboard bento grid**: `lg:grid-cols-[1fr_340px]` — left: readiness + actions + nutrition; right: AI coach + insight + condition tip + health feed
+
+### Fixed
+- **Admin infinite spinner** — `setChecking(false)` was missing on auth success path
+- **Sleep page hang** — removed blocking `getSleepHistory` re-fetch after save; update local state directly
+
+---
+
+## [2.3.0] — 2026-03-07
+
+### Added
+- **Phase 14 — Personalised Health Feed** (`/health-feed`): Daily Health Score 0–100 from 8 dimensions; HealthCard[] ranked by priority; condition-specific tips for all 10 ConditionKeys
+- **Phase 15 — CGM + Wearables**: Dexcom OAuth + EGV fetch + TIR calc + trend arrows; `/settings/integrations` page; DexcomCredentials / CGMDay / CGMReading types
+
+---
+
+## [2.2.0] — 2026-03-07
+
+### Added
+- **Apple-quality UI polish**: glassmorphism refinements, typography scale, spacing pass
+- **Light theme fixes**: ProgressRing, XP bar, workout bars use `var(--ring-track)`; onboarding ConsentBox border uses `var(--input-border)`
+
+### Fixed
+- CI/CD: Android build pipeline stabilised (AAB + APK)
+
+
 
 ## [2.1.0] — 2026-03-07
 

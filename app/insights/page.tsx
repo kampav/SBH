@@ -8,7 +8,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import {
   getProfile, getNutritionHistory, getRecentWorkouts, getSleepHistory,
-  getMetrics, getCachedWeeklyInsight, saveWeeklyInsight,
+  getMetrics, getCachedWeeklyInsight, saveWeeklyInsight, getMoodHistory,
 } from '@/lib/firebase/firestore'
 import { WeeklyInsight } from '@/lib/types'
 import { getWeekStart, shareStats } from '@/lib/utils'
@@ -86,13 +86,14 @@ export default function InsightsPage() {
         }
       }
 
-      // Fetch data in parallel
-      const [profile, nutrition, workouts, sleep, metrics] = await Promise.all([
+      // Fetch data in parallel (including mood for mental health users)
+      const [profile, nutrition, workouts, sleep, metrics, mood] = await Promise.all([
         getProfile(userId),
         getNutritionHistory(userId, 7),
         getRecentWorkouts(userId, 7),
         getSleepHistory(userId, 7),
         getMetrics(userId, 14),
+        getMoodHistory(userId, 7),
       ])
 
       if (!profile) { setError('Profile not found'); setLoading(false); return }
@@ -109,7 +110,15 @@ export default function InsightsPage() {
       const res = await fetch('/api/insights/weekly', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile, weekData: { nutrition, workouts, metrics, sleep }, weekStartDate: weekStart }),
+        body: JSON.stringify({
+          profile,
+          weekData: {
+            nutrition, workouts, metrics, sleep,
+            mood,
+            conditions: profile?.conditionProfile ?? null,
+          },
+          weekStartDate: weekStart,
+        }),
       })
 
       if (!res.ok) throw new Error('AI route failed')

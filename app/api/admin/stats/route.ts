@@ -75,6 +75,22 @@ export async function GET(req: NextRequest) {
       // Collection may not exist yet — return empty array
     }
 
+    // Real subscription tier breakdown via collectionGroup
+    const tierCounts = { free: 0, pro: 0, premium: 0 }
+    try {
+      const subSnap = await db.collectionGroup('subscription').get()
+      subSnap.docs.forEach(doc => {
+        const tier = ((doc.data().tier ?? 'free')).toLowerCase()
+        if      (tier === 'pro')     tierCounts.pro++
+        else if (tier === 'premium') tierCounts.premium++
+        else                         tierCounts.free++
+      })
+      const accountedFor = tierCounts.free + tierCounts.pro + tierCounts.premium
+      if (accountedFor < totalUsers) tierCounts.free += totalUsers - accountedFor
+    } catch {
+      tierCounts.free = totalUsers
+    }
+
     const type = new URL(req.url).searchParams.get('type')
 
     return NextResponse.json({
@@ -84,6 +100,7 @@ export async function GET(req: NextRequest) {
       newLast30d,
       recentSignups,
       telemetry,
+      tierCounts,
       type,
     })
   } catch (err) {

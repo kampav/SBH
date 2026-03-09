@@ -24,6 +24,7 @@ interface AdminStats {
   newLast30d: number
   recentSignups: RecentSignup[]
   telemetry: TelemetryEntry[]
+  tierCounts?: { free: number; pro: number; premium: number }
 }
 
 const ENV_VARS = [
@@ -93,11 +94,11 @@ export default function AdminOverviewPage() {
   const chartDays = stats?.telemetry?.slice(0, 14).reverse() ?? []
   const maxDau = Math.max(...chartDays.map(d => d.dau ?? 0), 1)
 
-  /* Fake tier breakdown (replace with real data when subscription collection is queried) */
+  // Real tier breakdown from collectionGroup subscription query
   const tiers = [
-    { label: 'Free',    count: Math.max((stats?.totalUsers ?? 0) - 4, 0) },
-    { label: 'Pro',     count: 3 },
-    { label: 'Premium', count: 1 },
+    { label: 'Free',    count: stats?.tierCounts?.free    ?? Math.max((stats?.totalUsers ?? 0) - (stats?.tierCounts?.pro ?? 0) - (stats?.tierCounts?.premium ?? 0), 0) },
+    { label: 'Pro',     count: stats?.tierCounts?.pro     ?? 0 },
+    { label: 'Premium', count: stats?.tierCounts?.premium ?? 0 },
   ]
 
   return (

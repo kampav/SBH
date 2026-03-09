@@ -353,6 +353,7 @@ export interface WeeklyInsight {
     nutrition: number       // 0-100
     workout: number         // 0-100
     sleep: number           // 0-100
+    mood?: number           // 0-100 (optional — only when mood data exists)
     overall: number         // 0-100
   }
   weekData: {
