@@ -325,9 +325,9 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {/* Mobile: horizontal scroll | Desktop: vertical list */}
+            {/* Mobile: horizontal scroll | Desktop: 2–3 col grid */}
             <div
-              className="flex gap-3 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:gap-0 lg:pb-0"
+              className="flex gap-3 overflow-x-auto pb-2 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:overflow-visible lg:gap-3 lg:pb-0"
               style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}
             >
               {visibleTiles.map(tile => (
@@ -582,8 +582,8 @@ export default function DashboardPage() {
 }
 
 // ── Action Tile ────────────────────────────────────────────────────────────────
-// Mobile: compact vertical card in horizontal scroll
-// Desktop (lg+): full-width horizontal row with icon, labels, status
+// Mobile: compact 86px vertical card in horizontal scroll
+// Desktop (lg+): grid card — icon left, label+sub right, done badge
 function ActionTile({ href, icon: Icon, label, sub, done, color }: Tile) {
   return (
     <Link
@@ -615,31 +615,46 @@ function ActionTile({ href, icon: Icon, label, sub, done, color }: Tile) {
         </span>
       </div>
 
-      {/* ── Desktop row ── */}
+      {/* ── Desktop grid card ── */}
       <div
-        className="hidden lg:flex items-center gap-3 px-3 py-2.5 rounded-xl"
+        className="hidden lg:flex items-center gap-3 p-3.5 rounded-2xl h-full"
         style={{
-          background: done ? `${color}12` : 'transparent',
-          border: `1px solid ${done ? color + '40' : 'transparent'}`,
-          transition: 'all 0.2s',
+          background: done
+            ? `linear-gradient(135deg,${color}20,${color}0a)`
+            : 'rgba(255,255,255,0.03)',
+          border: `1.5px solid ${done ? color + '45' : 'rgba(255,255,255,0.07)'}`,
+          boxShadow: done ? `0 4px 16px ${color}20` : 'none',
+          transition: 'all 0.18s',
         }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${color}16`; (e.currentTarget as HTMLElement).style.border = `1px solid ${color}30` }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = done ? `${color}12` : 'transparent'; (e.currentTarget as HTMLElement).style.border = `1px solid ${done ? color + '40' : 'transparent'}` }}
+        onMouseEnter={e => {
+          const el = e.currentTarget as HTMLElement
+          el.style.background = `linear-gradient(135deg,${color}24,${color}10)`
+          el.style.border = `1.5px solid ${color}50`
+          el.style.transform = 'translateY(-1px)'
+          el.style.boxShadow = `0 6px 20px ${color}25`
+        }}
+        onMouseLeave={e => {
+          const el = e.currentTarget as HTMLElement
+          el.style.background = done ? `linear-gradient(135deg,${color}20,${color}0a)` : 'rgba(255,255,255,0.03)'
+          el.style.border = `1.5px solid ${done ? color + '45' : 'rgba(255,255,255,0.07)'}`
+          el.style.transform = 'none'
+          el.style.boxShadow = done ? `0 4px 16px ${color}20` : 'none'
+        }}
       >
         <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: done ? `${color}30` : `${color}18` }}
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: done ? `${color}30` : `${color}1a`, border: `1px solid ${color}${done ? '45' : '25'}` }}
         >
-          {done ? <CheckCircle size={15} style={{ color }} /> : <Icon size={15} strokeWidth={1.75} style={{ color }} />}
+          {done ? <CheckCircle size={18} style={{ color }} /> : <Icon size={18} strokeWidth={1.75} style={{ color }} />}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold leading-none" style={{ color: done ? color : 'var(--text-1)' }}>{label}</p>
-          <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-3)' }}>{sub}</p>
+          <p className="text-[11px] mt-1 leading-none" style={{ color: 'var(--text-3)' }}>{sub}</p>
         </div>
-        {done && (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${color}20`, color }}>Done</span>
-        )}
-        <ChevronRight size={13} style={{ color: 'var(--text-3)', opacity: 0.6 }} />
+        {done
+          ? <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: `${color}25`, color }}>✓</span>
+          : <ChevronRight size={13} style={{ color: 'var(--text-3)', opacity: 0.4 }} />
+        }
       </div>
     </Link>
   )
