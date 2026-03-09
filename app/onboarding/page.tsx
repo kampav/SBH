@@ -14,7 +14,7 @@ import Link from 'next/link'
 
 const CONSENT_VERSION = '2026-03'
 
-type Step = 'goal' | 'metrics' | 'activity' | 'confirm' | 'conditions' | 'consent'
+type Step = 'conditions' | 'metrics' | 'activity' | 'goal' | 'reveal' | 'consent'
 
 const CONDITION_OPTIONS: Array<{ key: ConditionKey; label: string; emoji: string }> = [
   { key: 'type2_diabetes',  label: 'Type 2 Diabetes',     emoji: '🩸' },
@@ -33,7 +33,7 @@ export default function OnboardingPage() {
   const router = useRouter()
   const [uid, setUid] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
-  const [step, setStep] = useState<Step>('goal')
+  const [step, setStep] = useState<Step>('conditions')
   const [saving, setSaving] = useState(false)
 
   const [form, setForm] = useState({
@@ -74,7 +74,7 @@ export default function OnboardingPage() {
   }, [router])
 
   const calc = calcAll(form.weightKg, form.heightCm, form.age, form.sex, form.activityLevel, form.goal)
-  const STEPS: Step[] = ['goal', 'metrics', 'activity', 'confirm', 'conditions', 'consent']
+  const STEPS: Step[] = ['conditions', 'metrics', 'activity', 'goal', 'reveal', 'consent']
   const stepIdx = STEPS.indexOf(step)
   const canProceedConsent = termsAccepted && privacyAccepted && healthDataConsent && ageVerified
 
@@ -132,25 +132,96 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        {/* STEP 1: GOAL */}
-        {step === 'goal' && (
-          <div className="space-y-3">
-            <h2 className="font-semibold text-1">What&apos;s your primary goal?</h2>
-            {([
-              ['fat_loss',    'Lose Fat',         'Burn fat, preserve muscle'],
-              ['muscle_gain', 'Build Muscle',     'Lean bulk, progressive overload'],
-              ['recomp',      'Body Recomp',      'Lose fat & gain muscle simultaneously'],
-              ['endurance',   'Improve Endurance','Marathon, cardio, stamina'],
-            ] as const).map(([val, label, desc]) => (
-              <button key={val} onClick={() => set('goal', val)}
-                className="w-full text-left p-4 rounded-xl border transition-colors"
-                style={{ borderColor: form.goal === val ? '#7c3aed' : 'rgba(255,255,255,0.08)', background: form.goal === val ? 'rgba(124,58,237,0.12)' : 'transparent' }}>
-                <p className="font-semibold text-1 text-sm">{label}</p>
-                <p className="text-xs text-2 mt-0.5">{desc}</p>
+        {/* STEP 1: CONDITIONS — "What brought you here today?" */}
+        {step === 'conditions' && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-bold text-1">What brought you here today?</h2>
+              <p className="text-xs text-2 mt-1">Select all that apply — we&apos;ll personalise your experience.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {CONDITION_OPTIONS.map(({ key, label, emoji }) => {
+                const selected = selectedConditions.includes(key)
+                return (
+                  <button key={key} onClick={() => toggleCondition(key)}
+                    className="text-left p-3.5 rounded-2xl border transition-all"
+                    style={{
+                      borderColor: selected ? '#7c3aed' : 'rgba(255,255,255,0.08)',
+                      background: selected ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.03)',
+                    }}>
+                    <span className="text-2xl">{emoji}</span>
+                    <p className="text-xs font-semibold text-1 mt-1.5 leading-snug">{label}</p>
+                    {selected && <div className="mt-1 w-1.5 h-1.5 rounded-full" style={{ background: '#7c3aed' }} />}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Condition-specific sub-questions */}
+            {selectedConditions.some(c => c === 'type2_diabetes' || c === 'prediabetes') && (
+              <div className="glass-dark rounded-xl p-4 space-y-2 border" style={{ borderColor: 'rgba(239,68,68,0.2)' }}>
+                <p className="text-xs font-semibold" style={{ color: '#fca5a5' }}>🩸 Diabetes — quick setup</p>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div onClick={() => setOnMedication(m => !m)}
+                    className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0"
+                    style={{ borderColor: onMedication ? '#7c3aed' : 'var(--input-border)', background: onMedication ? '#7c3aed' : 'transparent' }}>
+                    {onMedication && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  <span className="text-xs text-2">I take insulin or diabetes medication</span>
+                </label>
+              </div>
+            )}
+
+            {selectedConditions.some(c => c === 'anxiety' || c === 'depression') && (
+              <div className="glass-dark rounded-xl p-4 space-y-2 border" style={{ borderColor: 'rgba(167,139,250,0.2)' }}>
+                <p className="text-xs font-semibold" style={{ color: '#a78bfa' }}>🧠 Mental wellness — quick check-in</p>
+                <p className="text-xs text-2">Over the last 2 weeks, how often have you felt down, depressed, or hopeless?</p>
+                <div className="flex gap-2">
+                  {['Not at all', 'Several days', 'More than half', 'Nearly daily'].map((opt) => (
+                    <button key={opt} className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                      style={{ background: 'rgba(124,58,237,0.1)', color: 'var(--text-2)', fontSize: '0.65rem' }}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedConditions.some(c => c === 'hypertension' || c === 'heart_disease') && (
+              <div className="glass-dark rounded-xl p-4 border" style={{ borderColor: 'rgba(244,63,94,0.2)' }}>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#fda4af' }}>❤️ Heart health — medication?</p>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div onClick={() => setOnMedication(m => !m)}
+                    className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0"
+                    style={{ borderColor: onMedication ? '#7c3aed' : 'var(--input-border)', background: onMedication ? '#7c3aed' : 'transparent' }}>
+                    {onMedication && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  <span className="text-xs text-2">I take blood pressure or heart medication</span>
+                </label>
+              </div>
+            )}
+
+            {selectedConditions.length > 0 && (
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div onClick={() => setDiagnosedByDoctor(d => !d)}
+                  className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0"
+                  style={{ borderColor: diagnosedByDoctor ? '#7c3aed' : 'var(--input-border)', background: diagnosedByDoctor ? '#7c3aed' : 'transparent' }}>
+                  {diagnosedByDoctor && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                </div>
+                <span className="text-xs text-2">Diagnosed by a doctor</span>
+              </label>
+            )}
+
+            <div className="flex gap-2">
+              <button onClick={() => setStep('metrics')}
+                className="w-full py-3 rounded-xl font-semibold text-white"
+                style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>
+                {selectedConditions.length > 0 ? `Continue with ${selectedConditions.length} condition${selectedConditions.length > 1 ? 's' : ''}` : 'Continue'}
               </button>
-            ))}
-            <button onClick={() => setStep('metrics')} className="w-full py-3 rounded-xl font-semibold text-white"
-              style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>Next</button>
+            </div>
+            <button onClick={() => setStep('metrics')} className="w-full text-xs text-3 text-center py-1">
+              Skip — general wellness
+            </button>
           </div>
         )}
 
@@ -187,7 +258,7 @@ export default function OnboardingPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setStep('goal')} className="flex-1 py-2.5 glass rounded-xl text-sm text-2">Back</button>
+              <button onClick={() => setStep('conditions')} className="flex-1 py-2.5 glass rounded-xl text-sm text-2">Back</button>
               <button onClick={() => setStep('activity')} className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm"
                 style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>Next</button>
             </div>
@@ -213,98 +284,99 @@ export default function OnboardingPage() {
             ))}
             <div className="flex gap-2">
               <button onClick={() => setStep('metrics')} className="flex-1 py-2.5 glass rounded-xl text-sm text-2">Back</button>
-              <button onClick={() => setStep('confirm')} className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm"
+              <button onClick={() => setStep('goal')} className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm"
                 style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>Next</button>
             </div>
           </div>
         )}
 
-        {/* STEP 4: CONFIRM */}
-        {step === 'confirm' && (
-          <div className="space-y-4">
-            <h2 className="font-semibold text-1">Your personalised plan</h2>
-            <div className="glass-dark rounded-xl p-4 space-y-2 text-sm">
-              <Row label="BMR"            value={`${calc.bmr} kcal/day`} />
-              <Row label="TDEE"           value={`${calc.tdee} kcal/day`} />
-              <Row label="Calorie Target" value={`${calc.calorieTarget} kcal/day`} highlight />
-              <div className="border-t border-white/10 pt-2 mt-2" />
-              <Row label="Protein" value={`${calc.proteinTargetG}g`} />
-              <Row label="Carbs"   value={`${calc.carbTargetG}g`} />
-              <Row label="Fat"     value={`${calc.fatTargetG}g`} />
-            </div>
-            <p className="text-xs text-3">Based on Mifflin-St Jeor formula. Recalculated when weight changes 2+ kg.</p>
+        {/* STEP 4: GOAL */}
+        {step === 'goal' && (
+          <div className="space-y-3">
+            <h2 className="font-semibold text-1">What&apos;s your primary goal?</h2>
+            {([
+              ['fat_loss',    '🔥 Lose Fat',         'Burn fat, preserve muscle'],
+              ['muscle_gain', '💪 Build Muscle',     'Lean bulk, progressive overload'],
+              ['recomp',      '⚖️ Body Recomp',      'Lose fat & gain muscle simultaneously'],
+              ['endurance',   '🏃 Improve Endurance','Marathon, cardio, stamina'],
+            ] as const).map(([val, label, desc]) => (
+              <button key={val} onClick={() => set('goal', val)}
+                className="w-full text-left p-4 rounded-xl border transition-colors"
+                style={{ borderColor: form.goal === val ? '#7c3aed' : 'rgba(255,255,255,0.08)', background: form.goal === val ? 'rgba(124,58,237,0.12)' : 'transparent' }}>
+                <p className="font-semibold text-1 text-sm">{label}</p>
+                <p className="text-xs text-2 mt-0.5">{desc}</p>
+              </button>
+            ))}
             <div className="flex gap-2">
               <button onClick={() => setStep('activity')} className="flex-1 py-2.5 glass rounded-xl text-sm text-2">Back</button>
-              <button onClick={() => setStep('conditions')} className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm"
+              <button onClick={() => setStep('reveal')} className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm"
                 style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>Next</button>
             </div>
           </div>
         )}
 
-        {/* STEP 5: CONDITIONS (optional, Phase 13) */}
-        {step === 'conditions' && (
+        {/* STEP 5: REVEAL — Your personalised HealthOS plan */}
+        {step === 'reveal' && (
           <div className="space-y-4">
-            <div>
-              <h2 className="font-semibold text-1 mb-1">Any health conditions? <span className="text-xs font-normal text-3">(optional)</span></h2>
-              <p className="text-xs text-2">
-                Selecting conditions helps HealthOS personalise recommendations. This data is stored only for you
-                and never shared. You can skip this step.
-              </p>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-3xl mx-auto mb-3 flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg,rgba(124,58,237,0.3),rgba(6,182,212,0.3))', border: '1px solid rgba(124,58,237,0.3)' }}>
+                <span className="text-3xl">✨</span>
+              </div>
+              <h2 className="text-xl font-bold text-1">Your HealthOS plan</h2>
+              <p className="text-xs text-2 mt-1">Personalised based on your profile</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              {CONDITION_OPTIONS.map(({ key, label, emoji }) => {
-                const selected = selectedConditions.includes(key)
-                return (
-                  <button key={key} onClick={() => toggleCondition(key)}
-                    className="text-left p-3 rounded-xl border transition-all"
-                    style={{
-                      borderColor: selected ? '#7c3aed' : 'var(--input-border)',
-                      background: selected ? 'rgba(124,58,237,0.12)' : 'transparent',
-                    }}>
-                    <span className="text-xl">{emoji}</span>
-                    <p className="text-xs font-semibold text-1 mt-1 leading-snug">{label}</p>
-                  </button>
-                )
-              })}
+            {/* Macros */}
+            <div className="glass-dark rounded-xl p-4 space-y-2 text-sm">
+              <Row label="Daily calories" value={`${calc.calorieTarget} kcal`} highlight />
+              <Row label="Protein"        value={`${calc.proteinTargetG}g`} />
+              <Row label="Carbs"          value={`${calc.carbTargetG}g`} />
+              <Row label="Fat"            value={`${calc.fatTargetG}g`} />
             </div>
 
+            {/* Condition-specific features */}
             {selectedConditions.length > 0 && (
               <div className="space-y-2">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <div onClick={() => setDiagnosedByDoctor(d => !d)}
-                    className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors"
-                    style={{ borderColor: diagnosedByDoctor ? '#7c3aed' : 'var(--input-border)', background: diagnosedByDoctor ? '#7c3aed' : 'transparent' }}>
-                    {diagnosedByDoctor && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>}
+                <p className="text-xs font-semibold uppercase tracking-wider text-3">Active modules for your conditions</p>
+                {selectedConditions.some(c => c === 'type2_diabetes' || c === 'prediabetes') && (
+                  <div className="glass rounded-xl px-3 py-2.5 flex items-center gap-2">
+                    <span className="text-base">🩸</span>
+                    <div><p className="text-xs font-semibold text-1">Glucose Tracker + CGM Integration</p><p className="text-xs text-3">GI/GL meal scoring, HbA1c log, trend analysis</p></div>
                   </div>
-                  <span className="text-xs text-2">Diagnosed by a doctor</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <div onClick={() => setOnMedication(m => !m)}
-                    className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors"
-                    style={{ borderColor: onMedication ? '#7c3aed' : 'var(--input-border)', background: onMedication ? '#7c3aed' : 'transparent' }}>
-                    {onMedication && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>}
+                )}
+                {selectedConditions.some(c => c === 'anxiety' || c === 'depression') && (
+                  <div className="glass rounded-xl px-3 py-2.5 flex items-center gap-2">
+                    <span className="text-base">🧠</span>
+                    <div><p className="text-xs font-semibold text-1">Mental Wellness Suite</p><p className="text-xs text-3">Mood check-ins, CBT journal, PHQ-9/GAD-7, stress correlations</p></div>
                   </div>
-                  <span className="text-xs text-2">Currently on medication for this condition</span>
-                </label>
+                )}
+                {selectedConditions.some(c => c === 'hypertension' || c === 'heart_disease') && (
+                  <div className="glass rounded-xl px-3 py-2.5 flex items-center gap-2">
+                    <span className="text-base">❤️</span>
+                    <div><p className="text-xs font-semibold text-1">Heart Health Tracker</p><p className="text-xs text-3">Blood pressure log, sodium monitor, heart rate zones</p></div>
+                  </div>
+                )}
+                {selectedConditions.includes('pcos') && (
+                  <div className="glass rounded-xl px-3 py-2.5 flex items-center gap-2">
+                    <span className="text-base">🔄</span>
+                    <div><p className="text-xs font-semibold text-1">PCOS Module</p><p className="text-xs text-3">Cycle tracking, hormone-phased workouts, supplement log</p></div>
+                  </div>
+                )}
+                {selectedConditions.includes('hypothyroidism') && (
+                  <div className="glass rounded-xl px-3 py-2.5 flex items-center gap-2">
+                    <span className="text-base">🦋</span>
+                    <div><p className="text-xs font-semibold text-1">Thyroid Tracker</p><p className="text-xs text-3">TSH log, medication reminder, fatigue & energy correlation</p></div>
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="rounded-xl px-3 py-2.5 text-xs"
-              style={{ background: 'rgba(124,58,237,0.08)', color: 'var(--text-2)', border: '1px solid rgba(124,58,237,0.15)' }}>
-              HealthOS is a wellness app, not a medical device. Always follow your doctor&apos;s advice.
-            </div>
-
+            <p className="text-xs text-3">Based on Mifflin-St Jeor formula. Recalculated when weight changes ≥2 kg.</p>
             <div className="flex gap-2">
-              <button onClick={() => setStep('confirm')} className="flex-1 py-2.5 glass rounded-xl text-sm text-2">Back</button>
+              <button onClick={() => setStep('goal')} className="flex-1 py-2.5 glass rounded-xl text-sm text-2">Back</button>
               <button onClick={() => setStep('consent')} className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm"
-                style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>
-                {selectedConditions.length > 0 ? 'Next' : 'Skip'}
-              </button>
+                style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>Looks great →</button>
             </div>
           </div>
         )}
@@ -347,7 +419,7 @@ export default function OnboardingPage() {
             </div>
 
             <div className="flex gap-2">
-              <button onClick={() => setStep('conditions')} className="flex-1 py-2.5 glass rounded-xl text-sm text-2">Back</button>
+              <button onClick={() => setStep('reveal')} className="flex-1 py-2.5 glass rounded-xl text-sm text-2">Back</button>
               <button onClick={handleComplete} disabled={saving || !canProceedConsent}
                 className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm disabled:opacity-40 transition-opacity"
                 style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)' }}>

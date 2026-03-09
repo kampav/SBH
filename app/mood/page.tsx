@@ -79,11 +79,29 @@ const ANXIETY_LABELS: Record<MoodLevel, string> = { 1: 'Very Calm', 2: 'Calm', 3
 
 type Tab = 'log' | 'history' | 'phq9' | 'gad7'
 
+// ── Crisis detection ──────────────────────────────────────────────────────────
+function detectCrisis(history: import('@/lib/types').MoodEntry[], phqHistory: PHQ9Assessment[]): {
+  triggered: boolean; reason: 'phq9' | 'mood' | null
+} {
+  // PHQ-9 moderately severe or severe (score ≥ 15)
+  if (phqHistory.length > 0 && phqHistory[0].totalScore >= 15) {
+    return { triggered: true, reason: 'phq9' }
+  }
+  // Mood = 1 for 3 consecutive logged days (most recent 3)
+  const recent = [...history].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3)
+  if (recent.length >= 3 && recent.every(e => e.mood === 1)) {
+    return { triggered: true, reason: 'mood' }
+  }
+  return { triggered: false, reason: null }
+}
+
 export default function MoodPage() {
   const router = useRouter()
   const [uid, setUid] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [tab, setTab] = useState<Tab>('log')
+  const [crisis, setCrisis] = useState<{ triggered: boolean; reason: 'phq9' | 'mood' | null }>({ triggered: false, reason: null })
+  const [crisisDismissed, setCrisisDismissed] = useState(false)
 
   // Daily check-in form
   const [mood, setMood] = useState<MoodLevel>(3)
@@ -133,6 +151,7 @@ export default function MoodPage() {
       setGadHistory(gadH)
       const today = new Date().toISOString().slice(0, 10)
       if (moodH.some(m => m.date === today)) setSavedToday(true)
+      setCrisis(detectCrisis(moodH, phqH))
     } catch {
       // best-effort
     } finally {
@@ -245,6 +264,49 @@ export default function MoodPage() {
             call <strong>116 123</strong> (Samaritans UK) or <strong>999</strong> (emergency).
           </p>
         </div>
+
+        {/* Crisis safety card */}
+        {crisis.triggered && !crisisDismissed && (
+          <div className="rounded-2xl p-5 mb-4 space-y-3"
+            style={{ background: 'rgba(220,38,38,0.1)', border: '1.5px solid rgba(220,38,38,0.35)' }}>
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(220,38,38,0.2)' }}>
+                <AlertTriangle size={18} style={{ color: '#fca5a5' }} />
+              </div>
+              <div>
+                <p className="text-sm font-bold" style={{ color: '#fca5a5' }}>
+                  {crisis.reason === 'phq9'
+                    ? 'Your PHQ-9 score suggests you may need support'
+                    : 'We noticed you\'ve been having a very tough time recently'}
+                </p>
+                <p className="text-xs mt-1 leading-relaxed" style={{ color: '#fca5a5', opacity: 0.85 }}>
+                  Your wellbeing matters. Please consider reaching out to a professional or a trusted person in your life.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {[
+                { label: 'Samaritans (UK)', number: '116 123', sub: '24/7, free, anonymous' },
+                { label: 'Crisis Text Line', number: 'Text SHOUT to 85258', sub: 'Free, 24/7 mental health support' },
+                { label: 'Emergency services', number: '999', sub: 'If you are in immediate danger' },
+              ].map(r => (
+                <div key={r.label} className="rounded-xl px-3 py-2.5 flex items-center justify-between"
+                  style={{ background: 'rgba(220,38,38,0.12)' }}>
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: '#fca5a5' }}>{r.label}</p>
+                    <p className="text-xs" style={{ color: '#fca5a5', opacity: 0.7 }}>{r.sub}</p>
+                  </div>
+                  <p className="text-sm font-bold" style={{ color: '#ef4444' }}>{r.number}</p>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setCrisisDismissed(true)}
+              className="text-xs" style={{ color: '#fca5a5', opacity: 0.6 }}>
+              I understand — dismiss
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}

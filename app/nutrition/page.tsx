@@ -887,9 +887,17 @@ export default function NutritionPage() {
                       <p className="text-xs text-2 mt-0.5">{meal.time} · {meal.mealType.replace('_',' ')}</p>
                       <div className="flex items-center gap-2 flex-wrap mt-0.5">
                         <p className="text-xs text-3">P:{Math.round(meal.proteinG * 10)/10}g C:{Math.round(meal.carbsG * 10)/10}g F:{Math.round(meal.fatG * 10)/10}g</p>
-                        {glucoseSettings && m.giEstimate != null && (
-                          <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(6,182,212,0.1)', color: CYAN }}>GI {m.giEstimate}</span>
-                        )}
+                        {glucoseSettings && m.giEstimate != null && (() => {
+                          const { label, color } = giCategory(m.giEstimate)
+                          return (
+                            <>
+                              <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: `${color}20`, color }}>{label} ({m.giEstimate})</span>
+                              {m.glEstimate != null && (
+                                <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: m.glEstimate <= 10 ? '#10b98120' : m.glEstimate <= 19 ? '#f59e0b20' : '#f43f5e20', color: m.glEstimate <= 10 ? '#10b981' : m.glEstimate <= 19 ? '#f59e0b' : '#f43f5e' }}>GL {m.glEstimate}</span>
+                              )}
+                            </>
+                          )
+                        })()}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-3">

@@ -825,6 +825,7 @@ export default function ProfilePage() {
             { label: 'Integrations (CGM & Wearables)', href: '/settings/integrations' },
             { label: 'CBT Thought Journal', href: '/journal' },
             { label: 'Stress Correlations', href: '/correlations' },
+            { label: 'Care Team Report', href: '/reports' },
             { label: 'PCOS Tracker', href: '/pcos' },
             { label: 'Thyroid Tracker', href: '/thyroid' },
             { label: 'Release Notes & What\'s New', href: '/release-notes' },

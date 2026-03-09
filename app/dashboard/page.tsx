@@ -216,6 +216,7 @@ export default function DashboardPage() {
     { id: 'feed',        label: 'Health Feed',     sub: 'Your score',        href: '/health-feed',   icon: Sparkles,    color: '#06b6d4', defaultVisible: false },
     { id: 'journal',     label: 'CBT Journal',     sub: 'Thought records',   href: '/journal',       icon: BookOpen,    color: '#8b5cf6', defaultVisible: false },
     { id: 'correlations',label: 'Correlations',    sub: 'Stress patterns',   href: '/correlations',  icon: Activity,    color: '#06b6d4', defaultVisible: false },
+    { id: 'reports',     label: 'Care Team Report',sub: 'Share with GP',     href: '/reports',       icon: BookOpen,    color: '#10b981', defaultVisible: false },
   ]
 
   const visibleTiles = allTiles.filter(t => !hiddenTiles.includes(t.id))
