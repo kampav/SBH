@@ -18,26 +18,21 @@ const app = isBrowser
   ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
   : null
 
-// @capacitor/core is bundled into the web app, so window.Capacitor exists
-// in ALL environments. Use isNativePlatform() to distinguish a real Android/iOS
-// binary (where sessionStorage is blocked) from a regular browser session.
+// Use browserLocalPersistence FIRST on all platforms — localStorage is
+// synchronous so onAuthStateChanged fires immediately with the correct user
+// rather than null while IndexedDB loads asynchronously. This prevents the
+// login-redirect race condition on app launch / page refresh.
+// IndexedDB is kept as fallback for environments where localStorage is blocked.
 function createAuth() {
   if (!app) return null as never
-  const cap = (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
-  const isNative = !!(cap?.isNativePlatform?.())
-  if (isNative) {
-    // Native WebView: sessionStorage blocked — use IndexedDB instead
-    try {
-      return initializeAuth(app, {
-        persistence: [indexedDBLocalPersistence, browserLocalPersistence],
-      })
-    } catch {
-      return getAuth(app)
-    }
+  try {
+    return initializeAuth(app, {
+      persistence: [browserLocalPersistence, indexedDBLocalPersistence],
+    })
+  } catch {
+    // Already initialised (e.g. HMR in dev) — return existing instance
+    return getAuth(app)
   }
-  // Regular browser: getAuth() uses full default persistence chain
-  // (includes browserSessionPersistence required by signInWithPopup)
-  return getAuth(app)
 }
 
 export const auth = isBrowser ? createAuth() : null as never

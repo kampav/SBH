@@ -456,6 +456,32 @@ export interface CGMDay {
   syncedAt: FirestoreTimestamp
 }
 
+// ─── CBT Thought Journal (Phase 17) ──────────────────────────────────────────
+export interface ThoughtRecord {
+  id: string
+  date: string              // YYYY-MM-DD
+  situation: string         // "What happened?"
+  automaticThought: string  // "What went through your mind?"
+  emotion: string           // e.g. "anxious"
+  emotionIntensity: number  // 0-10 before
+  evidenceFor: string       // "What supports this thought?"
+  evidenceAgainst: string   // "What doesn't support it?"
+  balancedThought: string   // "A more balanced view"
+  outcomeEmotion: string    // "How do you feel now?"
+  outcomeIntensity: number  // 0-10 after
+  loggedAt: FirestoreTimestamp
+}
+
+// ─── GAD-7 Anxiety Screening (Phase 17) ──────────────────────────────────────
+export interface GAD7Assessment {
+  id: string
+  date: string          // YYYY-MM-DD
+  answers: number[]     // 7 items, each 0-3
+  totalScore: number    // 0-21
+  severity: 'minimal' | 'mild' | 'moderate' | 'severe'
+  completedAt: FirestoreTimestamp
+}
+
 // ─── Subscription ─────────────────────────────────────────────────────────────
 export interface UserSubscription {
   tier: 'free' | 'pro' | 'premium'

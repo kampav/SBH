@@ -6,8 +6,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
-import { saveMoodEntry, getMoodHistory, savePHQ9, getPHQ9History } from '@/lib/firebase/firestore'
-import { MoodEntry, MoodLevel, PHQ9Assessment } from '@/lib/types'
+import { saveMoodEntry, getMoodHistory, savePHQ9, getPHQ9History, saveGAD7, getGAD7History } from '@/lib/firebase/firestore'
+import { MoodEntry, MoodLevel, PHQ9Assessment, GAD7Assessment } from '@/lib/types'
 import { serverTimestamp } from 'firebase/firestore'
 import Link from 'next/link'
 import { ArrowLeft, Brain, TrendingUp, ClipboardList, CheckCircle, AlertTriangle } from 'lucide-react'
@@ -26,6 +26,33 @@ const PHQ9_QUESTIONS = [
 ]
 
 const PHQ9_OPTIONS = ['Not at all', 'Several days', 'More than half', 'Nearly every day']
+
+// ── GAD-7 Questions ──────────────────────────────────────────────────────────
+const GAD7_QUESTIONS = [
+  'Feeling nervous, anxious, or on edge',
+  'Not being able to stop or control worrying',
+  'Worrying too much about different things',
+  'Trouble relaxing',
+  'Being so restless that it\'s hard to sit still',
+  'Becoming easily annoyed or irritable',
+  'Feeling afraid as if something awful might happen',
+]
+
+const GAD7_OPTIONS = ['Not at all', 'Several days', 'More than half', 'Nearly every day']
+
+function gad7Severity(score: number): GAD7Assessment['severity'] {
+  if (score <= 4)  return 'minimal'
+  if (score <= 9)  return 'mild'
+  if (score <= 14) return 'moderate'
+  return 'severe'
+}
+
+const GAD7_SEVERITY_INFO: Record<GAD7Assessment['severity'], { label: string; color: string; note: string }> = {
+  minimal:  { label: 'Minimal',  color: '#10b981', note: 'Anxiety is within normal range. Keep up healthy coping habits.' },
+  mild:     { label: 'Mild',     color: '#f59e0b', note: 'Consider stress-reduction techniques: breathing exercises, regular exercise, good sleep.' },
+  moderate: { label: 'Moderate', color: '#f97316', note: 'May benefit from professional support. Speak to a GP or mental health professional.' },
+  severe:   { label: 'Severe',   color: '#ef4444', note: 'Active treatment is recommended. Please speak to your GP or a mental health professional.' },
+}
 
 function phq9Severity(score: number): PHQ9Assessment['severity'] {
   if (score <= 4)  return 'minimal'
@@ -50,7 +77,7 @@ const MOOD_COLORS: Record<MoodLevel, string> = { 1: '#dc2626', 2: '#f97316', 3: 
 const ANXIETY_EMOJIS: Record<MoodLevel, string> = { 1: '😌', 2: '🙂', 3: '😐', 4: '😰', 5: '😱' }
 const ANXIETY_LABELS: Record<MoodLevel, string> = { 1: 'Very Calm', 2: 'Calm', 3: 'Neutral', 4: 'Anxious', 5: 'Very Anxious' }
 
-type Tab = 'log' | 'history' | 'phq9'
+type Tab = 'log' | 'history' | 'phq9' | 'gad7'
 
 export default function MoodPage() {
   const router = useRouter()
@@ -77,6 +104,12 @@ export default function MoodPage() {
   const [phqSaving, setPhqSaving] = useState(false)
   const [phqHistory, setPhqHistory] = useState<PHQ9Assessment[]>([])
 
+  // GAD-7
+  const [gadAnswers, setGadAnswers] = useState<number[]>(Array(7).fill(-1))
+  const [gadResult, setGadResult] = useState<GAD7Assessment | null>(null)
+  const [gadSaving, setGadSaving] = useState(false)
+  const [gadHistory, setGadHistory] = useState<GAD7Assessment[]>([])
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => {
       setAuthReady(true)
@@ -89,13 +122,22 @@ export default function MoodPage() {
   const loadHistory = useCallback(async () => {
     if (!uid) return
     setHistoryLoading(true)
-    const [moodH, phqH] = await Promise.all([getMoodHistory(uid, 30), getPHQ9History(uid, 6)])
-    setHistory(moodH)
-    setPhqHistory(phqH)
-    // Check if logged today
-    const today = new Date().toISOString().slice(0, 10)
-    if (moodH.some(m => m.date === today)) setSavedToday(true)
-    setHistoryLoading(false)
+    try {
+      const [moodH, phqH, gadH] = await Promise.all([
+        getMoodHistory(uid, 30),
+        getPHQ9History(uid, 6),
+        getGAD7History(uid, 6),
+      ])
+      setHistory(moodH)
+      setPhqHistory(phqH)
+      setGadHistory(gadH)
+      const today = new Date().toISOString().slice(0, 10)
+      if (moodH.some(m => m.date === today)) setSavedToday(true)
+    } catch {
+      // best-effort
+    } finally {
+      setHistoryLoading(false)
+    }
   }, [uid])
 
   useEffect(() => {
@@ -138,7 +180,7 @@ export default function MoodPage() {
     const severity = phq9Severity(total)
     const now = new Date()
     const assessment: PHQ9Assessment = {
-      id: now.toISOString(),
+      id: now.toISOString().replace(/[:.]/g, '-'),
       date: now.toISOString().slice(0, 10),
       answers: phqAnswers,
       totalScore: total,
@@ -148,6 +190,26 @@ export default function MoodPage() {
     await savePHQ9(uid, assessment)
     setPhqResult(assessment)
     setPhqSaving(false)
+    await loadHistory()
+  }
+
+  async function submitGAD7() {
+    if (!uid || gadAnswers.includes(-1)) return
+    setGadSaving(true)
+    const total = gadAnswers.reduce((s, a) => s + a, 0)
+    const severity = gad7Severity(total)
+    const now = new Date()
+    const assessment: GAD7Assessment = {
+      id: now.toISOString().replace(/[:.]/g, '-'),
+      date: now.toISOString().slice(0, 10),
+      answers: gadAnswers,
+      totalScore: total,
+      severity,
+      completedAt: serverTimestamp() as never,
+    }
+    await saveGAD7(uid, assessment)
+    setGadResult(assessment)
+    setGadSaving(false)
     await loadHistory()
   }
 
@@ -188,14 +250,14 @@ export default function MoodPage() {
       {/* Tabs */}
       <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-8">
         <div className="flex gap-1 glass rounded-2xl p-1 mb-4">
-          {([['log', 'Check-in', Brain], ['history', 'History', TrendingUp], ['phq9', 'PHQ-9', ClipboardList]] as const).map(([t, label, Icon]) => (
+          {([['log', 'Check-in', Brain], ['history', 'History', TrendingUp], ['phq9', 'PHQ-9', ClipboardList], ['gad7', 'GAD-7', AlertTriangle]] as const).map(([t, label, Icon]) => (
             <button key={t} onClick={() => setTab(t)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all"
+              className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all"
               style={{
                 background: tab === t ? '#7c3aed' : 'transparent',
                 color: tab === t ? '#fff' : 'var(--text-2)',
               }}>
-              <Icon size={13} />
+              <Icon size={12} />
               {label}
             </button>
           ))}
@@ -479,6 +541,116 @@ export default function MoodPage() {
 
                 <p className="text-xs text-3 text-center">
                   PHQ-9 © Pfizer Inc. For educational purposes only. Not a clinical diagnosis.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── GAD-7 TAB ────────────────────────────────────────────────── */}
+        {tab === 'gad7' && (
+          <div className="space-y-4">
+            {gadResult ? (
+              <div className="glass rounded-2xl p-6 space-y-4">
+                <div className="text-center">
+                  <p className="text-4xl font-black text-1">{gadResult.totalScore}</p>
+                  <p className="text-xs text-3 mt-1">out of 21</p>
+                  <span className="inline-block mt-2 px-4 py-1.5 rounded-full text-sm font-bold"
+                    style={{
+                      background: GAD7_SEVERITY_INFO[gadResult.severity].color + '20',
+                      color: GAD7_SEVERITY_INFO[gadResult.severity].color,
+                    }}>
+                    {GAD7_SEVERITY_INFO[gadResult.severity].label}
+                  </span>
+                </div>
+                <div className="rounded-xl p-4 text-sm"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)' }}>
+                  <p className="text-1">{GAD7_SEVERITY_INFO[gadResult.severity].note}</p>
+                </div>
+                {gadHistory.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-3 mb-2">Past results</p>
+                    <div className="space-y-1.5">
+                      {gadHistory.map(a => {
+                        const sev = GAD7_SEVERITY_INFO[a.severity]
+                        return (
+                          <div key={a.id} className="glass rounded-xl px-4 py-2.5 flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-semibold text-1">{a.date}</p>
+                              <p className="text-xs text-3">Score: {a.totalScore}/21</p>
+                            </div>
+                            <span className="text-xs px-3 py-1 rounded-full font-semibold"
+                              style={{ background: sev.color + '20', color: sev.color }}>
+                              {sev.label}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                <button onClick={() => { setGadResult(null); setGadAnswers(Array(7).fill(-1)) }}
+                  className="w-full py-3 rounded-xl text-sm font-semibold glass text-1">
+                  Retake Assessment
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="glass rounded-2xl px-4 py-3"
+                  style={{ border: '1px solid rgba(124,58,237,0.2)' }}>
+                  <p className="text-xs text-2">
+                    Over the <strong className="text-1">last 2 weeks</strong>, how often have you been bothered by the following anxiety symptoms?
+                  </p>
+                </div>
+
+                {GAD7_QUESTIONS.map((q, i) => (
+                  <div key={i} className="glass rounded-2xl p-4">
+                    <p className="text-sm text-1 mb-3 leading-relaxed">
+                      <span className="text-xs font-bold text-3 mr-2">{i + 1}.</span>{q}
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {GAD7_OPTIONS.map((opt, j) => (
+                        <button key={j} onClick={() => {
+                          const next = [...gadAnswers]
+                          next[i] = j
+                          setGadAnswers(next)
+                        }}
+                          className="py-2 px-3 rounded-xl text-xs font-semibold transition-all text-left"
+                          style={{
+                            background: gadAnswers[i] === j ? '#7c3aed' : 'var(--glass-bg)',
+                            color: gadAnswers[i] === j ? '#fff' : 'var(--text-2)',
+                          }}>
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                    {gadAnswers[i] >= 0 && (
+                      <div className="mt-2 flex justify-end">
+                        <span className="text-xs" style={{ color: '#a78bfa' }}>
+                          Score: {gadAnswers[i]}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <div className="glass rounded-xl px-4 py-3 flex items-center justify-between">
+                  <p className="text-xs text-2">Questions answered</p>
+                  <p className="text-sm font-bold text-1">
+                    {gadAnswers.filter(a => a >= 0).length} / 7
+                  </p>
+                </div>
+
+                <button
+                  onClick={submitGAD7}
+                  disabled={gadAnswers.includes(-1) || gadSaving}
+                  className="w-full py-3.5 rounded-2xl font-semibold text-sm text-white disabled:opacity-40 transition-all"
+                  style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
+                  {gadSaving ? 'Calculating…' : 'Get My Score'}
+                </button>
+
+                <p className="text-xs text-3 text-center">
+                  GAD-7 © Pfizer Inc. For educational purposes only. Not a clinical diagnosis.
                 </p>
               </div>
             )}

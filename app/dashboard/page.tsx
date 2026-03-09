@@ -20,7 +20,7 @@ import {
   Activity, Moon, Brain,
   Bot, Heart, CheckSquare,
   CheckCircle, Zap, Settings2, X,
-  Sparkles, ChevronRight,
+  Sparkles, ChevronRight, BookOpen,
   type LucideIcon,
 } from 'lucide-react'
 import ProgressRing from '@/components/ui/ProgressRing'
@@ -212,8 +212,10 @@ export default function DashboardPage() {
     { id: 'bp',      label: 'Blood Pressure', sub: 'Heart health',    href: '/blood-pressure', icon: Heart,       color: '#f43f5e', defaultVisible: true },
     { id: 'habits',  label: 'Habits',         sub: 'Daily streaks',   href: '/habits',         icon: CheckSquare, color: CYAN,      defaultVisible: true },
     { id: 'coach',   label: 'AI Coach',       sub: 'Chat & check-in', href: '/coach',          icon: Bot,         color: VIOLET,    defaultVisible: true },
-    { id: 'insights',label: 'Weekly Report',  sub: 'AI insights',     href: '/insights',        icon: TrendingUp,  color: '#fbbf24', defaultVisible: false },
-    { id: 'feed',    label: 'Health Feed',    sub: 'Your score',      href: '/health-feed',    icon: Sparkles,    color: '#06b6d4', defaultVisible: false },
+    { id: 'insights',    label: 'Weekly Report',   sub: 'AI insights',       href: '/insights',      icon: TrendingUp,  color: '#fbbf24', defaultVisible: false },
+    { id: 'feed',        label: 'Health Feed',     sub: 'Your score',        href: '/health-feed',   icon: Sparkles,    color: '#06b6d4', defaultVisible: false },
+    { id: 'journal',     label: 'CBT Journal',     sub: 'Thought records',   href: '/journal',       icon: BookOpen,    color: '#8b5cf6', defaultVisible: false },
+    { id: 'correlations',label: 'Correlations',    sub: 'Stress patterns',   href: '/correlations',  icon: Activity,    color: '#06b6d4', defaultVisible: false },
   ]
 
   const visibleTiles = allTiles.filter(t => !hiddenTiles.includes(t.id))

@@ -6,7 +6,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from './client'
-import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement, SleepEntry, HabitDefinition, DailyHabitLog, WeeklyInsight, LeaderboardEntry, MoodEntry, PHQ9Assessment, BloodPressureReading, DexcomCredentials, CGMDay } from '../types'
+import { UserProfile, DailyMetric, DailyNutrition, DailyWorkout, BodyMeasurement, FavouriteFood, GlucoseReading, DailyGlucose, HbA1cEntry, GlucoseSettings, StreakRecord, Achievement, SleepEntry, HabitDefinition, DailyHabitLog, WeeklyInsight, LeaderboardEntry, MoodEntry, PHQ9Assessment, BloodPressureReading, DexcomCredentials, CGMDay, ThoughtRecord, GAD7Assessment } from '../types'
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 export async function getProfile(uid: string): Promise<UserProfile | null> {
@@ -410,9 +410,35 @@ export async function getCGMHistory(uid: string, days = 14): Promise<CGMDay[]> {
   return snap.docs.map(d => d.data() as CGMDay).reverse()
 }
 
+// ─── CBT Thought Journal (Phase 17) ──────────────────────────────────────────
+export async function saveThoughtRecord(uid: string, record: ThoughtRecord): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'thought_records', record.id), record)
+}
+
+export async function getThoughtRecords(uid: string, limitCount = 30): Promise<ThoughtRecord[]> {
+  const q = query(collection(db, 'users', uid, 'thought_records'), orderBy('date', 'desc'), limit(limitCount))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => d.data() as ThoughtRecord)
+}
+
+export async function deleteThoughtRecord(uid: string, id: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', uid, 'thought_records', id))
+}
+
+// ─── GAD-7 Anxiety Screening (Phase 17) ──────────────────────────────────────
+export async function saveGAD7(uid: string, assessment: GAD7Assessment): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'gad7', assessment.id), assessment)
+}
+
+export async function getGAD7History(uid: string, limitCount = 12): Promise<GAD7Assessment[]> {
+  const q = query(collection(db, 'users', uid, 'gad7'), orderBy('date', 'desc'), limit(limitCount))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => d.data() as GAD7Assessment)
+}
+
 // ─── Account Deletion ─────────────────────────────────────────────────────────
 export async function deleteAllUserData(uid: string): Promise<void> {
-  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings', 'subscription', 'streaks', 'achievements', 'fcm_tokens', 'sleep', 'habits', 'habit_logs', 'insights', 'mood', 'phq9', 'blood_pressure', 'integrations', 'cgm']
+  const subcollections = ['metrics', 'nutrition', 'workouts', 'measurements', 'favourites', 'glucose', 'hba1c', 'glucose_settings', 'subscription', 'streaks', 'achievements', 'fcm_tokens', 'sleep', 'habits', 'habit_logs', 'insights', 'mood', 'phq9', 'gad7', 'thought_records', 'blood_pressure', 'integrations', 'cgm']
   for (const sub of subcollections) {
     const snap = await getDocs(collection(db, 'users', uid, sub))
     const batch = writeBatch(db)
