@@ -231,7 +231,7 @@ export default function CorrelationsPage() {
   return (
     <div className="min-h-screen mesh-bg pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-30 glass-strong border-b" style={{ borderColor: 'var(--border)' }}>
+      <div className="sticky top-0 z-30 glass-strong border-b" style={{ borderColor: 'var(--sbh-border)' }}>
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
           <Link href="/dashboard" className="p-2 rounded-xl glass-elevated">
             <ArrowLeft size={16} style={{ color: 'var(--text-3)' }} />

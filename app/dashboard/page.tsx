@@ -521,11 +521,11 @@ export default function DashboardPage() {
           <div
             className="w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto"
             style={{
-              background: 'var(--glass-bg)',
+              background: 'var(--glass-s-bg)',
               backdropFilter: 'blur(28px)',
               WebkitBackdropFilter: 'blur(28px)',
-              border: '1px solid var(--glass-border)',
-              boxShadow: '0 -20px 60px rgba(0,0,0,0.5)',
+              border: '1px solid var(--glass-s-bdr)',
+              boxShadow: '0 -20px 60px rgba(0,0,0,0.45)',
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -624,9 +624,9 @@ function ActionTile({ href, icon: Icon, label, sub, done, color }: Tile) {
         style={{
           background: done
             ? `linear-gradient(135deg,${color}20,${color}0a)`
-            : 'rgba(255,255,255,0.03)',
-          border: `1.5px solid ${done ? color + '45' : 'rgba(255,255,255,0.07)'}`,
-          boxShadow: done ? `0 4px 16px ${color}20` : 'none',
+            : 'var(--glass-bg)',
+          border: `1.5px solid ${done ? color + '45' : 'var(--sbh-border)'}`,
+          boxShadow: done ? `0 4px 16px ${color}20` : 'var(--card-shadow)',
           transition: 'all 0.18s',
         }}
         onMouseEnter={e => {
@@ -638,10 +638,10 @@ function ActionTile({ href, icon: Icon, label, sub, done, color }: Tile) {
         }}
         onMouseLeave={e => {
           const el = e.currentTarget as HTMLElement
-          el.style.background = done ? `linear-gradient(135deg,${color}20,${color}0a)` : 'rgba(255,255,255,0.03)'
-          el.style.border = `1.5px solid ${done ? color + '45' : 'rgba(255,255,255,0.07)'}`
+          el.style.background = done ? `linear-gradient(135deg,${color}20,${color}0a)` : 'var(--glass-bg)'
+          el.style.border = `1.5px solid ${done ? color + '45' : 'var(--sbh-border)'}`
           el.style.transform = 'none'
-          el.style.boxShadow = done ? `0 4px 16px ${color}20` : 'none'
+          el.style.boxShadow = done ? `0 4px 16px ${color}20` : 'var(--card-shadow)'
         }}
       >
         <div

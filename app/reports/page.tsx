@@ -152,7 +152,7 @@ export default function ReportsPage() {
   return (
     <div className="min-h-screen mesh-bg pb-24 print:bg-white print:pb-4">
       {/* Header — hidden when printing */}
-      <div className="sticky top-0 z-30 glass-strong border-b print:hidden" style={{ borderColor: 'var(--border)' }}>
+      <div className="sticky top-0 z-30 glass-strong border-b print:hidden" style={{ borderColor: 'var(--sbh-border)' }}>
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <Link href="/dashboard" className="p-2 rounded-xl glass-elevated">
             <ArrowLeft size={16} style={{ color: 'var(--text-3)' }} />
